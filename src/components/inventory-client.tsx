@@ -1,0 +1,1584 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes } from "react";
+import { useTranslations } from "next-intl";
+import { Camera, ChevronLeft, ChevronRight, Grid2X2, List, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input, Select, Textarea } from "@/components/ui/input";
+import { money, numberValue } from "@/lib/format";
+import type { Kind } from "@/lib/repository";
+
+type AnyItem = Record<string, any>;
+type MetaItem = { id: number; name: string; sortOrder?: number };
+type CreateMetaHandler = {
+  (name: string): Promise<MetaItem | null>;
+};
+type Filters = {
+  tagIds: number[];
+  source: string;
+  from: string;
+  to: string;
+  used: string;
+  hasStockLeft: boolean;
+  color: string;
+  categoryId: string;
+  unitId: string;
+  patternId: string;
+  clothId: string;
+  materialId: string;
+};
+type LightboxState = { photos: string[]; index: number };
+type Props = {
+  kind: Kind;
+  items: AnyItem[];
+  summary: Record<string, any>;
+  tags: MetaItem[];
+  categories?: MetaItem[];
+  units?: MetaItem[];
+  clothOptions?: AnyItem[];
+  patternOptions?: AnyItem[];
+  materialOptions?: AnyItem[];
+};
+type FieldsProps = {
+  kind: Kind;
+  item: AnyItem;
+  tags: MetaItem[];
+  categories: MetaItem[];
+  units: MetaItem[];
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
+  onAddTag: (name: string) => void;
+  onAddCategory: CreateMetaHandler;
+  onAddUnit: CreateMetaHandler;
+};
+type MetaSelectProps = {
+  name: string;
+  label: string;
+  options: MetaItem[];
+  value?: number;
+  onCreate?: CreateMetaHandler;
+};
+type PhotoUploadedHandler = {
+  (): void | Promise<void>;
+};
+type DetailProps = {
+  item: AnyItem;
+  kind: Kind;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+  onOpenPhoto: (photos: string[], index: number) => void;
+  onUploaded: PhotoUploadedHandler;
+};
+type PhotoStripProps = {
+  item: AnyItem;
+  kind: Kind;
+  readOnly?: boolean;
+  onUploaded?: PhotoUploadedHandler;
+  onOpenPhoto?: (photos: string[], index: number) => void;
+  onError?: (message: string) => void;
+};
+
+const entityByKind = {
+  cloths: "cloth",
+  patterns: "pattern",
+  materials: "material",
+  projects: "project"
+} as const;
+const commonColors = [
+  "red",
+  "burgundy",
+  "coral",
+  "peach",
+  "orange",
+  "gold",
+  "yellow",
+  "lime",
+  "mint",
+  "green",
+  "olive",
+  "sage",
+  "teal",
+  "turquoise",
+  "aqua",
+  "skyBlue",
+  "blue",
+  "royalBlue",
+  "navy",
+  "denim",
+  "lavender",
+  "lilac",
+  "purple",
+  "violet",
+  "mauve",
+  "pink",
+  "rose",
+  "magenta",
+  "white",
+  "ivory",
+  "cream",
+  "beige",
+  "tan",
+  "camel",
+  "brown",
+  "chocolate",
+  "gray",
+  "silver",
+  "black"
+];
+const colorSwatches: Record<string, string> = {
+  red: "#ef4444",
+  burgundy: "#7f1d1d",
+  coral: "#fb7185",
+  peach: "#fdba74",
+  orange: "#f97316",
+  gold: "#d97706",
+  yellow: "#eab308",
+  lime: "#84cc16",
+  mint: "#86efac",
+  green: "#22c55e",
+  olive: "#6b7f2a",
+  sage: "#9caf88",
+  teal: "#14b8a6",
+  turquoise: "#2dd4bf",
+  aqua: "#67e8f9",
+  skyBlue: "#7dd3fc",
+  blue: "#3b82f6",
+  royalBlue: "#1d4ed8",
+  navy: "#1e3a8a",
+  denim: "#3b638c",
+  lavender: "#c4b5fd",
+  lilac: "#d8b4fe",
+  purple: "#a855f7",
+  violet: "#7c3aed",
+  mauve: "#c08497",
+  pink: "#ec4899",
+  rose: "#f43f5e",
+  magenta: "#d946ef",
+  white: "#ffffff",
+  ivory: "#fffff0",
+  cream: "#fff7d6",
+  beige: "#d6c4a8",
+  tan: "#c49a6c",
+  camel: "#b7791f",
+  brown: "#92400e",
+  chocolate: "#5c2e16",
+  gray: "#6b7280",
+  silver: "#c0c0c0",
+  black: "#111827"
+};
+
+export function InventoryClient(props: Props) {
+  const t = useTranslations();
+  const [items, setItems] = useState(props.items);
+  const [summary, setSummary] = useState(props.summary);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("created");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [filters, setFilters] = useState<Filters>(() => emptyFilters());
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [editing, setEditing] = useState<AnyItem | null>(null);
+  const [selected, setSelected] = useState<AnyItem | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AnyItem | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+  const [stagedPhotoFiles, setStagedPhotoFiles] = useState<File[]>([]);
+  const [tagList, setTagList] = useState(props.tags);
+  const [categoryList, setCategoryList] = useState(props.categories ?? []);
+  const [unitList, setUnitList] = useState(props.units ?? []);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshSeqRef = useRef(0);
+  const title = t(`${props.kind}.title`);
+  const colorOptions = useMemo(
+    () => collectColors([props.items, items, props.clothOptions ?? [], props.materialOptions ?? []]),
+    [items, props.items, props.clothOptions, props.materialOptions]
+  );
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (lightbox) setLightbox(null);
+      else if (filterOpen) setFilterOpen(false);
+      else if (editing) {
+        setStagedPhotoFiles([]);
+        setEditing(null);
+      }
+      else if (selected) setSelected(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editing, selected, lightbox, filterOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
+  }
+
+  async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters) {
+    const requestId = ++refreshSeqRef.current;
+    const params = buildListParams(nextQuery, nextSort, nextFilters);
+    const [listResponse, summaryResponse] = await Promise.all([
+      fetch(`/api/${props.kind}?${params.toString()}`),
+      fetch(`/api/${props.kind}/summary`)
+    ]);
+    const nextItems = (await listResponse.json()).items;
+    const nextSummary = await summaryResponse.json();
+    if (requestId !== refreshSeqRef.current) return;
+    setItems(nextItems);
+    setSummary(nextSummary);
+  }
+
+  function debounceRefresh(nextQuery: string, nextSort = sort, nextFilters = filters) {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      void refresh(nextQuery, nextSort, nextFilters);
+    }, 250);
+  }
+
+  async function refreshOpenItem(itemId: number) {
+    const response = await fetch(`/api/${props.kind}/${itemId}`);
+    if (response.ok) {
+      const { item } = (await response.json()) as { item: AnyItem };
+      setEditing((current) => (current?.id === itemId ? item : current));
+      setSelected((current) => (current?.id === itemId ? item : current));
+    }
+    await refresh();
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const body = formToBody(props.kind, form);
+    const path = editing?.id ? `/api/${props.kind}/${editing.id}` : `/api/${props.kind}`;
+    const response = await fetch(path, {
+      method: editing?.id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      notify(t("common.error"));
+      return;
+    }
+    const { item } = (await response.json()) as { item: AnyItem };
+    try {
+      await uploadStagedPhotos(stagedPhotoFiles, props.kind, item.id);
+    } catch (error) {
+      notify(`${t("common.uploadFailed")}: ${error instanceof Error ? error.message : t("common.error")}`);
+    }
+    setStagedPhotoFiles([]);
+    setEditing(null);
+    setSelected((current) => (current?.id === item.id ? item : current));
+    await refresh();
+  }
+
+  function openCreate() {
+    setStagedPhotoFiles([]);
+    setEditing(defaultItem(props.kind));
+  }
+
+  function openEdit(item: AnyItem) {
+    setStagedPhotoFiles([]);
+    setEditing(item);
+  }
+
+  function closeEditor() {
+    setStagedPhotoFiles([]);
+    setEditing(null);
+  }
+
+  async function remove(item: AnyItem) {
+    const response = await fetch(`/api/${props.kind}/${item.id}`, { method: "DELETE" });
+    if (!response.ok) {
+      notify(t("common.error"));
+      return;
+    }
+    setConfirmDelete(null);
+    setSelected(null);
+    await refresh();
+  }
+
+  async function addTag(name: string) {
+    if (!name.trim()) return;
+    const response = await fetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), color: null })
+    });
+    if (response.ok) {
+      const { item } = await response.json();
+      setTagList((current) => [...current, item]);
+    }
+  }
+
+  async function createMeta(kind: "categories" | "units", name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const response = await fetch(`/api/meta/${kind}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed })
+    });
+    if (!response.ok) {
+      notify(t("common.error"));
+      return null;
+    }
+    const { item } = (await response.json()) as { item: MetaItem };
+    if (kind === "categories") setCategoryList((current) => [...current, item]);
+    else setUnitList((current) => [...current, item]);
+    return item;
+  }
+
+  function applyFilters(nextFilters: Filters) {
+    setFilters(nextFilters);
+    setFilterOpen(false);
+    void refresh(query, sort, nextFilters);
+  }
+
+  function openLightbox(photos: string[], index: number) {
+    if (!photos.length) return;
+    setLightbox({ photos, index });
+  }
+
+  const cards = useMemo(
+    () =>
+      items.map((item) => (
+        <ItemCard
+          key={item.id}
+          item={item}
+          kind={props.kind}
+          view={view}
+          onClick={() => setSelected(item)}
+        />
+      )),
+    [items, props.kind, view]
+  );
+
+  return (
+    <main className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4" aria-hidden />
+          {t(`${props.kind}.add`)}
+        </Button>
+      </div>
+
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
+        {summaryCards(props.kind, summary, t).map((card) => (
+          <Card key={card.label} className="p-3">
+            <div className="text-xs text-muted-foreground">{card.label}</div>
+            <div className="mt-1 text-lg font-semibold">{card.value}</div>
+          </Card>
+        ))}
+      </section>
+
+      <div className="grid gap-2 md:flex md:flex-wrap md:items-center">
+        <label className="relative min-w-0 md:min-w-48 md:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden />
+          <Input
+            className="pl-9"
+            placeholder={t("common.search")}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              debounceRefresh(event.target.value, sort);
+            }}
+          />
+        </label>
+        <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
+          <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-sm">
+            <span className="border-r border-border px-3 text-sm font-medium text-muted-foreground">{t("common.sortBy")}</span>
+            <Select
+              aria-label={t("common.sort")}
+              value={sort}
+              onChange={(event) => {
+                const nextSort = event.target.value;
+                setSort(nextSort);
+                void refresh(query, nextSort, filters);
+              }}
+              className="w-44 border-0 shadow-none"
+            >
+              <option value="created">{t("common.sortCreated")}</option>
+              <option value="name">{t("common.sortName")}</option>
+              <option value="price">{t("common.sortPrice")}</option>
+            </Select>
+          </label>
+          <Button className="shrink-0" variant={hasFilters(filters) ? "primary" : "secondary"} onClick={() => setFilterOpen(true)}>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            {t("common.filter")}
+          </Button>
+          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.grid")} onClick={() => setView("grid")}>
+            <Grid2X2 className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.list")} onClick={() => setView("list")}>
+            <List className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+
+      {items.length ? (
+        <section className={view === "grid" ? "grid grid-cols-2 gap-3 md:grid-cols-4" : "space-y-2"}>{cards}</section>
+      ) : (
+        <Card className="p-8 text-center">
+          <div className="text-4xl" aria-hidden>
+            🧵
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
+          <Button className="mt-4" onClick={openCreate}>
+            {t(`${props.kind}.add`)}
+          </Button>
+        </Card>
+      )}
+
+      {editing ? (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
+          <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+            <form key={`${props.kind}-${editing.id ?? "new"}`} className="space-y-4" onSubmit={submit}>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
+                <Button type="button" variant="ghost" onClick={closeEditor}>
+                  {t("common.cancel")}
+                </Button>
+              </div>
+              <section className="space-y-2">
+                <h3 className="text-sm font-medium">{t("common.photos")}</h3>
+                {editing.id ? (
+                  <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
+                ) : (
+                  <div className="flex gap-2 overflow-x-auto">
+                    {stagedPhotoFiles.map((file, index) => (
+                      <StagedPhotoPreview key={`${file.name}-${file.lastModified}-${index}`} file={file} />
+                    ))}
+                    <PhotoPicker onChange={(files) => setStagedPhotoFiles(Array.from(files ?? []))} />
+                  </div>
+                )}
+              </section>
+              <Fields
+                kind={props.kind}
+                item={editing}
+                tags={tagList}
+                categories={categoryList}
+                units={unitList}
+                clothOptions={props.clothOptions ?? []}
+                patternOptions={props.patternOptions ?? []}
+                materialOptions={props.materialOptions ?? []}
+                onAddTag={addTag}
+                onAddCategory={(name) => createMeta("categories", name)}
+                onAddUnit={(name) => createMeta("units", name)}
+              />
+              <div className="sticky bottom-0 flex justify-end gap-2 bg-card py-3">
+                <Button type="button" variant="secondary" onClick={closeEditor}>
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit">{t("common.save")}</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
+
+      {selected ? (
+        <Detail
+          item={selected}
+          kind={props.kind}
+          onEdit={() => openEdit(selected)}
+          onDelete={() => setConfirmDelete(selected)}
+          onClose={() => setSelected(null)}
+          onOpenPhoto={openLightbox}
+          onUploaded={() => refreshOpenItem(selected.id)}
+        />
+      ) : null}
+
+      {filterOpen ? (
+        <FilterDrawer
+          kind={props.kind}
+          filters={filters}
+          tags={tagList}
+          categories={categoryList}
+          units={unitList}
+          clothOptions={props.clothOptions ?? []}
+          patternOptions={props.patternOptions ?? []}
+          materialOptions={props.materialOptions ?? []}
+          colorOptions={colorOptions}
+          onApply={applyFilters}
+          onClose={() => setFilterOpen(false)}
+        />
+      ) : null}
+
+      {lightbox ? <PhotoLightbox state={lightbox} setState={setLightbox} onClose={() => setLightbox(null)} /> : null}
+
+      {confirmDelete ? (
+        <ConfirmSheet
+          message={t("common.confirmDelete")}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => {
+            void remove(confirmDelete);
+          }}
+        />
+      ) : null}
+
+      {toast ? <Toast message={toast} /> : null}
+
+      <Button
+        className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] right-4 h-14 w-14 rounded-full md:bottom-6"
+        size="icon"
+        aria-label={t(`${props.kind}.add`)}
+        onClick={openCreate}
+      >
+        <Plus className="h-6 w-6" aria-hidden />
+      </Button>
+    </main>
+  );
+}
+
+function ItemCard({
+  item,
+  kind,
+  view,
+  onClick
+}: {
+  item: AnyItem;
+  kind: Kind;
+  view: "grid" | "list";
+  onClick: () => void;
+}) {
+  const t = useTranslations();
+  const photoItems = item.photos ?? [];
+  const photos = photoItems.map((photo: AnyItem) => photo.id);
+  const coverIndex = Math.max(0, photoItems.findIndex((photo: AnyItem) => photo.isCover));
+  const photo = photos[coverIndex];
+  const stat = primaryStat(kind, item, t);
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => event.key === "Enter" && onClick()}
+      className={view === "grid" ? "overflow-hidden" : "flex items-center gap-3 p-2"}
+    >
+      {photo ? (
+        <button
+          type="button"
+          className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick();
+          }}
+        >
+          <img src={`/api/photos/${photo}/thumb`} alt="" className="h-full w-full object-cover" />
+        </button>
+      ) : (
+        <div className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"} />
+      )}
+      <div className={view === "grid" ? "p-3" : "min-w-0"}>
+        <h2 className="truncate text-sm font-semibold">{item.name}</h2>
+        <p className="mt-1 truncate text-xs text-muted-foreground">{stat}</p>
+        <ColorSwatches colors={item.colors ?? []} className="mt-2" />
+      </div>
+    </Card>
+  );
+}
+
+function Fields(props: FieldsProps) {
+  const t = useTranslations();
+  const [newTag, setNewTag] = useState("");
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field name="name" label={t("common.name")} defaultValue={props.item.name} required />
+        {props.kind === "cloths" ? <Field name="quantity" label={t("cloths.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
+        {props.kind === "cloths" ? <Field name="lengthTotal" label={t("cloths.lengthTotal")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.lengthTotal} required /> : null}
+        {props.kind === "cloths" ? <UnitSelect name="lengthUnit" label={t("cloths.lengthUnit")} values={["m", "cm", "yd"]} value={props.item.lengthUnit ?? "m"} /> : null}
+        {props.kind === "cloths" ? <Field name="width" label={t("cloths.width")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
+        {props.kind === "cloths" ? <UnitSelect name="widthUnit" label={t("cloths.widthUnit")} values={["cm", "m", "in"]} value={props.item.widthUnit ?? "cm"} /> : null}
+        {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
+        {props.kind === "patterns" ? <Field name="size" label={t("patterns.size")} defaultValue={props.item.size} /> : null}
+        {props.kind === "patterns" ? <Field name="pieces" label={t("patterns.pieces")} type="number" inputMode="numeric" defaultValue={props.item.pieces} /> : null}
+        {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
+        {props.kind === "materials" ? <MetaSelect name="unitId" label={t("materials.unit")} options={props.units} value={props.item.unitId} onCreate={props.onAddUnit} /> : null}
+        {props.kind === "materials" ? <Field name="quantityTotal" label={t("materials.quantityTotal")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.quantityTotal} required /> : null}
+        {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
+        <Field name="priceCents" label={props.kind === "projects" ? t("projects.extraCost") : t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} />
+        {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
+        {props.kind !== "projects" ? <Field name="source" label={t("common.source")} defaultValue={props.item.source} /> : null}
+        {props.kind !== "projects" ? <Field name="purchasedAt" label={t("common.date")} type="date" defaultValue={props.item.purchasedAt} /> : null}
+      </div>
+      {props.kind === "projects" ? <ProjectLinks {...props} /> : null}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">{t("common.tags")}</legend>
+        <div className="flex flex-wrap gap-2">
+          {props.tags.map((tag) => (
+            <label key={tag.id} className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
+              <input name="tagIds" type="checkbox" value={tag.id} defaultChecked={props.item.tags?.some((item: AnyItem) => item.id === tag.id)} />
+              <span>{tag.name}</span>
+            </label>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder={t("common.tags")} />
+          <Button type="button" variant="secondary" onClick={() => { void props.onAddTag(newTag); setNewTag(""); }}>
+            {t("common.add")}
+          </Button>
+        </div>
+      </fieldset>
+      <label className="block space-y-1">
+        <span className="text-sm font-medium">{t("common.remarks")}</span>
+        <Textarea name="remarks" defaultValue={props.item.remarks ?? ""} />
+      </label>
+    </>
+  );
+}
+
+function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOptions: AnyItem[]; materialOptions: AnyItem[] }) {
+  const t = useTranslations();
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      <MultiSelect title={t("projects.patterns")} name="patternIds" options={props.patternOptions} selected={props.item.patternIds ?? []} />
+      <LinkSelect title={t("projects.cloths")} idName="clothId" amountName="lengthUsed" options={props.clothOptions} links={props.item.cloths ?? []} amountLabel={t("projects.lengthUsed")} />
+      <LinkSelect title={t("projects.materials")} idName="materialId" amountName="quantityUsed" options={props.materialOptions} links={props.item.materials ?? []} amountLabel={t("projects.quantityUsed")} />
+    </div>
+  );
+}
+
+function MultiSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{title}</legend>
+      {options.map((option) => (
+        <label key={option.id} className="flex gap-2 text-sm">
+          <input type="checkbox" name={name} value={option.id} defaultChecked={selected.includes(option.id)} />
+          <span>{option.name}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+function LinkSelect(props: { title: string; idName: string; amountName: string; options: AnyItem[]; links: AnyItem[]; amountLabel: string }) {
+  const [rowCount, setRowCount] = useState(Math.max(1, props.links.length));
+
+  useEffect(() => {
+    setRowCount(Math.max(1, props.links.length));
+  }, [props.links]);
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{props.title}</legend>
+      {Array.from({ length: rowCount }, (_, row) => (
+        <div key={row} className="grid gap-2 md:grid-cols-2">
+          <Select name={props.idName} defaultValue={props.links[row]?.[props.idName] ?? ""}>
+            <option value="" />
+            {props.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+          <Input name={props.amountName} type="number" inputMode="decimal" step="0.01" defaultValue={props.links[row]?.[props.amountName] ?? ""} placeholder={props.amountLabel} />
+        </div>
+      ))}
+      <Button type="button" variant="secondary" size="icon" aria-label={props.title} onClick={() => setRowCount((current) => current + 1)}>
+        <Plus className="h-4 w-4" aria-hidden />
+      </Button>
+    </fieldset>
+  );
+}
+
+function Field(props: { name: string; label: string; defaultValue?: any; type?: string; step?: string; required?: boolean; inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"] }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-sm font-medium">{props.label}</span>
+      <Input name={props.name} type={props.type} inputMode={props.inputMode} step={props.step} defaultValue={props.defaultValue ?? ""} required={props.required} />
+    </label>
+  );
+}
+
+function UnitSelect({ name, label, values, value }: { name: string; label: string; values: string[]; value: string }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-sm font-medium">{label}</span>
+      <Select name={name} defaultValue={value}>
+        {values.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </Select>
+    </label>
+  );
+}
+
+function MetaSelect({ name, label, options, value, onCreate }: MetaSelectProps) {
+  const t = useTranslations();
+  const [selected, setSelected] = useState(value ? String(value) : "");
+  const [newName, setNewName] = useState("");
+
+  useEffect(() => {
+    setSelected(value ? String(value) : "");
+  }, [value]);
+
+  async function createOption() {
+    if (!onCreate || !newName.trim()) return;
+    const item = await onCreate(newName);
+    if (!item) return;
+    setSelected(String(item.id));
+    setNewName("");
+  }
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium" htmlFor={name}>{label}</label>
+      <Select id={name} name={name} value={selected} onChange={(event) => setSelected(event.target.value)}>
+        <option value="" />
+        {options.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      {onCreate ? (
+        <div className="flex gap-2">
+          <Input value={newName} onChange={(event) => setNewName(event.target.value)} placeholder={label} />
+          <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" onClick={createOption}>
+            {t("common.add")}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ColorField({ value }: { value: string[] }) {
+  const t = useTranslations();
+  const [colors, setColors] = useState(() => sanitizeColors(value));
+  const [presetColor, setPresetColor] = useState("");
+  const [customColor, setCustomColor] = useState("");
+
+  useEffect(() => {
+    setColors(sanitizeColors(value));
+  }, [value]);
+
+  const toggleColor = (color: string) => {
+    setColors((current) =>
+      current.includes(color) ? current.filter((item) => item !== color) : current.length < 5 ? [...current, color] : current
+    );
+  };
+
+  const addCustomColor = () => {
+    const color = normalizeColorName(customColor);
+    if (!color) return;
+    setColors((current) => (current.includes(color) || current.length >= 5 ? current : [...current, color]));
+    setCustomColor("");
+  };
+
+  const addPresetColor = () => {
+    const color = normalizeColorName(presetColor);
+    if (!color) return;
+    setColors((current) => (current.includes(color) || current.length >= 5 ? current : [...current, color]));
+    setPresetColor("");
+  };
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{t("common.colors")}</legend>
+      {colors.map((color) => (
+        <input key={color} type="hidden" name="colors" value={color} />
+      ))}
+      <div className="flex gap-2">
+        <Select value={presetColor} onChange={(event) => setPresetColor(event.target.value)}>
+          <option value="">{t("common.selectColor")}</option>
+          {commonColors.map((color) => (
+            <option key={color} value={color}>
+              {colorLabel(color, t)}
+            </option>
+          ))}
+        </Select>
+        <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" disabled={!presetColor || colors.length >= 5} onClick={addPresetColor}>
+          {t("common.add")}
+        </Button>
+      </div>
+      <div className="flex gap-2">
+        <Input value={customColor} onChange={(event) => setCustomColor(event.target.value)} placeholder={t("common.customColor")} maxLength={30} />
+        <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" disabled={!customColor.trim() || colors.length >= 5} onClick={addCustomColor}>
+          {t("common.add")}
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {colors.map((color) => (
+          <button
+            key={color}
+            type="button"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-muted px-2 text-sm"
+            onClick={() => toggleColor(color)}
+          >
+            <ColorDot color={color} />
+            {colorLabel(color, t)}
+            <X className="h-3 w-3" aria-hidden />
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function FilterDrawer({
+  kind,
+  filters,
+  tags,
+  categories,
+  units,
+  clothOptions,
+  patternOptions,
+  materialOptions,
+  colorOptions,
+  onApply,
+  onClose
+}: {
+  kind: Kind;
+  filters: Filters;
+  tags: MetaItem[];
+  categories: MetaItem[];
+  units: MetaItem[];
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
+  colorOptions: string[];
+  onApply: (filters: Filters) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations();
+  const [draft, setDraft] = useState(filters);
+
+  useEffect(() => {
+    setDraft(filters);
+  }, [filters]);
+
+  function update<K extends keyof Filters>(key: K, value: Filters[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  const toggleTag = (tagId: number) => {
+    setDraft((current) => ({
+      ...current,
+      tagIds: current.tagIds.includes(tagId) ? current.tagIds.filter((id) => id !== tagId) : [...current.tagIds, tagId]
+    }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">{t("common.filters")}</h2>
+          <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={onClose}>
+            <X className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+        <div className="mt-4 flex-1 space-y-4 overflow-y-auto overscroll-contain">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">{t("common.tags")}</legend>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <label key={tag.id} className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
+                  <input type="checkbox" checked={draft.tagIds.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
+                  <span>{tag.name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {kind !== "projects" ? (
+            <div className="grid gap-3">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("common.source")}</span>
+                <Input value={draft.source} onChange={(event) => update("source", event.target.value)} />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">{t("common.from")}</span>
+                  <Input type="date" value={draft.from} onChange={(event) => update("from", event.target.value)} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">{t("common.to")}</span>
+                  <Input type="date" value={draft.to} onChange={(event) => update("to", event.target.value)} />
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          {kind === "cloths" ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={draft.hasStockLeft} onChange={(event) => update("hasStockLeft", event.target.checked)} />
+              <span>{t("cloths.hasStockLeft")}</span>
+            </label>
+          ) : null}
+
+          {kind === "cloths" || kind === "materials" || kind === "projects" ? (
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">{t("common.colors")}</span>
+              <Select value={draft.color} onChange={(event) => update("color", event.target.value)}>
+                <option value="">{t("common.all")}</option>
+                {[...new Set([...commonColors, ...colorOptions])].map((color) => (
+                  <option key={color} value={color}>
+                    {colorLabel(color, t)}
+                  </option>
+                ))}
+              </Select>
+            </label>
+          ) : null}
+
+          {kind !== "projects" ? (
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">{t("common.used")}</span>
+              <Select value={draft.used} onChange={(event) => update("used", event.target.value)}>
+                <option value="">{t("common.all")}</option>
+                <option value="true">{t("common.used")}</option>
+                <option value="false">{t("common.unused")}</option>
+              </Select>
+            </label>
+          ) : null}
+
+          {kind === "materials" ? (
+            <div className="grid gap-3">
+              <OptionFilter label={t("materials.category")} value={draft.categoryId} options={categories} onChange={(value) => update("categoryId", value)} />
+              <OptionFilter label={t("materials.unit")} value={draft.unitId} options={units} onChange={(value) => update("unitId", value)} />
+            </div>
+          ) : null}
+
+          {kind === "projects" ? (
+            <div className="grid gap-3">
+              <OptionFilter label={t("projects.patterns")} value={draft.patternId} options={patternOptions} onChange={(value) => update("patternId", value)} />
+              <OptionFilter label={t("projects.cloths")} value={draft.clothId} options={clothOptions} onChange={(value) => update("clothId", value)} />
+              <OptionFilter label={t("projects.materials")} value={draft.materialId} options={materialOptions} onChange={(value) => update("materialId", value)} />
+            </div>
+          ) : null}
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border pt-3">
+          <Button type="button" variant="secondary" onClick={() => setDraft(emptyFilters())}>
+            {t("common.reset")}
+          </Button>
+          <Button type="button" onClick={() => onApply(draft)}>
+            {t("common.apply")}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function OptionFilter({
+  label,
+  value,
+  options,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: AnyItem[];
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <label className="block space-y-1">
+      <span className="text-sm font-medium">{label}</span>
+      <Select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">{t("common.all")}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </Select>
+    </label>
+  );
+}
+
+function ColorSwatches({ colors, className = "" }: { colors: string[]; className?: string }) {
+  const safeColors = sanitizeColors(colors);
+  if (!safeColors.length) return null;
+  const t = useTranslations();
+  return (
+    <div className={`flex flex-wrap gap-1 ${className}`}>
+      {safeColors.map((color) => (
+        <span key={color} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-xs">
+          <ColorDot color={color} />
+          {colorLabel(color, t)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ColorDot({ color }: { color: string }) {
+  const backgroundColor = colorSwatches[color] ?? "transparent";
+  return (
+    <span
+      className="h-4 w-4 rounded-full border border-border"
+      style={{
+        backgroundColor,
+        backgroundImage: backgroundColor === "transparent" ? "linear-gradient(135deg, #ef4444 0 33%, #eab308 33% 66%, #3b82f6 66% 100%)" : undefined
+      }}
+    />
+  );
+}
+
+function ConfirmSheet({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
+  const t = useTranslations();
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
+      <Card className="w-full rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-w-sm md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+        <p className="text-base font-medium">{message}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" variant="danger" onClick={onConfirm}>
+            {t("common.delete")}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function Toast({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-md bg-foreground px-4 py-3 text-sm text-background shadow-xl md:bottom-6">
+      {message}
+    </div>
+  );
+}
+
+function Detail({
+  item,
+  kind,
+  onEdit,
+  onDelete,
+  onClose,
+  onOpenPhoto,
+  onUploaded
+}: DetailProps) {
+  const t = useTranslations();
+  return (
+    <div className="fixed inset-0 z-30 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{item.name}</h2>
+            <p className="text-sm text-muted-foreground">{primaryStat(kind, item, t)}</p>
+          </div>
+          <div className="flex gap-1">
+            <Button size="sm" variant="secondary" onClick={onEdit}>
+              {t("common.edit")}
+            </Button>
+            <Button size="icon" variant="danger" aria-label={t("common.delete")} onClick={onDelete}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button size="icon" variant="ghost" aria-label={t("common.cancel")} onClick={onClose}>
+              <X className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+        </div>
+        <ColorSwatches colors={item.colors ?? []} className="mt-3" />
+        <PhotoStrip item={item} kind={kind} readOnly onUploaded={onUploaded} onOpenPhoto={onOpenPhoto} />
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+          {detailRows(kind, item, t).map((row) => (
+            <div key={row.label} className="rounded-md bg-muted p-2">
+              <dt className="text-xs text-muted-foreground">{row.label}</dt>
+              <dd className="break-words">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {kind === "projects" && item.cost ? <p className="mt-3 text-xs text-muted-foreground">{t("projects.costCaveat")}</p> : null}
+      </Card>
+    </div>
+  );
+}
+
+function PhotoStrip({
+  item,
+  kind,
+  readOnly = false,
+  onUploaded,
+  onOpenPhoto,
+  onError
+}: PhotoStripProps) {
+  const t = useTranslations();
+  const photos = item.photos ?? [];
+  const photoIds = photos.map((photo: AnyItem) => photo.id);
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    try {
+      await uploadStagedPhotos(Array.from(files), kind, item.id);
+      if (onUploaded) await onUploaded();
+      else window.location.reload();
+    } catch (error) {
+      onError?.(`${t("common.uploadFailed")}: ${error instanceof Error ? error.message : t("common.error")}`);
+    }
+  }
+
+  async function updatePhoto(photoId: string, body: Record<string, unknown>) {
+    const response = await fetch(`/api/photos/${photoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      onError?.(t("common.error"));
+      return;
+    }
+    if (onUploaded) await onUploaded();
+  }
+
+  async function deletePhoto(photoId: string) {
+    const response = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
+    if (!response.ok) {
+      onError?.(t("common.error"));
+      return;
+    }
+    if (onUploaded) await onUploaded();
+  }
+
+  async function movePhoto(index: number, direction: -1 | 1) {
+    const current = photos[index];
+    const other = photos[index + direction];
+    if (!current || !other) return;
+    await Promise.all([
+      fetch(`/api/photos/${current.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortOrder: other.sortOrder ?? index + direction })
+      }),
+      fetch(`/api/photos/${other.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortOrder: current.sortOrder ?? index })
+      })
+    ]);
+    if (onUploaded) await onUploaded();
+  }
+
+  return (
+    <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-contain">
+      {photos.map((photo: AnyItem, index: number) => (
+        <div key={photo.id} className="group relative h-20 w-20 shrink-0 snap-start overflow-hidden rounded-md bg-muted">
+          <button type="button" className="h-full w-full" onClick={() => onOpenPhoto?.(photoIds, index)}>
+            <img src={`/api/photos/${photo.id}/thumb`} alt="" className="h-full w-full object-cover" />
+          </button>
+          {!readOnly ? (
+            <>
+              <div className="absolute inset-x-1 top-1 flex justify-between gap-1">
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  aria-label={t("common.moveLeft")}
+                  disabled={index === 0}
+                  onClick={() => movePhoto(index, -1)}
+                >
+                  <ChevronLeft className="h-3 w-3" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  aria-label={t("common.moveRight")}
+                  disabled={index === photos.length - 1}
+                  onClick={() => movePhoto(index, 1)}
+                >
+                  <ChevronRight className="h-3 w-3" aria-hidden />
+                </button>
+              </div>
+              <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
+                <button
+                  type="button"
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`}
+                  aria-label={t("common.setCover")}
+                  onClick={() => updatePhoto(photo.id, { isCover: true })}
+                >
+                  <Star className="h-3 w-3" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  aria-label={t("common.delete")}
+                  onClick={() => deletePhoto(photo.id)}
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden />
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
+      ))}
+      {!readOnly ? <PhotoPicker onChange={(files) => upload(files)} /> : null}
+    </div>
+  );
+}
+
+function PhotoLightbox({
+  state,
+  setState,
+  onClose
+}: {
+  state: LightboxState;
+  setState: (state: LightboxState) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations();
+  const photoId = state.photos[state.index];
+  const canPage = state.photos.length > 1;
+  const touchStartRef = useRef<number | null>(null);
+  const go = (direction: -1 | 1) => {
+    const nextIndex = (state.index + direction + state.photos.length) % state.photos.length;
+    setState({ ...state, index: nextIndex });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      onTouchStart={(event) => {
+        touchStartRef.current = event.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(event) => {
+        if (!canPage || touchStartRef.current === null) return;
+        const delta = event.changedTouches[0].clientX - touchStartRef.current;
+        touchStartRef.current = null;
+        if (Math.abs(delta) < 40) return;
+        go(delta > 0 ? -1 : 1);
+      }}
+    >
+      <button
+        type="button"
+        className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/10 text-white"
+        aria-label={t("common.cancel")}
+        onClick={onClose}
+      >
+        <X className="h-5 w-5" aria-hidden />
+      </button>
+      {canPage ? (
+        <button
+          type="button"
+          className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-white/10 text-white"
+          aria-label={t("common.previous")}
+          onClick={(event) => {
+            event.stopPropagation();
+            go(-1);
+          }}
+        >
+          <ChevronLeft className="h-6 w-6" aria-hidden />
+        </button>
+      ) : null}
+      <img
+        src={`/api/photos/${photoId}/display`}
+        alt=""
+        className="max-h-[90dvh] max-w-[92vw] rounded-md object-contain shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      />
+      {canPage ? (
+        <button
+          type="button"
+          className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-white/10 text-white"
+          aria-label={t("common.next")}
+          onClick={(event) => {
+            event.stopPropagation();
+            go(1);
+          }}
+        >
+          <ChevronRight className="h-6 w-6" aria-hidden />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function PhotoPicker({ name, onChange }: { name?: string; onChange?: (files: FileList | null) => void }) {
+  const t = useTranslations();
+  const inputClass = "sr-only";
+  const labelClass = "flex h-20 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted text-xs font-medium text-muted-foreground";
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onChange?.(event.target.files);
+    event.target.value = "";
+  };
+
+  return (
+    <>
+      <label className={labelClass}>
+        <Camera className="h-5 w-5" aria-hidden />
+        <span>{t("common.camera")}</span>
+        <input className={inputClass} name={name} type="file" accept="image/*" capture="environment" onChange={handleChange} aria-label={t("common.camera")} />
+      </label>
+      <label className={labelClass}>
+        <Plus className="h-5 w-5" aria-hidden />
+        <span>{t("common.album")}</span>
+        <input className={inputClass} name={name} type="file" accept="image/*" multiple onChange={handleChange} aria-label={t("common.album")} />
+      </label>
+    </>
+  );
+}
+
+function StagedPhotoPreview({ file }: { file: File }) {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    const nextUrl = URL.createObjectURL(file);
+    setUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [file]);
+
+  return <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">{url ? <img src={url} alt="" className="h-full w-full object-cover" /> : null}</div>;
+}
+
+function emptyFilters(): Filters {
+  return {
+    tagIds: [],
+    source: "",
+    from: "",
+    to: "",
+    used: "",
+    hasStockLeft: false,
+    color: "",
+    categoryId: "",
+    unitId: "",
+    patternId: "",
+    clothId: "",
+    materialId: ""
+  };
+}
+
+function hasFilters(filters: Filters) {
+  return (
+    filters.tagIds.length > 0 ||
+    Boolean(filters.source || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
+  );
+}
+
+function buildListParams(query: string, sort: string, filters: Filters) {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  params.set("sort", sort);
+  if (filters.tagIds.length) params.set("tags", filters.tagIds.join(","));
+  if (filters.source) params.set("source", filters.source);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.used) params.set("used", filters.used);
+  if (filters.hasStockLeft) params.set("hasStockLeft", "true");
+  if (filters.color) params.set("color", filters.color);
+  if (filters.categoryId) params.set("categoryId", filters.categoryId);
+  if (filters.unitId) params.set("unitId", filters.unitId);
+  if (filters.patternId) params.set("patternId", filters.patternId);
+  if (filters.clothId) params.set("clothId", filters.clothId);
+  if (filters.materialId) params.set("materialId", filters.materialId);
+  return params;
+}
+
+function sanitizeColors(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value
+        .map(normalizeColorName)
+        .filter((item): item is string => Boolean(item))
+    )
+  ].slice(0, 5);
+}
+
+function normalizeColorName(value: unknown) {
+  const color = String(value ?? "").trim().toLowerCase();
+  return color && color.length <= 30 ? color : "";
+}
+
+function colorLabel(color: string, t: ReturnType<typeof useTranslations>) {
+  return commonColors.includes(color) ? t(`colors.${color}`) : color;
+}
+
+function collectColors(groups: AnyItem[][]) {
+  return [
+    ...new Set(
+      groups.flatMap((items) =>
+        items.flatMap((item) => sanitizeColors(item.colors))
+      )
+    )
+  ].sort();
+}
+
+function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<typeof useTranslations>) {
+  if (kind === "cloths") {
+    return [
+      { label: t("cloths.total"), value: summary.count ?? 0 },
+      { label: t("cloths.cost"), value: money(summary.totalCost) },
+      { label: t("cloths.usedLength"), value: `${numberValue(summary.lengthUsedMetres)} m` },
+      { label: t("cloths.remainingLength"), value: `${numberValue(summary.lengthRemainingMetres)} m` }
+    ];
+  }
+  if (kind === "projects") {
+    return [
+      { label: t("projects.total"), value: summary.count ?? 0 },
+      { label: t("projects.cost"), value: money(summary.totalCost) },
+      { label: t("projects.value"), value: money(summary.totalValue) },
+      { label: t("projects.produced"), value: summary.totalProduced ?? 0 }
+    ];
+  }
+  const prefix = kind === "patterns" ? "patterns" : "materials";
+  return [
+    { label: t(`${prefix}.total`), value: summary.count ?? 0 },
+    { label: t(`${prefix}.cost`), value: money(summary.totalCost) },
+    { label: t(`${prefix}.usedCount`), value: summary.used ?? 0 },
+    { label: t(`${prefix}.unusedCount`), value: summary.unused ?? 0 }
+  ];
+}
+
+function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
+  if (kind === "cloths") return `${numberValue(item.lengthRemaining)} / ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+  if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
+  if (kind === "materials") return `${numberValue(item.quantityRemaining)} / ${numberValue(item.quantityTotal)}`;
+  return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
+}
+
+function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
+  const rows: Array<{ label: string; value: string }> = [];
+  const add = (label: string, value?: unknown, formatter?: (value: any) => string) => {
+    if (value === null || value === undefined || value === "") return;
+    rows.push({ label, value: formatter ? formatter(value) : String(value) });
+  };
+
+  if (kind === "cloths") {
+    add(t("cloths.quantity"), item.quantity);
+    add(t("cloths.lengthTotal"), item.lengthTotal, (value) => `${numberValue(value)} ${item.lengthUnit}`);
+    add(t("cloths.lengthRemaining"), item.lengthRemaining, (value) => `${numberValue(value)} ${item.lengthUnit}`);
+    add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
+    add(t("common.source"), item.source);
+    add(t("common.price"), item.priceCents, money);
+    add(t("common.date"), item.purchasedAt);
+  } else if (kind === "patterns") {
+    add(t("patterns.size"), item.size);
+    add(t("patterns.pieces"), item.pieces);
+    add(t("common.source"), item.source);
+    add(t("common.price"), item.priceCents, money);
+    add(t("common.date"), item.purchasedAt);
+  } else if (kind === "materials") {
+    add(t("materials.category"), item.categoryName);
+    add(t("materials.unit"), item.unitName);
+    add(t("materials.quantityTotal"), item.quantityTotal, numberValue);
+    add(t("materials.quantityRemaining"), item.quantityRemaining, numberValue);
+    add(t("common.source"), item.source);
+    add(t("common.price"), item.priceCents, money);
+    add(t("common.date"), item.purchasedAt);
+  } else {
+    add(t("projects.quantity"), item.quantity);
+    add(t("projects.extraCost"), item.priceCents, money);
+    add(t("projects.value"), item.valueCents, money);
+    add(t("projects.cost"), item.cost?.totalCost, money);
+  }
+
+  add(t("common.remarks"), item.remarks);
+  return rows;
+}
+
+function defaultItem(kind: Kind) {
+  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm" };
+  if (kind === "materials") return {};
+  if (kind === "projects") return { quantity: 1 };
+  return {};
+}
+
+function formToBody(kind: Kind, form: FormData) {
+  const base: Record<string, any> = {
+    name: form.get("name"),
+    priceCents: centsFromDollars(form.get("priceCents")),
+    remarks: stringOrNull(form.get("remarks")),
+    tagIds: form.getAll("tagIds").map(Number)
+  };
+  if (kind !== "projects") {
+    base.source = stringOrNull(form.get("source"));
+    base.purchasedAt = stringOrNull(form.get("purchasedAt"));
+  }
+  if (kind === "cloths") {
+    return {
+      ...base,
+      quantity: Number(form.get("quantity") || 1),
+      lengthTotal: Number(form.get("lengthTotal")),
+      lengthUnit: form.get("lengthUnit"),
+      width: numberOrNull(form.get("width")),
+      widthUnit: stringOrNull(form.get("widthUnit")),
+      colors: sanitizeColors(form.getAll("colors"))
+    };
+  }
+  if (kind === "patterns") {
+    return { ...base, size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
+  }
+  if (kind === "materials") {
+    return {
+      ...base,
+      categoryId: numberOrNull(form.get("categoryId")),
+      unitId: numberOrNull(form.get("unitId")),
+      quantityTotal: Number(form.get("quantityTotal")),
+      colors: sanitizeColors(form.getAll("colors"))
+    };
+  }
+  const clothIds = form.getAll("clothId");
+  const clothAmounts = form.getAll("lengthUsed");
+  const materialIds = form.getAll("materialId");
+  const materialAmounts = form.getAll("quantityUsed");
+  return {
+    ...base,
+    quantity: Number(form.get("quantity") || 1),
+    valueCents: centsFromDollars(form.get("valueCents")),
+    patternIds: form.getAll("patternIds").map(Number),
+    cloths: clothIds
+      .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
+      .filter((link) => link.clothId && link.lengthUsed),
+    materials: materialIds
+      .map((id, index) => ({ materialId: Number(id), quantityUsed: Number(materialAmounts[index]) }))
+      .filter((link) => link.materialId && link.quantityUsed)
+  };
+}
+
+function stringOrNull(value: FormDataEntryValue | null) {
+  const text = value?.toString().trim() ?? "";
+  return text ? text : null;
+}
+
+function numberOrNull(value: FormDataEntryValue | null) {
+  const text = value?.toString().trim() ?? "";
+  return text ? Number(text) : null;
+}
+
+function dollarsFromCents(cents?: number | null) {
+  if (cents == null) return "";
+  return (cents / 100).toFixed(2);
+}
+
+function centsFromDollars(value: FormDataEntryValue | null) {
+  const text = value?.toString().trim() ?? "";
+  return text ? Math.round(Number(text) * 100) : null;
+}
+
+async function uploadStagedPhotos(values: FormDataEntryValue[], kind: Kind, entityId: number) {
+  for (const value of values) {
+    if (!(value instanceof File) || value.size === 0) continue;
+    const form = new FormData();
+    form.set("file", value);
+    form.set("entityType", entityByKind[kind]);
+    form.set("entityId", String(entityId));
+    const response = await fetch("/api/photos", { method: "POST", body: form });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error ?? `${response.status}`);
+    }
+  }
+}

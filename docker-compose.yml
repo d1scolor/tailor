@@ -1,0 +1,12 @@
+services:
+  tailor:
+    build: .
+    image: tailor:latest
+    container_name: tailor
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
