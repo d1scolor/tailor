@@ -1,7 +1,6 @@
 services:
   tailor:
-    build: .
-    image: tailor:latest
+    image: ghcr.io/d1scolor/tailor:latest
     container_name: tailor
     restart: unless-stopped
     ports:
