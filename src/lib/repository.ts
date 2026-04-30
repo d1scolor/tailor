@@ -217,14 +217,15 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO patterns
-          (user_id, name, pattern_type, difficulty, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, pattern_type, difficulty, pattern_for, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
           input.patternType,
           input.difficulty,
+          input.patternFor,
           input.size,
           input.pieces,
           input.source,
@@ -334,12 +335,13 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       );
     } else if (kind === "patterns") {
       db.prepare(
-        `UPDATE patterns SET name = ?, pattern_type = ?, difficulty = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
+        `UPDATE patterns SET name = ?, pattern_type = ?, difficulty = ?, pattern_for = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
          purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
         input.patternType,
         input.difficulty,
+        input.patternFor,
         input.size,
         input.pieces,
         input.source,
@@ -445,14 +447,15 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
         const result = db
           .prepare(
             `INSERT INTO patterns
-            (user_id, name, pattern_type, difficulty, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            (user_id, name, pattern_type, difficulty, pattern_for, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             userId,
             existing.name,
             existing.pattern_type,
             existing.difficulty,
+            existing.pattern_for,
             existing.size,
             existing.pieces,
             existing.source,
