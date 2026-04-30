@@ -20,12 +20,12 @@ export const clothSchema = baseItemSchema.extend({
   width: nullableNumber,
   widthUnit: z.enum(["cm", "m", "in"]).nullable().optional(),
   colors: colorsSchema,
-  purpose: z.enum(["服装", "手工"]).default("服装"),
+  purpose: z.enum(["garment", "craft"]).default("garment"),
   materialType: labelValueSchema.default("其他")
 });
 
 export const patternSchema = baseItemSchema.extend({
-  patternType: z.enum(["纸质", "电子"]).default("纸质"),
+  patternType: z.enum(["paper", "digital"]).default("paper"),
   size: z.string().trim().nullable().optional(),
   pieces: nullableInt
 });
@@ -64,7 +64,7 @@ export const toolSchema = baseItemSchema.extend({
   quantity: z.coerce.number().int().positive().default(1),
   brand: z.string().trim().nullable().optional(),
   model: z.string().trim().nullable().optional(),
-  condition: z.enum(["正常", "需维护", "已损坏", "已停用"]).default("正常")
+  condition: z.enum(["good", "maintenance", "broken", "retired"]).default("good")
 });
 
 export const tagSchema = z.object({

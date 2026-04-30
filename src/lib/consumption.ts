@@ -9,7 +9,7 @@ type ProjectInput = {
 };
 
 export function applyProjectLinks(db: Database.Database, projectId: number, userId: number, input: ProjectInput) {
-  for (const link of input.cloths ?? []) {
+  for (const link of groupLinks(input.cloths ?? [], "clothId", "lengthUsed")) {
     consumeCloth(db, link.clothId, userId, link.lengthUsed);
     db.prepare(
       "INSERT INTO project_cloths (project_id, cloth_id, length_used, created_at) VALUES (?, ?, ?, ?)"
@@ -25,7 +25,7 @@ export function applyProjectLinks(db: Database.Database, projectId: number, user
     );
   }
 
-  for (const link of input.materials ?? []) {
+  for (const link of groupLinks(input.materials ?? [], "materialId", "quantityUsed")) {
     consumeMaterial(db, link.materialId, userId, link.quantityUsed);
     db.prepare("INSERT INTO project_materials (project_id, material_id, quantity_used) VALUES (?, ?, ?)").run(
       projectId,
@@ -33,6 +33,21 @@ export function applyProjectLinks(db: Database.Database, projectId: number, user
       link.quantityUsed
     );
   }
+}
+
+function groupLinks<TIdKey extends string, TAmountKey extends string>(
+  links: Array<Record<TIdKey | TAmountKey, number>>,
+  idKey: TIdKey,
+  amountKey: TAmountKey
+) {
+  const grouped = new Map<number, number>();
+  for (const link of links) {
+    const id = link[idKey];
+    const amount = link[amountKey];
+    if (!Number.isFinite(id) || !Number.isFinite(amount) || amount <= 0) continue;
+    grouped.set(id, (grouped.get(id) ?? 0) + amount);
+  }
+  return [...grouped.entries()].map(([id, amount]) => ({ [idKey]: id, [amountKey]: amount }) as Record<TIdKey | TAmountKey, number>);
 }
 
 export function restoreProjectLinks(db: Database.Database, projectId: number) {

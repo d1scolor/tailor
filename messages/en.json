@@ -126,18 +126,18 @@
     "black": "Black"
   },
   "clothPurpose": {
-    "服装": "Garment",
-    "手工": "Craft"
+    "garment": "Garment",
+    "craft": "Craft"
   },
   "patternType": {
-    "纸质": "Paper",
-    "电子": "Digital"
+    "paper": "Paper",
+    "digital": "Digital"
   },
   "toolCondition": {
-    "正常": "Good",
-    "需维护": "Needs maintenance",
-    "已损坏": "Broken",
-    "已停用": "Retired"
+    "good": "Good",
+    "maintenance": "Needs maintenance",
+    "broken": "Broken",
+    "retired": "Retired"
   },
   "cloths": {
     "title": "Cloths",
@@ -221,6 +221,9 @@
     "restore": "Restore",
     "downloadBackup": "Download backup",
     "restoreConfirm": "Type RESTORE to replace current data",
+    "passwordChanged": "Password updated",
+    "passwordInvalid": "Current password is incorrect",
+    "passwordTooShort": "New password must be at least 8 characters",
     "heicNote": "If HEIC upload fails, set iPhone Camera Formats to Most Compatible so photos upload as JPEG."
   },
   "meta": {
