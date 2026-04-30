@@ -126,18 +126,18 @@
     "black": "黑色"
   },
   "clothPurpose": {
-    "服装": "服装",
-    "手工": "手工"
+    "garment": "服装",
+    "craft": "手工"
   },
   "patternType": {
-    "纸质": "纸质",
-    "电子": "电子"
+    "paper": "纸质",
+    "digital": "电子"
   },
   "toolCondition": {
-    "正常": "正常",
-    "需维护": "需维护",
-    "已损坏": "已损坏",
-    "已停用": "已停用"
+    "good": "正常",
+    "maintenance": "需维护",
+    "broken": "已损坏",
+    "retired": "已停用"
   },
   "cloths": {
     "title": "布料",
@@ -221,6 +221,9 @@
     "restore": "恢复",
     "downloadBackup": "下载备份",
     "restoreConfirm": "输入 RESTORE 以替换当前数据",
+    "passwordChanged": "密码已更新",
+    "passwordInvalid": "当前密码不正确",
+    "passwordTooShort": "新密码至少需要 8 个字符",
     "heicNote": "如果 HEIC 上传失败，请将 iPhone 相机格式设为“兼容性最佳”，照片会以 JPEG 上传。"
   },
   "meta": {

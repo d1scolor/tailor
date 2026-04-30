@@ -75,13 +75,13 @@ function ensureAddedColumns(db: Sqlite) {
     db.exec("ALTER TABLE materials ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
   }
   if (!columnExists(db, "cloths", "purpose")) {
-    db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT '服装'");
+    db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
   }
   if (!columnExists(db, "cloths", "material_type")) {
     db.exec("ALTER TABLE cloths ADD COLUMN material_type TEXT NOT NULL DEFAULT '其他'");
   }
   if (!columnExists(db, "patterns", "pattern_type")) {
-    db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT '纸质'");
+    db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT 'paper'");
   }
   db.exec(`
     CREATE TABLE IF NOT EXISTS tools (
@@ -95,7 +95,7 @@ function ensureAddedColumns(db: Sqlite) {
       source TEXT,
       price_cents INTEGER,
       purchased_at TEXT,
-      condition TEXT NOT NULL DEFAULT '正常',
+      condition TEXT NOT NULL DEFAULT 'good',
       remarks TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL

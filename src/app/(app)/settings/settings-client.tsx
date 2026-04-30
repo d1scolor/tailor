@@ -23,6 +23,12 @@ export function SettingsClient({
   const [tagList, setTagList] = useState(tags);
   const [categoryList, setCategoryList] = useState(categories);
   const [unitList, setUnitList] = useState(units);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
+  }
 
   async function setLocale(next: "en" | "zh") {
     await fetch("/api/settings/locale", {
@@ -40,13 +46,23 @@ export function SettingsClient({
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await fetch("/api/auth/password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ current: form.get("current"), next: form.get("next") })
-    });
-    event.currentTarget.reset();
+    const target = event.currentTarget;
+    const form = new FormData(target);
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current: form.get("current"), next: form.get("next") })
+      });
+      if (response.ok) {
+        target.reset();
+        notify(t("settings.passwordChanged"));
+        return;
+      }
+      notify(response.status === 401 ? t("settings.passwordInvalid") : response.status === 400 ? t("settings.passwordTooShort") : t("common.error"));
+    } catch {
+      notify(t("common.error"));
+    }
   }
 
   return (
@@ -85,7 +101,16 @@ export function SettingsClient({
       <Button variant="danger" onClick={logout}>
         {t("common.logout")}
       </Button>
+      {toast ? <Toast message={toast} /> : null}
     </main>
+  );
+}
+
+function Toast({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-md bg-foreground px-4 py-3 text-sm text-background shadow-xl md:bottom-6">
+      {message}
+    </div>
   );
 }
 

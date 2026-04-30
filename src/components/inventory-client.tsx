@@ -100,9 +100,9 @@ const entityByKind = {
   projects: "project",
   tools: "tool"
 } as const;
-const clothPurposeOptions = ["服装", "手工"];
-const patternTypeOptions = ["纸质", "电子"];
-const toolConditionOptions = ["正常", "需维护", "已损坏", "已停用"];
+const clothPurposeOptions = ["garment", "craft"];
+const patternTypeOptions = ["paper", "digital"];
+const toolConditionOptions = ["good", "maintenance", "broken", "retired"];
 const toolCategoryDefaults = ["剪裁工具", "测量工具", "缝纫机配件", "手缝工具", "熨烫工具", "标记工具", "收纳工具", "维修保养", "其他"];
 const clothMaterialTypeDefaults = [
   "棉",
@@ -743,7 +743,7 @@ function Fields(props: FieldsProps) {
         {props.kind === "tools" ? <Field name="quantity" label={t("tools.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         {props.kind === "tools" ? <Field name="brand" label={t("tools.brand")} defaultValue={props.item.brand} /> : null}
         {props.kind === "tools" ? <Field name="model" label={t("tools.model")} defaultValue={props.item.model} /> : null}
-        {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "正常"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
+        {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "good"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         <Field name="priceCents" label={props.kind === "projects" ? t("projects.extraCost") : t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} />
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
@@ -1913,11 +1913,11 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 }
 
 function defaultItem(kind: Kind) {
-  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "服装", materialType: "其他" };
+  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "garment", materialType: "其他" };
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
-  if (kind === "tools") return { quantity: 1, category: "其他", condition: "正常" };
-  return { patternType: "纸质" };
+  if (kind === "tools") return { quantity: 1, category: "其他", condition: "good" };
+  return { patternType: "paper" };
 }
 
 function formToBody(kind: Kind, form: FormData) {
@@ -1963,7 +1963,7 @@ function formToBody(kind: Kind, form: FormData) {
       quantity: Number(form.get("quantity") || 1),
       brand: stringOrNull(form.get("brand")),
       model: stringOrNull(form.get("model")),
-      condition: form.get("condition") || "正常"
+      condition: form.get("condition") || "good"
     };
   }
   const clothIds = form.getAll("clothId");

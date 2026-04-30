@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tools (
   source TEXT,
   price_cents INTEGER,
   purchased_at TEXT,
-  condition TEXT NOT NULL DEFAULT '正常',
+  condition TEXT NOT NULL DEFAULT 'good',
   remarks TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

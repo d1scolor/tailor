@@ -64,13 +64,13 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
   const args: unknown[] = [userId];
   const q = params.get("q")?.trim();
   if (q) {
-    clauses.push(`${kind}.name LIKE ?`);
-    args.push(`%${q}%`);
+    clauses.push(`${kind}.name LIKE ? ESCAPE '\\'`);
+    args.push(`%${escapeLike(q)}%`);
   }
   const source = params.get("source")?.trim();
   if (source && kind !== "projects") {
-    clauses.push(`${kind}.source LIKE ?`);
-    args.push(`%${source}%`);
+    clauses.push(`${kind}.source LIKE ? ESCAPE '\\'`);
+    args.push(`%${escapeLike(source)}%`);
   }
   const color = normalizeColor(params.get("color"));
   if (color && (kind === "cloths" || kind === "materials")) {
@@ -79,9 +79,10 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
   }
   if (color && kind === "projects") {
     clauses.push(
-      "EXISTS (SELECT 1 FROM project_cloths pc JOIN cloths c ON c.id = pc.cloth_id WHERE pc.project_id = projects.id AND c.colors LIKE ?)"
+      `(EXISTS (SELECT 1 FROM project_cloths pc JOIN cloths c ON c.id = pc.cloth_id WHERE pc.project_id = projects.id AND c.colors LIKE ?)
+        OR EXISTS (SELECT 1 FROM project_materials pm JOIN materials m ON m.id = pm.material_id WHERE pm.project_id = projects.id AND m.colors LIKE ?))`
     );
-    args.push(`%"${color}"%`);
+    args.push(`%"${color}"%`, `%"${color}"%`);
   }
   if (kind === "cloths" && params.get("purpose")) {
     clauses.push("purpose = ?");
@@ -475,7 +476,7 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
       count: rows.length,
       totalQuantity: rows.reduce((sum, row) => sum + row.quantity, 0),
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      needsAttention: rows.filter((row) => row.condition === "需维护" || row.condition === "已损坏").length
+      needsAttention: rows.filter((row) => row.condition === "maintenance" || row.condition === "broken").length
     };
   }
   const rows = (filteredRows ??
@@ -570,7 +571,14 @@ function withExtras(row: Record<string, unknown>, entityType: EntityType) {
          WHERE pc.project_id = ?`
       )
       .all(id) as Array<{ colors: string | null }>;
-    extra.colors = [...new Set(inherited.flatMap((item) => decodeColors(item.colors)))];
+    const materialColors = db
+      .prepare(
+        `SELECT m.colors FROM project_materials pm
+         JOIN materials m ON m.id = pm.material_id
+         WHERE pm.project_id = ?`
+      )
+      .all(id) as Array<{ colors: string | null }>;
+    extra.colors = [...new Set([...inherited, ...materialColors].flatMap((item) => decodeColors(item.colors)))];
   }
   if (entityType === "material") {
     const material = row as Record<string, unknown>;
@@ -593,6 +601,10 @@ function withExtras(row: Record<string, unknown>, entityType: EntityType) {
 function normalizeColor(value: unknown) {
   const text = String(value ?? "").trim().toLowerCase();
   return text && text.length <= 30 ? text : null;
+}
+
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
 function encodeColors(value: unknown) {

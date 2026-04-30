@@ -38,7 +38,6 @@ export default function middleware(request: NextRequest) {
       path: "/",
       maxAge: sessionMaxAgeSeconds
     });
-    response.headers.set("x-tailor-session", sessionId ?? "");
   }
   return response;
 }
