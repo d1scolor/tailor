@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -504,7 +504,7 @@ export function InventoryClient(props: Props) {
     <main className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{title}</h1>
-        <Button onClick={openCreate}>
+        <Button className="hidden md:inline-flex" onClick={openCreate}>
           <Plus className="h-4 w-4" aria-hidden />
           {t(`${props.kind}.add`)}
         </Button>
@@ -604,8 +604,8 @@ export function InventoryClient(props: Props) {
               <form key={`${props.kind}-${editing.id ?? "new"}`} className="min-w-0 space-y-4" onSubmit={submit}>
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
-                  <Button type="button" variant="ghost" onClick={closeEditor}>
-                    {t("common.cancel")}
+                  <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={closeEditor}>
+                    <X className="h-4 w-4" aria-hidden />
                   </Button>
                 </div>
                 <section className="space-y-2">
@@ -850,23 +850,36 @@ function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOp
   const t = useTranslations();
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      <MultiSelect title={t("projects.patterns")} name="patternIds" options={props.patternOptions} selected={props.item.patternIds ?? []} />
+      <RepeatSelect title={t("projects.patterns")} name="patternIds" options={props.patternOptions} selected={props.item.patternIds ?? []} />
       <LinkSelect title={t("projects.cloths")} idName="clothId" amountName="lengthUsed" options={props.clothOptions} links={props.item.cloths ?? []} amountLabel={t("projects.lengthUsed")} />
       <LinkSelect title={t("projects.materials")} idName="materialId" amountName="quantityUsed" options={props.materialOptions} links={props.item.materials ?? []} amountLabel={t("projects.quantityUsed")} />
     </div>
   );
 }
 
-function MultiSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
+function RepeatSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
+  const [rowCount, setRowCount] = useState(Math.max(1, selected.length));
+
+  useEffect(() => {
+    setRowCount(Math.max(1, selected.length));
+  }, [selected.length]);
+
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium">{title}</legend>
-      {options.map((option) => (
-        <label key={option.id} className="flex gap-2 text-sm">
-          <input type="checkbox" name={name} value={option.id} defaultChecked={selected.includes(option.id)} />
-          <span>{option.name}</span>
-        </label>
+      {Array.from({ length: rowCount }, (_, row) => (
+        <Select key={row} name={name} defaultValue={selected[row] ?? ""}>
+          <option value="" />
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </Select>
       ))}
+      <Button type="button" variant="secondary" size="icon" aria-label={title} onClick={() => setRowCount((current) => current + 1)}>
+        <Plus className="h-4 w-4" aria-hidden />
+      </Button>
     </fieldset>
   );
 }
@@ -1507,8 +1520,8 @@ function Detail({
             <p className="text-sm text-muted-foreground">{primaryStat(kind, item, t)}</p>
           </div>
           <div className="flex gap-1">
-            <Button size="sm" variant="secondary" onClick={onEdit}>
-              {t("common.edit")}
+            <Button size="icon" variant="secondary" aria-label={t("common.edit")} onClick={onEdit}>
+              <Pencil className="h-4 w-4" aria-hidden />
             </Button>
             {onDuplicate ? (
               <Button size="icon" variant="secondary" aria-label={t("common.duplicate")} onClick={onDuplicate}>
@@ -2156,7 +2169,7 @@ function formToBody(kind: Kind, form: FormData) {
     ...base,
     quantity: Number(form.get("quantity") || 1),
     valueCents: centsFromDollars(form.get("valueCents")),
-    patternIds: form.getAll("patternIds").map(Number),
+    patternIds: form.getAll("patternIds").map(Number).filter(Boolean),
     cloths: clothIds
       .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
       .filter((link) => link.clothId && link.lengthUsed),

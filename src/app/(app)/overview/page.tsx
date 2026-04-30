@@ -75,7 +75,8 @@ export default async function OverviewPage() {
       ]
     }
   ];
-  const maxCategorySpend = Math.max(...categories.map((category) => category.cost), 1);
+  const spendingCategories = categories.filter((category) => category.key !== "projects");
+  const maxCategorySpend = Math.max(...spendingCategories.map((category) => category.cost), 1);
 
   return (
     <main className="space-y-5">
@@ -94,7 +95,7 @@ export default async function OverviewPage() {
         <Card className="p-4">
           <h2 className="text-base font-semibold">{t("overview.spending")}</h2>
           <div className="mt-4 space-y-3">
-            {categories.map((category) => (
+            {spendingCategories.map((category) => (
               <div key={category.key} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="font-medium">{t(`nav.${category.key}`)}</span>
