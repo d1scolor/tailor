@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FolderKanban, Package, Scissors, Shirt, Wrench } from "lucide-react";
+import { BarChart3, FolderKanban, Package, Scissors, Shirt, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ const tabs = [
 ] as const;
 
 const icons = {
+  overview: BarChart3,
   cloths: Shirt,
   patterns: Scissors,
   materials: Package,
@@ -37,6 +38,19 @@ export function DesktopTabs() {
         );
       })}
     </nav>
+  );
+}
+
+export function OverviewButton() {
+  const pathname = usePathname();
+  const t = useTranslations();
+  const active = pathname === "/overview" || pathname.startsWith("/overview/");
+  return (
+    <Button asChild variant={active ? "primary" : "ghost"} size="icon" aria-label={t("nav.overview")}>
+      <Link href="/overview">
+        <BarChart3 className="h-5 w-5" aria-hidden />
+      </Link>
+    </Button>
   );
 }
 

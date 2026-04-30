@@ -80,6 +80,7 @@
     "invalid": "Invalid username or password"
   },
   "nav": {
+    "overview": "Overview",
     "cloths": "Cloths",
     "patterns": "Patterns",
     "materials": "Materials",
@@ -215,6 +216,20 @@
     "brand": "Brand",
     "model": "Model",
     "condition": "Condition"
+  },
+  "overview": {
+    "title": "Overview",
+    "totalSpend": "Total spend",
+    "inventoryItems": "Inventory items",
+    "clothRemaining": "Cloth remaining",
+    "projectValue": "Project value",
+    "spending": "Spending",
+    "categoryMetrics": "Category metrics",
+    "count": "Entries",
+    "used": "Used",
+    "unused": "Unused",
+    "produced": "Produced",
+    "totalQuantity": "Total quantity"
   },
   "settings": {
     "title": "Settings",

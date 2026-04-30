@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Scissors, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
-import { DesktopTabs, MobileTabs } from "@/components/app-nav";
+import { DesktopTabs, MobileTabs, OverviewButton } from "@/components/app-nav";
 import { currencySymbol } from "@/lib/env";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -20,16 +20,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <header className="sticky top-0 z-50 border-b border-border bg-background px-4 py-3">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <Link href="/cloths" className="flex items-center gap-2 font-semibold">
+          <Link href="/overview" className="flex items-center gap-2 font-semibold">
             <Scissors className="h-5 w-5" aria-hidden />
             <span>{t("common.brand")}</span>
           </Link>
           <DesktopTabs />
-          <Button asChild variant="ghost" size="icon" aria-label={t("common.settings")}>
-            <Link href="/settings">
-              <Settings className="h-5 w-5" aria-hidden />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1">
+            <OverviewButton />
+            <Button asChild variant="ghost" size="icon" aria-label={t("common.settings")}>
+              <Link href="/settings">
+                <Settings className="h-5 w-5" aria-hidden />
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
       <div className="mx-auto max-w-6xl px-4 py-5">{children}</div>
