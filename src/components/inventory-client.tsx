@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Camera, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -522,6 +522,7 @@ export function InventoryClient(props: Props) {
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
               <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+              {props.kind === "cloths" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
               {props.kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
             </Select>
           </label>
@@ -634,22 +635,24 @@ export function InventoryClient(props: Props) {
       ) : null}
 
       {filterOpen ? (
-        <FilterDrawer
-          kind={props.kind}
-          filters={filters}
-          tags={tagList}
-          categories={categoryList}
-          units={unitList}
-          clothOptions={props.clothOptions ?? []}
-          patternOptions={props.patternOptions ?? []}
-          materialOptions={props.materialOptions ?? []}
-          colorOptions={colorOptions}
-          sourceOptions={sourceOptions}
-          materialTypeOptions={materialTypeOptions}
-          toolCategoryOptions={toolCategoryOptions}
-          onApply={applyFilters}
-          onClose={() => setFilterOpen(false)}
-        />
+        <ModalPortal>
+          <FilterDrawer
+            kind={props.kind}
+            filters={filters}
+            tags={tagList}
+            categories={categoryList}
+            units={unitList}
+            clothOptions={props.clothOptions ?? []}
+            patternOptions={props.patternOptions ?? []}
+            materialOptions={props.materialOptions ?? []}
+            colorOptions={colorOptions}
+            sourceOptions={sourceOptions}
+            materialTypeOptions={materialTypeOptions}
+            toolCategoryOptions={toolCategoryOptions}
+            onApply={applyFilters}
+            onClose={() => setFilterOpen(false)}
+          />
+        </ModalPortal>
       ) : null}
 
       {lightbox ? <PhotoLightbox state={lightbox} setState={setLightbox} onClose={() => setLightbox(null)} /> : null}
@@ -1004,14 +1007,7 @@ function ColorField({ value }: { value: string[] }) {
         <input key={color} type="hidden" name="colors" value={color} />
       ))}
       <div className="flex gap-2">
-        <Select value={presetColor} onChange={(event) => setPresetColor(event.target.value)}>
-          <option value="">{t("common.selectColor")}</option>
-          {commonColors.map((color) => (
-            <option key={color} value={color}>
-              {colorLabel(color, t)}
-            </option>
-          ))}
-        </Select>
+        <ColorSelect value={presetColor} options={commonColors} placeholder={t("common.selectColor")} onChange={setPresetColor} />
         <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" disabled={!presetColor || colors.length >= 5} onClick={addPresetColor}>
           {t("common.add")}
         </Button>
@@ -1073,6 +1069,7 @@ function FilterDrawer({
 }) {
   const t = useTranslations();
   const [draft, setDraft] = useState(filters);
+  const sourceListId = useId();
 
   useEffect(() => {
     setDraft(filters);
@@ -1093,7 +1090,7 @@ function FilterDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-center justify-between gap-3">
@@ -1119,14 +1116,19 @@ function FilterDrawer({
             <div className="grid gap-3">
               <label className="block space-y-1">
                 <span className="text-sm font-medium">{t("common.source")}</span>
-                <Select value={draft.source} onChange={(event) => update("source", event.target.value)}>
-                  <option value="">{t("common.all")}</option>
-                  {sourceOptions.map((source) => (
-                    <option key={source} value={source}>
-                      {source}
-                    </option>
-                  ))}
-                </Select>
+                <Input
+                  list={sourceOptions.length ? sourceListId : undefined}
+                  value={draft.source}
+                  placeholder={t("common.all")}
+                  onChange={(event) => update("source", event.target.value)}
+                />
+                {sourceOptions.length ? (
+                  <datalist id={sourceListId}>
+                    {sourceOptions.map((source) => (
+                      <option key={source} value={source} />
+                    ))}
+                  </datalist>
+                ) : null}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block space-y-1">
@@ -1229,14 +1231,13 @@ function FilterDrawer({
           {kind === "cloths" || kind === "materials" || kind === "projects" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.colors")}</span>
-              <Select value={draft.color} onChange={(event) => update("color", event.target.value)}>
-                <option value="">{t("common.all")}</option>
-                {[...new Set([...commonColors, ...colorOptions])].map((color) => (
-                  <option key={color} value={color}>
-                    {colorLabel(color, t)}
-                  </option>
-                ))}
-              </Select>
+              <ColorSelect
+                value={draft.color}
+                options={[...new Set([...commonColors, ...colorOptions])]}
+                placeholder={t("common.all")}
+                onChange={(color) => update("color", color)}
+                includeEmpty
+              />
             </label>
           ) : null}
 
@@ -1308,6 +1309,81 @@ function OptionFilter({
         ))}
       </Select>
     </label>
+  );
+}
+
+function ColorSelect({
+  value,
+  options,
+  placeholder,
+  includeEmpty,
+  onChange
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  includeEmpty?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const listId = useId();
+  const selectedLabel = value ? colorLabel(value, t) : placeholder;
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [open]);
+
+  function choose(nextValue: string) {
+    onChange(nextValue);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative min-w-0 flex-1" onKeyDown={(event) => event.key === "Escape" && setOpen(false)}>
+      <button
+        type="button"
+        className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-sm"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {value ? <ColorDot color={value} /> : null}
+          <span className="truncate">{selectedLabel}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      </button>
+      {open ? (
+        <div id={listId} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-white p-1 shadow-xl">
+          {includeEmpty ? (
+            <button type="button" role="option" aria-selected={!value} className="flex h-10 w-full items-center rounded px-2 text-left text-base hover:bg-muted" onClick={() => choose("")}>
+              {placeholder}
+            </button>
+          ) : null}
+          {options.map((color) => (
+            <button
+              key={color}
+              type="button"
+              role="option"
+              aria-selected={value === color}
+              className="flex h-10 w-full items-center gap-2 rounded px-2 text-left text-base hover:bg-muted aria-selected:bg-muted"
+              onClick={() => choose(color)}
+            >
+              <ColorDot color={color} />
+              <span className="truncate">{colorLabel(color, t)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

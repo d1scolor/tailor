@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   ["cloths", "/cloths"],
-  ["patterns", "/patterns"],
   ["materials", "/materials"],
-  ["projects", "/projects"],
-  ["tools", "/tools"]
+  ["patterns", "/patterns"],
+  ["tools", "/tools"],
+  ["projects", "/projects"]
 ] as const;
 
 const icons = {

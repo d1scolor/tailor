@@ -18,6 +18,9 @@ const entityByKind: Record<Kind, EntityType> = {
   tools: "tool"
 };
 
+const clothRemainingMetresSort =
+  "CASE length_unit WHEN 'cm' THEN length_remaining / 100.0 WHEN 'yd' THEN length_remaining * 0.9144 ELSE length_remaining END";
+
 const sortColumns: Record<Kind, Record<string, string>> = {
   cloths: {
     name: "name",
@@ -25,7 +28,8 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     purchased: "purchased_at",
     price: "price_cents",
     unitPrice: "CASE WHEN length_total > 0 THEN price_cents / length_total ELSE NULL END",
-    remaining: "length_remaining"
+    remaining: clothRemainingMetresSort,
+    remainingMetres: clothRemainingMetresSort
   },
   patterns: {
     name: "name",
