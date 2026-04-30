@@ -14,13 +14,20 @@
     "sortCreated": "最近添加",
     "sortName": "名称",
     "sortPrice": "价格",
+    "sortDirection": "排序方向",
+    "asc": "升序",
+    "desc": "降序",
+    "refresh": "刷新",
     "grid": "网格",
     "list": "列表",
     "save": "保存",
+    "saving": "保存中",
     "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",
     "add": "添加",
+    "select": "请选择",
+    "custom": "自定义",
     "create": "新建",
     "logout": "退出登录",
     "name": "名称",
@@ -50,6 +57,11 @@
     "previous": "上一张",
     "details": "详情",
     "summary": "概览",
+    "total": "总计",
+    "remaining": "剩余",
+    "unit": "单位",
+    "piece": "件",
+    "unitPrice": "单价",
     "upload": "添加照片",
     "uploadFailed": "照片上传失败",
     "camera": "拍照",
@@ -110,6 +122,14 @@
     "silver": "银色",
     "black": "黑色"
   },
+  "clothPurpose": {
+    "服装": "服装",
+    "手工": "手工"
+  },
+  "patternType": {
+    "纸质": "纸质",
+    "电子": "电子"
+  },
   "cloths": {
     "title": "布料",
     "add": "添加布料",
@@ -123,7 +143,9 @@
     "hasStockLeft": "仅显示有剩余",
     "lengthUnit": "长度单位",
     "width": "幅宽",
-    "widthUnit": "宽度单位"
+    "widthUnit": "宽度单位",
+    "purpose": "布料用途",
+    "materialType": "材质"
   },
   "patterns": {
     "title": "纸样",
@@ -132,6 +154,7 @@
     "cost": "总成本",
     "usedCount": "已使用",
     "unusedCount": "未使用",
+    "patternType": "纸样类型",
     "size": "尺码",
     "pieces": "张数"
   },

@@ -18,13 +18,15 @@ const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)");
-const migration = "0000_initial.sql";
-if (!db.prepare("SELECT name FROM _migrations WHERE name = ?").get(migration)) {
-  db.transaction(() => {
-    db.exec(fs.readFileSync(path.join(process.cwd(), "src/lib/db/migrations", migration), "utf8"));
-    db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration, now());
-  })();
-  console.log(`Applied migration ${migration}`);
+const migrationsDir = path.join(process.cwd(), "src/lib/db/migrations");
+for (const migration of fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort()) {
+  if (!db.prepare("SELECT name FROM _migrations WHERE name = ?").get(migration)) {
+    db.transaction(() => {
+      db.exec(fs.readFileSync(path.join(migrationsDir, migration), "utf8"));
+      db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration, now());
+    })();
+    console.log(`Applied migration ${migration}`);
+  }
 }
 
 const count = db.prepare("SELECT COUNT(*) AS count FROM users").get().count;

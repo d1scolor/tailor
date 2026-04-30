@@ -74,6 +74,15 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "materials", "colors")) {
     db.exec("ALTER TABLE materials ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
   }
+  if (!columnExists(db, "cloths", "purpose")) {
+    db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT '服装'");
+  }
+  if (!columnExists(db, "cloths", "material_type")) {
+    db.exec("ALTER TABLE cloths ADD COLUMN material_type TEXT NOT NULL DEFAULT '其他'");
+  }
+  if (!columnExists(db, "patterns", "pattern_type")) {
+    db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT '纸质'");
+  }
 }
 
 function columnExists(db: Sqlite, table: string, column: string) {

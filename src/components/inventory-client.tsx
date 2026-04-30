@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, ChevronLeft, ChevronRight, Grid2X2, List, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -17,6 +17,9 @@ type CreateMetaHandler = {
 type Filters = {
   tagIds: number[];
   source: string;
+  purpose: string;
+  materialType: string;
+  patternType: string;
   from: string;
   to: string;
   used: string;
@@ -29,6 +32,7 @@ type Filters = {
   materialId: string;
 };
 type LightboxState = { photos: string[]; index: number };
+type StagedPhoto = { id: string; file: File; isCover: boolean };
 type Props = {
   kind: Kind;
   items: AnyItem[];
@@ -39,6 +43,8 @@ type Props = {
   clothOptions?: AnyItem[];
   patternOptions?: AnyItem[];
   materialOptions?: AnyItem[];
+  sourceOptions?: string[];
+  materialTypeOptions?: string[];
 };
 type FieldsProps = {
   kind: Kind;
@@ -49,6 +55,8 @@ type FieldsProps = {
   clothOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
+  sourceOptions: string[];
+  materialTypeOptions: string[];
   onAddTag: (name: string) => void;
   onAddCategory: CreateMetaHandler;
   onAddUnit: CreateMetaHandler;
@@ -87,6 +95,24 @@ const entityByKind = {
   materials: "material",
   projects: "project"
 } as const;
+const clothPurposeOptions = ["服装", "手工"];
+const patternTypeOptions = ["纸质", "电子"];
+const clothMaterialTypeDefaults = [
+  "棉",
+  "亚麻",
+  "羊毛",
+  "丝绸",
+  "粘胶",
+  "聚酯纤维",
+  "尼龙",
+  "牛仔布",
+  "帆布",
+  "针织",
+  "法兰绒",
+  "皮革",
+  "混纺",
+  "其他"
+];
 const commonColors = [
   "red",
   "burgundy",
@@ -176,18 +202,23 @@ export function InventoryClient(props: Props) {
   const [summary, setSummary] = useState(props.summary);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("created");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filters, setFilters] = useState<Filters>(() => emptyFilters());
   const [filterOpen, setFilterOpen] = useState(false);
   const [editing, setEditing] = useState<AnyItem | null>(null);
   const [selected, setSelected] = useState<AnyItem | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AnyItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
-  const [stagedPhotoFiles, setStagedPhotoFiles] = useState<File[]>([]);
+  const [stagedPhotoFiles, setStagedPhotoFiles] = useState<StagedPhoto[]>([]);
   const [tagList, setTagList] = useState(props.tags);
   const [categoryList, setCategoryList] = useState(props.categories ?? []);
   const [unitList, setUnitList] = useState(props.units ?? []);
+  const [sourceOptions, setSourceOptions] = useState(props.sourceOptions ?? []);
+  const [materialTypeOptions, setMaterialTypeOptions] = useState(props.materialTypeOptions ?? []);
+  const submitLockRef = useRef(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
   const title = t(`${props.kind}.title`);
@@ -217,17 +248,38 @@ export function InventoryClient(props: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    const hasModal = Boolean(editing || selected || filterOpen || lightbox || confirmDelete);
+    if (!hasModal) return;
+    const scrollY = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [editing, selected, filterOpen, lightbox, confirmDelete]);
+
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
   }
 
-  async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters) {
+  async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters, nextDir = dir) {
     const requestId = ++refreshSeqRef.current;
-    const params = buildListParams(nextQuery, nextSort, nextFilters);
+    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir);
     const [listResponse, summaryResponse] = await Promise.all([
       fetch(`/api/${props.kind}?${params.toString()}`),
-      fetch(`/api/${props.kind}/summary`)
+      fetch(`/api/${props.kind}/summary?${params.toString()}`)
     ]);
     const nextItems = (await listResponse.json()).items;
     const nextSummary = await summaryResponse.json();
@@ -236,10 +288,10 @@ export function InventoryClient(props: Props) {
     setSummary(nextSummary);
   }
 
-  function debounceRefresh(nextQuery: string, nextSort = sort, nextFilters = filters) {
+  function debounceRefresh(nextQuery: string, nextSort = sort, nextFilters = filters, nextDir = dir) {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      void refresh(nextQuery, nextSort, nextFilters);
+      void refresh(nextQuery, nextSort, nextFilters, nextDir);
     }, 250);
   }
 
@@ -255,28 +307,36 @@ export function InventoryClient(props: Props) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const body = formToBody(props.kind, form);
+    const body: Record<string, any> = formToBody(props.kind, form);
     const path = editing?.id ? `/api/${props.kind}/${editing.id}` : `/api/${props.kind}`;
-    const response = await fetch(path, {
-      method: editing?.id ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) {
-      notify(t("common.error"));
-      return;
-    }
-    const { item } = (await response.json()) as { item: AnyItem };
     try {
+      const response = await fetch(path, {
+        method: editing?.id ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) {
+        notify(t("common.error"));
+        return;
+      }
+      const { item } = (await response.json()) as { item: AnyItem };
+      rememberSource(body.source);
+      rememberMaterialType(body.materialType);
       await uploadStagedPhotos(stagedPhotoFiles, props.kind, item.id);
+      setStagedPhotoFiles([]);
+      setEditing(null);
+      setSelected((current) => (current?.id === item.id ? item : current));
+      await refresh();
     } catch (error) {
       notify(`${t("common.uploadFailed")}: ${error instanceof Error ? error.message : t("common.error")}`);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
     }
-    setStagedPhotoFiles([]);
-    setEditing(null);
-    setSelected((current) => (current?.id === item.id ? item : current));
-    await refresh();
   }
 
   function openCreate() {
@@ -339,12 +399,33 @@ export function InventoryClient(props: Props) {
   function applyFilters(nextFilters: Filters) {
     setFilters(nextFilters);
     setFilterOpen(false);
-    void refresh(query, sort, nextFilters);
+    void refresh(query, sort, nextFilters, dir);
   }
 
   function openLightbox(photos: string[], index: number) {
     if (!photos.length) return;
     setLightbox({ photos, index });
+  }
+
+  function appendStagedPhotos(files: FileList | null) {
+    const nextPhotos = filesToStaged(files);
+    if (!nextPhotos.length) return;
+    setStagedPhotoFiles((current) => {
+      const merged = [...current, ...nextPhotos];
+      return merged.some((photo) => photo.isCover) ? merged : merged.map((photo, index) => ({ ...photo, isCover: index === 0 }));
+    });
+  }
+
+  function rememberSource(value: unknown) {
+    const source = String(value ?? "").trim();
+    if (!source || props.kind === "projects") return;
+    setSourceOptions((current) => (current.includes(source) ? current : [...current, source].sort()));
+  }
+
+  function rememberMaterialType(value: unknown) {
+    const materialType = String(value ?? "").trim();
+    if (!materialType || props.kind !== "cloths") return;
+    setMaterialTypeOptions((current) => (current.includes(materialType) ? current : [...current, materialType].sort()));
   }
 
   const cards = useMemo(
@@ -389,7 +470,7 @@ export function InventoryClient(props: Props) {
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
-              debounceRefresh(event.target.value, sort);
+              debounceRefresh(event.target.value, sort, filters, dir);
             }}
           />
         </label>
@@ -402,7 +483,7 @@ export function InventoryClient(props: Props) {
               onChange={(event) => {
                 const nextSort = event.target.value;
                 setSort(nextSort);
-                void refresh(query, nextSort, filters);
+                void refresh(query, nextSort, filters, dir);
               }}
               className="w-44 border-0 shadow-none"
             >
@@ -411,14 +492,30 @@ export function InventoryClient(props: Props) {
               <option value="price">{t("common.sortPrice")}</option>
             </Select>
           </label>
+          <Select
+            aria-label={t("common.sortDirection")}
+            value={dir}
+            onChange={(event) => {
+              const nextDir = event.target.value === "asc" ? "asc" : "desc";
+              setDir(nextDir);
+              void refresh(query, sort, filters, nextDir);
+            }}
+            className="w-32 shrink-0"
+          >
+            <option value="desc">{t("common.desc")}</option>
+            <option value="asc">{t("common.asc")}</option>
+          </Select>
+          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.refresh")} onClick={() => void refresh()}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+          </Button>
           <Button className="shrink-0" variant={hasFilters(filters) ? "primary" : "secondary"} onClick={() => setFilterOpen(true)}>
             <SlidersHorizontal className="h-4 w-4" aria-hidden />
             {t("common.filter")}
           </Button>
-          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.grid")} onClick={() => setView("grid")}>
+          <Button className="shrink-0" variant={view === "grid" ? "primary" : "secondary"} size="icon" aria-label={t("common.grid")} onClick={() => setView("grid")}>
             <Grid2X2 className="h-4 w-4" aria-hidden />
           </Button>
-          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.list")} onClick={() => setView("list")}>
+          <Button className="shrink-0" variant={view === "list" ? "primary" : "secondary"} size="icon" aria-label={t("common.list")} onClick={() => setView("list")}>
             <List className="h-4 w-4" aria-hidden />
           </Button>
         </div>
@@ -454,12 +551,7 @@ export function InventoryClient(props: Props) {
                 {editing.id ? (
                   <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
                 ) : (
-                  <div className="flex gap-2 overflow-x-auto">
-                    {stagedPhotoFiles.map((file, index) => (
-                      <StagedPhotoPreview key={`${file.name}-${file.lastModified}-${index}`} file={file} />
-                    ))}
-                    <PhotoPicker onChange={(files) => setStagedPhotoFiles(Array.from(files ?? []))} />
-                  </div>
+                  <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
                 )}
               </section>
               <Fields
@@ -471,6 +563,8 @@ export function InventoryClient(props: Props) {
                 clothOptions={props.clothOptions ?? []}
                 patternOptions={props.patternOptions ?? []}
                 materialOptions={props.materialOptions ?? []}
+                sourceOptions={sourceOptions}
+                materialTypeOptions={materialTypeOptions}
                 onAddTag={addTag}
                 onAddCategory={(name) => createMeta("categories", name)}
                 onAddUnit={(name) => createMeta("units", name)}
@@ -479,7 +573,9 @@ export function InventoryClient(props: Props) {
                 <Button type="button" variant="secondary" onClick={closeEditor}>
                   {t("common.cancel")}
                 </Button>
-                <Button type="submit">{t("common.save")}</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? t("common.saving") : t("common.save")}
+                </Button>
               </div>
             </form>
           </Card>
@@ -509,6 +605,8 @@ export function InventoryClient(props: Props) {
           patternOptions={props.patternOptions ?? []}
           materialOptions={props.materialOptions ?? []}
           colorOptions={colorOptions}
+          sourceOptions={sourceOptions}
+          materialTypeOptions={materialTypeOptions}
           onApply={applyFilters}
           onClose={() => setFilterOpen(false)}
         />
@@ -557,6 +655,7 @@ function ItemCard({
   const coverIndex = Math.max(0, photoItems.findIndex((photo: AnyItem) => photo.isCover));
   const photo = photos[coverIndex];
   const stat = primaryStat(kind, item, t);
+  const unitPrice = unitPriceStat(kind, item, t);
   return (
     <Card
       role="button"
@@ -582,6 +681,7 @@ function ItemCard({
       <div className={view === "grid" ? "p-3" : "min-w-0"}>
         <h2 className="truncate text-sm font-semibold">{item.name}</h2>
         <p className="mt-1 truncate text-xs text-muted-foreground">{stat}</p>
+        {unitPrice ? <p className="mt-1 truncate text-xs text-muted-foreground">{unitPrice}</p> : null}
         <ColorSwatches colors={item.colors ?? []} className="mt-2" />
       </div>
     </Card>
@@ -600,7 +700,18 @@ function Fields(props: FieldsProps) {
         {props.kind === "cloths" ? <UnitSelect name="lengthUnit" label={t("cloths.lengthUnit")} values={["m", "cm", "yd"]} value={props.item.lengthUnit ?? "m"} /> : null}
         {props.kind === "cloths" ? <Field name="width" label={t("cloths.width")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
         {props.kind === "cloths" ? <UnitSelect name="widthUnit" label={t("cloths.widthUnit")} values={["cm", "m", "in"]} value={props.item.widthUnit ?? "cm"} /> : null}
+        {props.kind === "cloths" ? <UnitSelect name="purpose" label={t("cloths.purpose")} values={clothPurposeOptions} value={props.item.purpose ?? clothPurposeOptions[0]} labels={(value) => t(`clothPurpose.${value}`)} /> : null}
+        {props.kind === "cloths" ? (
+          <TextChoiceField
+            name="materialType"
+            label={t("cloths.materialType")}
+            value={props.item.materialType ?? "其他"}
+            options={[...new Set([...clothMaterialTypeDefaults, ...props.materialTypeOptions])]}
+            required
+          />
+        ) : null}
         {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
+        {props.kind === "patterns" ? <UnitSelect name="patternType" label={t("patterns.patternType")} values={patternTypeOptions} value={props.item.patternType ?? patternTypeOptions[0]} labels={(value) => t(`patternType.${value}`)} /> : null}
         {props.kind === "patterns" ? <Field name="size" label={t("patterns.size")} defaultValue={props.item.size} /> : null}
         {props.kind === "patterns" ? <Field name="pieces" label={t("patterns.pieces")} type="number" inputMode="numeric" defaultValue={props.item.pieces} /> : null}
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
@@ -609,7 +720,7 @@ function Fields(props: FieldsProps) {
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         <Field name="priceCents" label={props.kind === "projects" ? t("projects.extraCost") : t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} />
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
-        {props.kind !== "projects" ? <Field name="source" label={t("common.source")} defaultValue={props.item.source} /> : null}
+        {props.kind !== "projects" ? <TextChoiceField name="source" label={t("common.source")} value={props.item.source ?? ""} options={props.sourceOptions} /> : null}
         {props.kind !== "projects" ? <Field name="purchasedAt" label={t("common.date")} type="date" defaultValue={props.item.purchasedAt} /> : null}
       </div>
       {props.kind === "projects" ? <ProjectLinks {...props} /> : null}
@@ -702,18 +813,63 @@ function Field(props: { name: string; label: string; defaultValue?: any; type?: 
   );
 }
 
-function UnitSelect({ name, label, values, value }: { name: string; label: string; values: string[]; value: string }) {
+function UnitSelect({ name, label, values, value, labels }: { name: string; label: string; values: string[]; value: string; labels?: (value: string) => string }) {
   return (
     <label className="block space-y-1">
       <span className="text-sm font-medium">{label}</span>
       <Select name={name} defaultValue={value}>
         {values.map((item) => (
           <option key={item} value={item}>
-            {item}
+            {labels ? labels(item) : item}
           </option>
         ))}
       </Select>
     </label>
+  );
+}
+
+function TextChoiceField({
+  name,
+  label,
+  value,
+  options,
+  required = false
+}: {
+  name: string;
+  label: string;
+  value: string;
+  options: string[];
+  required?: boolean;
+}) {
+  const t = useTranslations();
+  const knownOptions = [...new Set(options.filter(Boolean))];
+  const optionKey = knownOptions.join("\u0000");
+  const [mode, setMode] = useState(value && !knownOptions.includes(value) ? "__custom" : value ? value : "");
+  const [custom, setCustom] = useState(value && !knownOptions.includes(value) ? value : "");
+  const selectedValue = mode === "__custom" ? custom : mode;
+
+  useEffect(() => {
+    setMode(value && !knownOptions.includes(value) ? "__custom" : value ? value : "");
+    setCustom(value && !knownOptions.includes(value) ? value : "");
+  }, [value, optionKey]);
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium" htmlFor={`${name}-choice`}>{label}</label>
+      <input type="hidden" name={name} value={selectedValue} />
+      <Select id={`${name}-choice`} value={mode} required={required && !custom} onChange={(event) => setMode(event.target.value)}>
+        <option value="">{required ? t("common.select") : ""}</option>
+        {knownOptions.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+        <option value="__custom">{t("common.custom")}</option>
+      </Select>
+      {mode === "__custom" ? (
+        <Input value={custom} required={required} onChange={(event) => setCustom(event.target.value)} placeholder={label} maxLength={80} />
+      ) : null}
+    </div>
   );
 }
 
@@ -840,6 +996,8 @@ function FilterDrawer({
   patternOptions,
   materialOptions,
   colorOptions,
+  sourceOptions,
+  materialTypeOptions,
   onApply,
   onClose
 }: {
@@ -852,6 +1010,8 @@ function FilterDrawer({
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   colorOptions: string[];
+  sourceOptions: string[];
+  materialTypeOptions: string[];
   onApply: (filters: Filters) => void;
   onClose: () => void;
 }) {
@@ -900,7 +1060,14 @@ function FilterDrawer({
             <div className="grid gap-3">
               <label className="block space-y-1">
                 <span className="text-sm font-medium">{t("common.source")}</span>
-                <Input value={draft.source} onChange={(event) => update("source", event.target.value)} />
+                <Select value={draft.source} onChange={(event) => update("source", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </Select>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block space-y-1">
@@ -916,9 +1083,47 @@ function FilterDrawer({
           ) : null}
 
           {kind === "cloths" ? (
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={draft.hasStockLeft} onChange={(event) => update("hasStockLeft", event.target.checked)} />
-              <span>{t("cloths.hasStockLeft")}</span>
+            <div className="grid gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={draft.hasStockLeft} onChange={(event) => update("hasStockLeft", event.target.checked)} />
+                <span>{t("cloths.hasStockLeft")}</span>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("cloths.purpose")}</span>
+                <Select value={draft.purpose} onChange={(event) => update("purpose", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {clothPurposeOptions.map((purpose) => (
+                    <option key={purpose} value={purpose}>
+                      {t(`clothPurpose.${purpose}`)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("cloths.materialType")}</span>
+                <Select value={draft.materialType} onChange={(event) => update("materialType", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {[...new Set([...clothMaterialTypeDefaults, ...materialTypeOptions])].map((materialType) => (
+                    <option key={materialType} value={materialType}>
+                      {materialType}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+          ) : null}
+
+          {kind === "patterns" ? (
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">{t("patterns.patternType")}</span>
+              <Select value={draft.patternType} onChange={(event) => update("patternType", event.target.value)}>
+                <option value="">{t("common.all")}</option>
+                {patternTypeOptions.map((patternType) => (
+                  <option key={patternType} value={patternType}>
+                    {t(`patternType.${patternType}`)}
+                  </option>
+                ))}
+              </Select>
             </label>
           ) : null}
 
@@ -1070,8 +1275,8 @@ function Detail({
 }: DetailProps) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
-      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1121,7 +1326,7 @@ function PhotoStrip({
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     try {
-      await uploadStagedPhotos(Array.from(files), kind, item.id);
+      await uploadStagedPhotos(filesToStaged(files), kind, item.id);
       if (onUploaded) await onUploaded();
       else window.location.reload();
     } catch (error) {
@@ -1173,7 +1378,7 @@ function PhotoStrip({
   return (
     <div className="mt-4 flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-contain">
       {photos.map((photo: AnyItem, index: number) => (
-        <div key={photo.id} className="group relative h-20 w-20 shrink-0 snap-start overflow-hidden rounded-md bg-muted">
+        <div key={photo.id} className="group relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-md bg-muted">
           <button type="button" className="h-full w-full" onClick={() => onOpenPhoto?.(photoIds, index)}>
             <img src={`/api/photos/${photo.id}/thumb`} alt="" className="h-full w-full object-cover" />
           </button>
@@ -1182,39 +1387,39 @@ function PhotoStrip({
               <div className="absolute inset-x-1 top-1 flex justify-between gap-1">
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40"
                   aria-label={t("common.moveLeft")}
                   disabled={index === 0}
                   onClick={() => movePhoto(index, -1)}
                 >
-                  <ChevronLeft className="h-3 w-3" aria-hidden />
+                  <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40"
                   aria-label={t("common.moveRight")}
                   disabled={index === photos.length - 1}
                   onClick={() => movePhoto(index, 1)}
                 >
-                  <ChevronRight className="h-3 w-3" aria-hidden />
+                  <ChevronRight className="h-4 w-4" aria-hidden />
                 </button>
               </div>
               <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
                 <button
                   type="button"
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`}
                   aria-label={t("common.setCover")}
                   onClick={() => updatePhoto(photo.id, { isCover: true })}
                 >
-                  <Star className="h-3 w-3" aria-hidden />
+                  <Star className="h-4 w-4" aria-hidden />
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded bg-black/55 text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white"
                   aria-label={t("common.delete")}
                   onClick={() => deletePhoto(photo.id)}
                 >
-                  <Trash2 className="h-3 w-3" aria-hidden />
+                  <Trash2 className="h-4 w-4" aria-hidden />
                 </button>
               </div>
             </>
@@ -1308,7 +1513,7 @@ function PhotoLightbox({
 function PhotoPicker({ name, onChange }: { name?: string; onChange?: (files: FileList | null) => void }) {
   const t = useTranslations();
   const inputClass = "sr-only";
-  const labelClass = "flex h-20 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted text-xs font-medium text-muted-foreground";
+  const labelClass = "flex h-28 w-28 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-muted text-xs font-medium text-muted-foreground";
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onChange?.(event.target.files);
     event.target.value = "";
@@ -1330,22 +1535,122 @@ function PhotoPicker({ name, onChange }: { name?: string; onChange?: (files: Fil
   );
 }
 
-function StagedPhotoPreview({ file }: { file: File }) {
+function StagedPhotoStrip({
+  photos,
+  setPhotos,
+  onAdd
+}: {
+  photos: StagedPhoto[];
+  setPhotos: (updater: (current: StagedPhoto[]) => StagedPhoto[]) => void;
+  onAdd: (files: FileList | null) => void;
+}) {
+  const t = useTranslations();
+
+  function updatePhoto(photoId: string, update: Partial<StagedPhoto>) {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === photoId
+          ? { ...photo, ...update }
+          : update.isCover
+            ? { ...photo, isCover: false }
+            : photo
+      )
+    );
+  }
+
+  function deletePhoto(photoId: string) {
+    setPhotos((current) => {
+      const next = current.filter((photo) => photo.id !== photoId);
+      return next.some((photo) => photo.isCover) ? next : next.map((photo, index) => ({ ...photo, isCover: index === 0 }));
+    });
+  }
+
+  function movePhoto(index: number, direction: -1 | 1) {
+    setPhotos((current) => {
+      const next = [...current];
+      const target = index + direction;
+      if (!next[index] || !next[target]) return current;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  return (
+    <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-contain">
+      {photos.map((photo, index) => (
+        <StagedPhotoPreview
+          key={photo.id}
+          photo={photo}
+          canMoveLeft={index > 0}
+          canMoveRight={index < photos.length - 1}
+          onSetCover={() => updatePhoto(photo.id, { isCover: true })}
+          onDelete={() => deletePhoto(photo.id)}
+          onMoveLeft={() => movePhoto(index, -1)}
+          onMoveRight={() => movePhoto(index, 1)}
+        />
+      ))}
+      <PhotoPicker onChange={onAdd} />
+      <span className="sr-only">{t("common.photos")}</span>
+    </div>
+  );
+}
+
+function StagedPhotoPreview({
+  photo,
+  canMoveLeft,
+  canMoveRight,
+  onSetCover,
+  onDelete,
+  onMoveLeft,
+  onMoveRight
+}: {
+  photo: StagedPhoto;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
+  onSetCover: () => void;
+  onDelete: () => void;
+  onMoveLeft: () => void;
+  onMoveRight: () => void;
+}) {
+  const t = useTranslations();
   const [url, setUrl] = useState("");
 
   useEffect(() => {
-    const nextUrl = URL.createObjectURL(file);
+    const nextUrl = URL.createObjectURL(photo.file);
     setUrl(nextUrl);
     return () => URL.revokeObjectURL(nextUrl);
-  }, [file]);
+  }, [photo.file]);
 
-  return <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">{url ? <img src={url} alt="" className="h-full w-full object-cover" /> : null}</div>;
+  return (
+    <div className="group relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-md bg-muted">
+      {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : null}
+      <div className="absolute inset-x-1 top-1 flex justify-between gap-1">
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveLeft")} disabled={!canMoveLeft} onClick={onMoveLeft}>
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </button>
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveRight")} disabled={!canMoveRight} onClick={onMoveRight}>
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+      <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
+        <button type="button" className={`inline-flex h-9 w-9 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`} aria-label={t("common.setCover")} onClick={onSetCover}>
+          <Star className="h-4 w-4" aria-hidden />
+        </button>
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white" aria-label={t("common.delete")} onClick={onDelete}>
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function emptyFilters(): Filters {
   return {
     tagIds: [],
     source: "",
+    purpose: "",
+    materialType: "",
+    patternType: "",
     from: "",
     to: "",
     used: "",
@@ -1362,17 +1667,21 @@ function emptyFilters(): Filters {
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
   );
 }
 
-function buildListParams(query: string, sort: string, filters: Filters) {
+function buildListParams(query: string, sort: string, filters: Filters, dir: "asc" | "desc") {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   params.set("sort", sort);
+  params.set("dir", dir);
   if (filters.tagIds.length) params.set("tags", filters.tagIds.join(","));
   if (filters.source) params.set("source", filters.source);
+  if (filters.purpose) params.set("purpose", filters.purpose);
+  if (filters.materialType) params.set("materialType", filters.materialType);
+  if (filters.patternType) params.set("patternType", filters.patternType);
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.used) params.set("used", filters.used);
@@ -1443,10 +1752,31 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
 }
 
 function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
-  if (kind === "cloths") return `${numberValue(item.lengthRemaining)} / ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+  if (kind === "cloths") {
+    return `${t("common.remaining")} ${numberValue(item.lengthRemaining)} / ${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+  }
   if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
-  if (kind === "materials") return `${numberValue(item.quantityRemaining)} / ${numberValue(item.quantityTotal)}`;
+  if (kind === "materials") {
+    return `${t("common.remaining")} ${numberValue(item.quantityRemaining)} / ${t("common.total")} ${numberValue(item.quantityTotal)}`;
+  }
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
+}
+
+function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
+  if (kind === "cloths" && item.priceCents && item.lengthTotal > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.lengthTotal))}/${item.lengthUnit}`;
+  }
+  if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantityTotal))}/${item.unitName ?? t("common.unit")}`;
+  }
+  if (kind === "patterns" && item.priceCents) {
+    const divisor = item.pieces && item.pieces > 0 ? item.pieces : 1;
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / divisor))}/${t("common.piece")}`;
+  }
+  if (kind === "projects" && item.valueCents && item.quantity > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.valueCents / item.quantity))}/${t("common.piece")}`;
+  }
+  return "";
 }
 
 function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
@@ -1458,6 +1788,8 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 
   if (kind === "cloths") {
     add(t("cloths.quantity"), item.quantity);
+    add(t("cloths.purpose"), item.purpose, (value) => t(`clothPurpose.${value}`));
+    add(t("cloths.materialType"), item.materialType);
     add(t("cloths.lengthTotal"), item.lengthTotal, (value) => `${numberValue(value)} ${item.lengthUnit}`);
     add(t("cloths.lengthRemaining"), item.lengthRemaining, (value) => `${numberValue(value)} ${item.lengthUnit}`);
     add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
@@ -1465,6 +1797,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.price"), item.priceCents, money);
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
+    add(t("patterns.patternType"), item.patternType, (value) => t(`patternType.${value}`));
     add(t("patterns.size"), item.size);
     add(t("patterns.pieces"), item.pieces);
     add(t("common.source"), item.source);
@@ -1490,10 +1823,10 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 }
 
 function defaultItem(kind: Kind) {
-  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm" };
+  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "服装", materialType: "其他" };
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
-  return {};
+  return { patternType: "纸质" };
 }
 
 function formToBody(kind: Kind, form: FormData) {
@@ -1515,11 +1848,13 @@ function formToBody(kind: Kind, form: FormData) {
       lengthUnit: form.get("lengthUnit"),
       width: numberOrNull(form.get("width")),
       widthUnit: stringOrNull(form.get("widthUnit")),
+      purpose: form.get("purpose"),
+      materialType: stringOrNull(form.get("materialType")) ?? "其他",
       colors: sanitizeColors(form.getAll("colors"))
     };
   }
   if (kind === "patterns") {
-    return { ...base, size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
+    return { ...base, patternType: form.get("patternType"), size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
   }
   if (kind === "materials") {
     return {
@@ -1568,13 +1903,24 @@ function centsFromDollars(value: FormDataEntryValue | null) {
   return text ? Math.round(Number(text) * 100) : null;
 }
 
-async function uploadStagedPhotos(values: FormDataEntryValue[], kind: Kind, entityId: number) {
+function filesToStaged(files: FileList | null) {
+  return Array.from(files ?? [])
+    .filter((file) => file.size > 0)
+    .map((file, index) => ({
+      id: `${file.name}-${file.lastModified}-${file.size}-${index}-${crypto.randomUUID()}`,
+      file,
+      isCover: false
+    }));
+}
+
+async function uploadStagedPhotos(values: StagedPhoto[], kind: Kind, entityId: number) {
   for (const value of values) {
-    if (!(value instanceof File) || value.size === 0) continue;
+    if (value.file.size === 0) continue;
     const form = new FormData();
-    form.set("file", value);
+    form.set("file", value.file);
     form.set("entityType", entityByKind[kind]);
     form.set("entityId", String(entityId));
+    if (value.isCover) form.set("setCover", "true");
     const response = await fetch("/api/photos", { method: "POST", body: form });
     if (!response.ok) {
       const body = await response.json().catch(() => null);

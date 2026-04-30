@@ -60,6 +60,18 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     );
     args.push(`%"${color}"%`);
   }
+  if (kind === "cloths" && params.get("purpose")) {
+    clauses.push("purpose = ?");
+    args.push(params.get("purpose"));
+  }
+  if (kind === "cloths" && params.get("materialType")) {
+    clauses.push("material_type = ?");
+    args.push(params.get("materialType"));
+  }
+  if (kind === "patterns" && params.get("patternType")) {
+    clauses.push("pattern_type = ?");
+    args.push(params.get("patternType"));
+  }
   const tags = parseIds(params.get("tags"));
   if (tags.length) {
     clauses.push(
@@ -136,8 +148,8 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO cloths
-          (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
@@ -149,6 +161,8 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
           input.width,
           input.widthUnit,
           encodeColors(input.colors),
+          input.purpose,
+          input.materialType,
           input.source,
           input.priceCents,
           input.purchasedAt,
@@ -161,12 +175,13 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO patterns
-          (user_id, name, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, pattern_type, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
+          input.patternType,
           input.size,
           input.pieces,
           input.source,
@@ -232,7 +247,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       }
       db.prepare(
         `UPDATE cloths SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
-         width = ?, width_unit = ?, colors = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
+         width = ?, width_unit = ?, colors = ?, purpose = ?, material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
         input.quantity,
@@ -242,6 +257,8 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         input.width,
         input.widthUnit,
         encodeColors(input.colors),
+        input.purpose,
+        input.materialType,
         input.source,
         input.priceCents,
         input.purchasedAt,
@@ -251,10 +268,11 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       );
     } else if (kind === "patterns") {
       db.prepare(
-        `UPDATE patterns SET name = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
+        `UPDATE patterns SET name = ?, pattern_type = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
          purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
+        input.patternType,
         input.size,
         input.pieces,
         input.source,
@@ -331,59 +349,69 @@ export function deleteItem(kind: Kind, userId: number, id: number) {
   return { ok: true };
 }
 
-export function summary(kind: Kind, userId: number) {
+export function summary(kind: Kind, userId: number, params = new URLSearchParams()) {
   const db = getSqlite();
+  const filteredRows = params.toString() ? listItems(kind, userId, params) : null;
   if (kind === "cloths") {
-    const rows = db
-      .prepare("SELECT price_cents, length_total, length_remaining, length_unit FROM cloths WHERE user_id = ?")
-      .all(userId) as Array<{ price_cents: number | null; length_total: number; length_remaining: number; length_unit: string }>;
+    const rows = (filteredRows ??
+      db
+        .prepare("SELECT price_cents AS priceCents, length_total AS lengthTotal, length_remaining AS lengthRemaining, length_unit AS lengthUnit FROM cloths WHERE user_id = ?")
+        .all(userId)) as Array<{ priceCents: number | null; lengthTotal: number; lengthRemaining: number; lengthUnit: string }>;
     return {
       count: rows.length,
-      totalCost: rows.reduce((sum, row) => sum + (row.price_cents ?? 0), 0),
+      totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
       lengthUsedMetres: rows.reduce(
-        (sum, row) => sum + lengthToMetres(row.length_total - row.length_remaining, row.length_unit),
+        (sum, row) => sum + lengthToMetres(row.lengthTotal - row.lengthRemaining, row.lengthUnit),
         0
       ),
-      lengthRemainingMetres: rows.reduce((sum, row) => sum + lengthToMetres(row.length_remaining, row.length_unit), 0)
+      lengthRemainingMetres: rows.reduce((sum, row) => sum + lengthToMetres(row.lengthRemaining, row.lengthUnit), 0)
     };
   }
   if (kind === "patterns") {
-    const rows = db
-      .prepare(
-        `SELECT price_cents, EXISTS(SELECT 1 FROM project_patterns pp WHERE pp.pattern_id = patterns.id) AS used
-         FROM patterns WHERE user_id = ?`
-      )
-      .all(userId) as Array<{ price_cents: number | null; used: number }>;
+    const rows = (filteredRows ??
+      db
+        .prepare(
+          `SELECT price_cents AS priceCents, EXISTS(SELECT 1 FROM project_patterns pp WHERE pp.pattern_id = patterns.id) AS used
+           FROM patterns WHERE user_id = ?`
+        )
+        .all(userId)) as Array<{ id: number; priceCents: number | null; used?: number }>;
     return {
       count: rows.length,
-      totalCost: rows.reduce((sum, row) => sum + (row.price_cents ?? 0), 0),
-      used: rows.filter((row) => row.used).length,
-      unused: rows.filter((row) => !row.used).length
+      totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
+      used: rows.filter((row) => row.used ?? isPatternUsed(row.id)).length,
+      unused: rows.filter((row) => !(row.used ?? isPatternUsed(row.id))).length
     };
   }
   if (kind === "materials") {
-    const rows = db
-      .prepare("SELECT price_cents, quantity_total, quantity_remaining FROM materials WHERE user_id = ?")
-      .all(userId) as Array<{ price_cents: number | null; quantity_total: number; quantity_remaining: number }>;
+    const rows = (filteredRows ??
+      db
+        .prepare("SELECT price_cents AS priceCents, quantity_total AS quantityTotal, quantity_remaining AS quantityRemaining FROM materials WHERE user_id = ?")
+        .all(userId)) as Array<{ priceCents: number | null; quantityTotal: number; quantityRemaining: number }>;
     return {
       count: rows.length,
-      totalCost: rows.reduce((sum, row) => sum + (row.price_cents ?? 0), 0),
-      used: rows.filter((row) => row.quantity_remaining < row.quantity_total).length,
-      unused: rows.filter((row) => row.quantity_remaining === row.quantity_total).length
+      totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
+      used: rows.filter((row) => row.quantityRemaining < row.quantityTotal).length,
+      unused: rows.filter((row) => row.quantityRemaining === row.quantityTotal).length
     };
   }
-  const rows = db.prepare("SELECT id, quantity, price_cents, value_cents FROM projects WHERE user_id = ?").all(userId) as Array<{
+  const rows = (filteredRows ??
+    db.prepare("SELECT id, quantity, price_cents AS priceCents, value_cents AS valueCents FROM projects WHERE user_id = ?").all(userId)) as Array<{
     id: number;
     quantity: number;
-    price_cents: number | null;
-    value_cents: number | null;
+    priceCents: number | null;
+    valueCents: number | null;
   }>;
   return {
     count: rows.length,
     totalCost: rows.reduce((sum, row) => sum + calculateProjectCost(row.id).totalCost, 0),
-    totalValue: rows.reduce((sum, row) => sum + (row.value_cents ?? 0), 0),
+    totalValue: rows.reduce((sum, row) => sum + (row.valueCents ?? 0), 0),
     totalProduced: rows.reduce((sum, row) => sum + row.quantity, 0)
   };
+}
+
+function isPatternUsed(patternId: number) {
+  const row = getSqlite().prepare("SELECT 1 FROM project_patterns WHERE pattern_id = ? LIMIT 1").get(patternId);
+  return Boolean(row);
 }
 
 export function calculateProjectCost(projectId: number) {
@@ -540,6 +568,22 @@ export function upsertMeta(table: "material_categories" | "material_units", user
 
 export function listMeta(table: "material_categories" | "material_units", userId: number) {
   return getSqlite().prepare(`SELECT id, name, sort_order AS sortOrder FROM ${table} WHERE user_id = ? ORDER BY sort_order, name`).all(userId);
+}
+
+export function listSources(kind: Exclude<Kind, "projects">, userId: number) {
+  return (
+    getSqlite()
+      .prepare(`SELECT DISTINCT source FROM ${kind} WHERE user_id = ? AND source IS NOT NULL AND TRIM(source) != '' ORDER BY source`)
+      .all(userId) as Array<{ source: string }>
+  ).map((row) => row.source);
+}
+
+export function listClothMaterialTypes(userId: number) {
+  return (
+    getSqlite()
+      .prepare("SELECT DISTINCT material_type AS materialType FROM cloths WHERE user_id = ? AND material_type IS NOT NULL AND TRIM(material_type) != '' ORDER BY material_type")
+      .all(userId) as Array<{ materialType: string }>
+  ).map((row) => row.materialType);
 }
 
 export function parseIds(value: string | null) {

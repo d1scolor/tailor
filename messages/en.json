@@ -14,13 +14,20 @@
     "sortCreated": "Recently added",
     "sortName": "Name A-Z",
     "sortPrice": "Price",
+    "sortDirection": "Sort direction",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "refresh": "Refresh",
     "grid": "Grid",
     "list": "List",
     "save": "Save",
+    "saving": "Saving",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
+    "select": "Select",
+    "custom": "Custom",
     "create": "Create",
     "logout": "Logout",
     "name": "Name",
@@ -50,6 +57,11 @@
     "previous": "Previous",
     "details": "Details",
     "summary": "Summary",
+    "total": "Total",
+    "remaining": "Remaining",
+    "unit": "unit",
+    "piece": "piece",
+    "unitPrice": "Unit price",
     "upload": "Add photo",
     "uploadFailed": "Photo upload failed",
     "camera": "Camera",
@@ -110,6 +122,14 @@
     "silver": "Silver",
     "black": "Black"
   },
+  "clothPurpose": {
+    "服装": "Garment",
+    "手工": "Craft"
+  },
+  "patternType": {
+    "纸质": "Paper",
+    "电子": "Digital"
+  },
   "cloths": {
     "title": "Cloths",
     "add": "Add cloth",
@@ -123,7 +143,9 @@
     "hasStockLeft": "Has remaining length",
     "lengthUnit": "Length unit",
     "width": "Width",
-    "widthUnit": "Width unit"
+    "widthUnit": "Width unit",
+    "purpose": "Use",
+    "materialType": "Material"
   },
   "patterns": {
     "title": "Patterns",
@@ -132,6 +154,7 @@
     "cost": "Total cost",
     "usedCount": "Used",
     "unusedCount": "Never used",
+    "patternType": "Pattern type",
     "size": "Size",
     "pieces": "Pieces"
   },

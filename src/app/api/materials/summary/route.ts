@@ -8,5 +8,5 @@ export const runtime = "nodejs";
 export function GET(request: NextRequest) {
   const { user, response } = requireAuthFromRequest(request);
   if (response) return response;
-  return ok(summary("materials", user.id));
+  return ok(summary("materials", user.id, request.nextUrl.searchParams));
 }
