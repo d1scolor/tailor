@@ -15,6 +15,7 @@
     "sortName": "名称",
     "sortPrice": "价格",
     "sortUnitPrice": "单价",
+    "sortQuantity": "数量",
     "sortDirection": "排序方向",
     "asc": "升序",
     "desc": "降序",
@@ -80,7 +81,8 @@
     "cloths": "布料",
     "patterns": "纸样",
     "materials": "辅料",
-    "projects": "作品"
+    "projects": "作品",
+    "tools": "工具"
   },
   "colors": {
     "red": "红色",
@@ -130,6 +132,12 @@
   "patternType": {
     "纸质": "纸质",
     "电子": "电子"
+  },
+  "toolCondition": {
+    "正常": "正常",
+    "需维护": "需维护",
+    "已损坏": "已损坏",
+    "已停用": "已停用"
   },
   "cloths": {
     "title": "布料",
@@ -186,6 +194,19 @@
     "lengthUsed": "使用长度",
     "quantityUsed": "使用数量",
     "costCaveat": "纸样成本在每次使用时按全价计算。"
+  },
+  "tools": {
+    "title": "工具",
+    "add": "添加工具",
+    "total": "工具数量",
+    "totalQuantity": "总数量",
+    "cost": "总成本",
+    "needsAttention": "需处理",
+    "category": "分类",
+    "quantity": "数量",
+    "brand": "品牌",
+    "model": "型号",
+    "condition": "状态"
   },
   "settings": {
     "title": "设置",

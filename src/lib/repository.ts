@@ -5,14 +5,15 @@ import { deletePhotoFilesSync } from "@/lib/images";
 import { applyProjectLinks, restoreProjectLinks } from "@/lib/consumption";
 import { nowIso } from "@/lib/time";
 
-export type Kind = "cloths" | "patterns" | "materials" | "projects";
-export type EntityType = "cloth" | "pattern" | "material" | "project";
+export type Kind = "cloths" | "patterns" | "materials" | "projects" | "tools";
+export type EntityType = "cloth" | "pattern" | "material" | "project" | "tool";
 
 const entityByKind: Record<Kind, EntityType> = {
   cloths: "cloth",
   patterns: "pattern",
   materials: "material",
-  projects: "project"
+  projects: "project",
+  tools: "tool"
 };
 
 const sortColumns: Record<Kind, Record<string, string>> = {
@@ -45,6 +46,14 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     price: "price_cents",
     value: "value_cents",
     unitPrice: "CASE WHEN quantity > 0 THEN value_cents / quantity ELSE NULL END"
+  },
+  tools: {
+    name: "name",
+    created: "created_at",
+    purchased: "purchased_at",
+    price: "price_cents",
+    quantity: "quantity",
+    unitPrice: "CASE WHEN quantity > 0 THEN price_cents / quantity ELSE NULL END"
   }
 };
 
@@ -85,6 +94,14 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
   if (kind === "patterns" && params.get("patternType")) {
     clauses.push("pattern_type = ?");
     args.push(params.get("patternType"));
+  }
+  if (kind === "tools" && params.get("category")) {
+    clauses.push("category = ?");
+    args.push(params.get("category"));
+  }
+  if (kind === "tools" && params.get("condition")) {
+    clauses.push("condition = ?");
+    args.push(params.get("condition"));
   }
   const tags = parseIds(params.get("tags"));
   if (tags.length) {
@@ -229,6 +246,29 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
           now
         );
       id = Number(result.lastInsertRowid);
+    } else if (kind === "tools") {
+      const result = db
+        .prepare(
+          `INSERT INTO tools
+          (user_id, name, category, quantity, brand, model, source, price_cents, purchased_at, condition, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          userId,
+          input.name,
+          input.category,
+          input.quantity,
+          input.brand,
+          input.model,
+          input.source,
+          input.priceCents,
+          input.purchasedAt,
+          input.condition,
+          input.remarks,
+          now,
+          now
+        );
+      id = Number(result.lastInsertRowid);
     } else {
       const result = db
         .prepare(
@@ -315,6 +355,24 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         input.source,
         input.priceCents,
         input.purchasedAt,
+        input.remarks,
+        now,
+        id
+      );
+    } else if (kind === "tools") {
+      db.prepare(
+        `UPDATE tools SET name = ?, category = ?, quantity = ?, brand = ?, model = ?, source = ?, price_cents = ?,
+         purchased_at = ?, condition = ?, remarks = ?, updated_at = ? WHERE id = ?`
+      ).run(
+        input.name,
+        input.category,
+        input.quantity,
+        input.brand,
+        input.model,
+        input.source,
+        input.priceCents,
+        input.purchasedAt,
+        input.condition,
         input.remarks,
         now,
         id
@@ -406,6 +464,18 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
       used: rows.filter((row) => row.quantityRemaining < row.quantityTotal).length,
       unused: rows.filter((row) => row.quantityRemaining === row.quantityTotal).length
+    };
+  }
+  if (kind === "tools") {
+    const rows = (filteredRows ??
+      db
+        .prepare("SELECT quantity, price_cents AS priceCents, condition FROM tools WHERE user_id = ?")
+        .all(userId)) as Array<{ quantity: number; priceCents: number | null; condition: string }>;
+    return {
+      count: rows.length,
+      totalQuantity: rows.reduce((sum, row) => sum + row.quantity, 0),
+      totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
+      needsAttention: rows.filter((row) => row.condition === "需维护" || row.condition === "已损坏").length
     };
   }
   const rows = (filteredRows ??
@@ -590,6 +660,14 @@ export function listSources(kind: Exclude<Kind, "projects">, userId: number) {
       .prepare(`SELECT DISTINCT source FROM ${kind} WHERE user_id = ? AND source IS NOT NULL AND TRIM(source) != '' ORDER BY source`)
       .all(userId) as Array<{ source: string }>
   ).map((row) => row.source);
+}
+
+export function listToolCategories(userId: number) {
+  return (
+    getSqlite()
+      .prepare("SELECT DISTINCT category FROM tools WHERE user_id = ? AND category IS NOT NULL AND TRIM(category) != '' ORDER BY category")
+      .all(userId) as Array<{ category: string }>
+  ).map((row) => row.category);
 }
 
 export function listClothMaterialTypes(userId: number) {

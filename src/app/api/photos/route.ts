@@ -21,7 +21,8 @@ const tableByEntity = {
   cloth: "cloths",
   pattern: "patterns",
   material: "materials",
-  project: "projects"
+  project: "projects",
+  tool: "tools"
 } as const;
 
 export async function POST(request: NextRequest) {

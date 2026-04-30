@@ -15,6 +15,7 @@
     "sortName": "Name A-Z",
     "sortPrice": "Price",
     "sortUnitPrice": "Unit price",
+    "sortQuantity": "Quantity",
     "sortDirection": "Sort direction",
     "asc": "Ascending",
     "desc": "Descending",
@@ -80,7 +81,8 @@
     "cloths": "Cloths",
     "patterns": "Patterns",
     "materials": "Materials",
-    "projects": "Projects"
+    "projects": "Projects",
+    "tools": "Tools"
   },
   "colors": {
     "red": "Red",
@@ -130,6 +132,12 @@
   "patternType": {
     "纸质": "Paper",
     "电子": "Digital"
+  },
+  "toolCondition": {
+    "正常": "Good",
+    "需维护": "Needs maintenance",
+    "已损坏": "Broken",
+    "已停用": "Retired"
   },
   "cloths": {
     "title": "Cloths",
@@ -186,6 +194,19 @@
     "lengthUsed": "Length used",
     "quantityUsed": "Quantity used",
     "costCaveat": "Pattern cost is counted in full each time a pattern is used."
+  },
+  "tools": {
+    "title": "Tools",
+    "add": "Add tool",
+    "total": "Tool entries",
+    "totalQuantity": "Total quantity",
+    "cost": "Total cost",
+    "needsAttention": "Needs attention",
+    "category": "Category",
+    "quantity": "Quantity",
+    "brand": "Brand",
+    "model": "Model",
+    "condition": "Condition"
   },
   "settings": {
     "title": "Settings",

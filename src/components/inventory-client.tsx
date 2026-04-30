@@ -30,6 +30,8 @@ type Filters = {
   patternId: string;
   clothId: string;
   materialId: string;
+  category: string;
+  condition: string;
 };
 type LightboxState = { photos: string[]; index: number };
 type StagedPhoto = { id: string; file: File; isCover: boolean };
@@ -45,6 +47,7 @@ type Props = {
   materialOptions?: AnyItem[];
   sourceOptions?: string[];
   materialTypeOptions?: string[];
+  toolCategoryOptions?: string[];
 };
 type FieldsProps = {
   kind: Kind;
@@ -57,6 +60,7 @@ type FieldsProps = {
   materialOptions: AnyItem[];
   sourceOptions: string[];
   materialTypeOptions: string[];
+  toolCategoryOptions: string[];
   onAddTag: (name: string) => void;
   onAddCategory: CreateMetaHandler;
   onAddUnit: CreateMetaHandler;
@@ -93,10 +97,13 @@ const entityByKind = {
   cloths: "cloth",
   patterns: "pattern",
   materials: "material",
-  projects: "project"
+  projects: "project",
+  tools: "tool"
 } as const;
 const clothPurposeOptions = ["服装", "手工"];
 const patternTypeOptions = ["纸质", "电子"];
+const toolConditionOptions = ["正常", "需维护", "已损坏", "已停用"];
+const toolCategoryDefaults = ["剪裁工具", "测量工具", "缝纫机配件", "手缝工具", "熨烫工具", "标记工具", "收纳工具", "维修保养", "其他"];
 const clothMaterialTypeDefaults = [
   "棉",
   "亚麻",
@@ -218,6 +225,7 @@ export function InventoryClient(props: Props) {
   const [unitList, setUnitList] = useState(props.units ?? []);
   const [sourceOptions, setSourceOptions] = useState(props.sourceOptions ?? []);
   const [materialTypeOptions, setMaterialTypeOptions] = useState(props.materialTypeOptions ?? []);
+  const [toolCategoryOptions, setToolCategoryOptions] = useState(props.toolCategoryOptions ?? []);
   const submitLockRef = useRef(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
@@ -322,6 +330,7 @@ export function InventoryClient(props: Props) {
       const { item } = (await response.json()) as { item: AnyItem };
       rememberSource(body.source);
       rememberMaterialType(body.materialType);
+      rememberToolCategory(body.category);
       await uploadStagedPhotos(stagedPhotoFiles, props.kind, item.id);
       setStagedPhotoFiles([]);
       setEditing(null);
@@ -423,6 +432,12 @@ export function InventoryClient(props: Props) {
     setMaterialTypeOptions((current) => (current.includes(materialType) ? current : [...current, materialType].sort()));
   }
 
+  function rememberToolCategory(value: unknown) {
+    const category = String(value ?? "").trim();
+    if (!category || props.kind !== "tools") return;
+    setToolCategoryOptions((current) => (current.includes(category) ? current : [...current, category].sort()));
+  }
+
   const cards = useMemo(
     () =>
       items.map((item) => (
@@ -486,6 +501,7 @@ export function InventoryClient(props: Props) {
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
               <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+              {props.kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
             </Select>
           </label>
           <Select
@@ -561,6 +577,7 @@ export function InventoryClient(props: Props) {
                 materialOptions={props.materialOptions ?? []}
                 sourceOptions={sourceOptions}
                 materialTypeOptions={materialTypeOptions}
+                toolCategoryOptions={toolCategoryOptions}
                 onAddTag={addTag}
                 onAddCategory={(name) => createMeta("categories", name)}
                 onAddUnit={(name) => createMeta("units", name)}
@@ -603,6 +620,7 @@ export function InventoryClient(props: Props) {
           colorOptions={colorOptions}
           sourceOptions={sourceOptions}
           materialTypeOptions={materialTypeOptions}
+          toolCategoryOptions={toolCategoryOptions}
           onApply={applyFilters}
           onClose={() => setFilterOpen(false)}
         />
@@ -713,6 +731,19 @@ function Fields(props: FieldsProps) {
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
         {props.kind === "materials" ? <MetaSelect name="unitId" label={t("materials.unit")} options={props.units} value={props.item.unitId} onCreate={props.onAddUnit} /> : null}
         {props.kind === "materials" ? <Field name="quantityTotal" label={t("materials.quantityTotal")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.quantityTotal} required /> : null}
+        {props.kind === "tools" ? (
+          <TextChoiceField
+            name="category"
+            label={t("tools.category")}
+            value={props.item.category ?? "其他"}
+            options={[...new Set([...toolCategoryDefaults, ...props.toolCategoryOptions])]}
+            required
+          />
+        ) : null}
+        {props.kind === "tools" ? <Field name="quantity" label={t("tools.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
+        {props.kind === "tools" ? <Field name="brand" label={t("tools.brand")} defaultValue={props.item.brand} /> : null}
+        {props.kind === "tools" ? <Field name="model" label={t("tools.model")} defaultValue={props.item.model} /> : null}
+        {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "正常"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         <Field name="priceCents" label={props.kind === "projects" ? t("projects.extraCost") : t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} />
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
@@ -994,6 +1025,7 @@ function FilterDrawer({
   colorOptions,
   sourceOptions,
   materialTypeOptions,
+  toolCategoryOptions,
   onApply,
   onClose
 }: {
@@ -1008,6 +1040,7 @@ function FilterDrawer({
   colorOptions: string[];
   sourceOptions: string[];
   materialTypeOptions: string[];
+  toolCategoryOptions: string[];
   onApply: (filters: Filters) => void;
   onClose: () => void;
 }) {
@@ -1126,6 +1159,33 @@ function FilterDrawer({
             </label>
           ) : null}
 
+          {kind === "tools" ? (
+            <div className="grid gap-3">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("tools.category")}</span>
+                <Select value={draft.category} onChange={(event) => update("category", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {[...new Set([...toolCategoryDefaults, ...toolCategoryOptions])].map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("tools.condition")}</span>
+                <Select value={draft.condition} onChange={(event) => update("condition", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {toolConditionOptions.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {t(`toolCondition.${condition}`)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+          ) : null}
+
           {kind === "cloths" || kind === "materials" || kind === "projects" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.colors")}</span>
@@ -1140,7 +1200,7 @@ function FilterDrawer({
             </label>
           ) : null}
 
-          {kind !== "projects" ? (
+          {kind !== "projects" && kind !== "tools" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.used")}</span>
               <Select value={draft.used} onChange={(event) => update("used", event.target.value)}>
@@ -1664,14 +1724,16 @@ function emptyFilters(): Filters {
     unitId: "",
     patternId: "",
     clothId: "",
-    materialId: ""
+    materialId: "",
+    category: "",
+    condition: ""
   };
 }
 
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
   );
 }
@@ -1696,6 +1758,8 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.patternId) params.set("patternId", filters.patternId);
   if (filters.clothId) params.set("clothId", filters.clothId);
   if (filters.materialId) params.set("materialId", filters.materialId);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.condition) params.set("condition", filters.condition);
   return params;
 }
 
@@ -1746,6 +1810,14 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
       { label: t("projects.produced"), value: summary.totalProduced ?? 0 }
     ];
   }
+  if (kind === "tools") {
+    return [
+      { label: t("tools.total"), value: summary.count ?? 0 },
+      { label: t("tools.totalQuantity"), value: summary.totalQuantity ?? 0 },
+      { label: t("tools.cost"), value: money(summary.totalCost) },
+      { label: t("tools.needsAttention"), value: summary.needsAttention ?? 0 }
+    ];
+  }
   const prefix = kind === "patterns" ? "patterns" : "materials";
   return [
     { label: t(`${prefix}.total`), value: summary.count ?? 0 },
@@ -1764,6 +1836,7 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
     const unit = item.unitName ? ` ${item.unitName}` : "";
     return `${t("common.total")} ${numberValue(item.quantityTotal)}${unit} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}${unit}`;
   }
+  if (kind === "tools") return `${item.category ?? t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
 }
 
@@ -1780,6 +1853,9 @@ function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTransl
   }
   if (kind === "projects" && item.valueCents && item.quantity > 0) {
     return `${t("common.unitPrice")} ${money(Math.round(item.valueCents / item.quantity))}/${t("common.piece")}`;
+  }
+  if (kind === "tools" && item.priceCents && item.quantity > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantity))}/${t("common.piece")}`;
   }
   return "";
 }
@@ -1816,6 +1892,15 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, money);
     add(t("common.date"), item.purchasedAt);
+  } else if (kind === "tools") {
+    add(t("tools.category"), item.category);
+    add(t("tools.quantity"), item.quantity);
+    add(t("tools.brand"), item.brand);
+    add(t("tools.model"), item.model);
+    add(t("tools.condition"), item.condition, (value) => t(`toolCondition.${value}`));
+    add(t("common.source"), item.source);
+    add(t("common.price"), item.priceCents, money);
+    add(t("common.date"), item.purchasedAt);
   } else {
     add(t("projects.quantity"), item.quantity);
     add(t("projects.extraCost"), item.priceCents, money);
@@ -1831,6 +1916,7 @@ function defaultItem(kind: Kind) {
   if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "服装", materialType: "其他" };
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
+  if (kind === "tools") return { quantity: 1, category: "其他", condition: "正常" };
   return { patternType: "纸质" };
 }
 
@@ -1868,6 +1954,16 @@ function formToBody(kind: Kind, form: FormData) {
       unitId: numberOrNull(form.get("unitId")),
       quantityTotal: Number(form.get("quantityTotal")),
       colors: sanitizeColors(form.getAll("colors"))
+    };
+  }
+  if (kind === "tools") {
+    return {
+      ...base,
+      category: stringOrNull(form.get("category")) ?? "其他",
+      quantity: Number(form.get("quantity") || 1),
+      brand: stringOrNull(form.get("brand")),
+      model: stringOrNull(form.get("model")),
+      condition: form.get("condition") || "正常"
     };
   }
   const clothIds = form.getAll("clothId");

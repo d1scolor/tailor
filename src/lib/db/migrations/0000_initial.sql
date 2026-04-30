@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
 CREATE TABLE IF NOT EXISTS photos (
   id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project')),
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project','tool')),
   entity_id INTEGER NOT NULL,
   original_ext TEXT NOT NULL,
   is_cover INTEGER NOT NULL DEFAULT 0,
@@ -109,6 +109,23 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tools (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT '其他',
+  quantity INTEGER NOT NULL DEFAULT 1,
+  brand TEXT,
+  model TEXT,
+  source TEXT,
+  price_cents INTEGER,
+  purchased_at TEXT,
+  condition TEXT NOT NULL DEFAULT '正常',
+  remarks TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS project_cloths (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -145,7 +162,7 @@ CREATE TABLE IF NOT EXISTS tags (
 );
 
 CREATE TABLE IF NOT EXISTS entity_tags (
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project')),
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project','tool')),
   entity_id INTEGER NOT NULL,
   tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY(entity_type, entity_id, tag_id)

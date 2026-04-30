@@ -83,6 +83,24 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "patterns", "pattern_type")) {
     db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT '纸质'");
   }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tools (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT '其他',
+      quantity INTEGER NOT NULL DEFAULT 1,
+      brand TEXT,
+      model TEXT,
+      source TEXT,
+      price_cents INTEGER,
+      purchased_at TEXT,
+      condition TEXT NOT NULL DEFAULT '正常',
+      remarks TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
 }
 
 function columnExists(db: Sqlite, table: string, column: string) {
