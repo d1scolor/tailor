@@ -248,6 +248,27 @@ export function InventoryClient(props: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    const hasModal = Boolean(editing || selected || filterOpen || lightbox || confirmDelete);
+    if (!hasModal) return;
+    const scrollY = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [editing, selected, filterOpen, lightbox, confirmDelete]);
+
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
@@ -258,7 +279,7 @@ export function InventoryClient(props: Props) {
     const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir);
     const [listResponse, summaryResponse] = await Promise.all([
       fetch(`/api/${props.kind}?${params.toString()}`),
-      fetch(`/api/${props.kind}/summary`)
+      fetch(`/api/${props.kind}/summary?${params.toString()}`)
     ]);
     const nextItems = (await listResponse.json()).items;
     const nextSummary = await summaryResponse.json();
@@ -634,6 +655,7 @@ function ItemCard({
   const coverIndex = Math.max(0, photoItems.findIndex((photo: AnyItem) => photo.isCover));
   const photo = photos[coverIndex];
   const stat = primaryStat(kind, item, t);
+  const unitPrice = unitPriceStat(kind, item, t);
   return (
     <Card
       role="button"
@@ -659,6 +681,7 @@ function ItemCard({
       <div className={view === "grid" ? "p-3" : "min-w-0"}>
         <h2 className="truncate text-sm font-semibold">{item.name}</h2>
         <p className="mt-1 truncate text-xs text-muted-foreground">{stat}</p>
+        {unitPrice ? <p className="mt-1 truncate text-xs text-muted-foreground">{unitPrice}</p> : null}
         <ColorSwatches colors={item.colors ?? []} className="mt-2" />
       </div>
     </Card>
@@ -1252,8 +1275,8 @@ function Detail({
 }: DetailProps) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
-      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1729,10 +1752,31 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
 }
 
 function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
-  if (kind === "cloths") return `${numberValue(item.lengthRemaining)} / ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+  if (kind === "cloths") {
+    return `${t("common.remaining")} ${numberValue(item.lengthRemaining)} / ${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+  }
   if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
-  if (kind === "materials") return `${numberValue(item.quantityRemaining)} / ${numberValue(item.quantityTotal)}`;
+  if (kind === "materials") {
+    return `${t("common.remaining")} ${numberValue(item.quantityRemaining)} / ${t("common.total")} ${numberValue(item.quantityTotal)}`;
+  }
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
+}
+
+function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
+  if (kind === "cloths" && item.priceCents && item.lengthTotal > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.lengthTotal))}/${item.lengthUnit}`;
+  }
+  if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantityTotal))}/${item.unitName ?? t("common.unit")}`;
+  }
+  if (kind === "patterns" && item.priceCents) {
+    const divisor = item.pieces && item.pieces > 0 ? item.pieces : 1;
+    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / divisor))}/${t("common.piece")}`;
+  }
+  if (kind === "projects" && item.valueCents && item.quantity > 0) {
+    return `${t("common.unitPrice")} ${money(Math.round(item.valueCents / item.quantity))}/${t("common.piece")}`;
+  }
+  return "";
 }
 
 function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
