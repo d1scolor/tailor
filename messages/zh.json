@@ -121,6 +121,10 @@
     "服装": "服装",
     "手工": "手工"
   },
+  "patternType": {
+    "纸质": "纸质",
+    "电子": "电子"
+  },
   "cloths": {
     "title": "布料",
     "add": "添加布料",
@@ -145,6 +149,7 @@
     "cost": "总成本",
     "usedCount": "已使用",
     "unusedCount": "未使用",
+    "patternType": "纸样类型",
     "size": "尺码",
     "pieces": "张数"
   },

@@ -19,6 +19,7 @@ type Filters = {
   source: string;
   purpose: string;
   materialType: string;
+  patternType: string;
   from: string;
   to: string;
   used: string;
@@ -95,6 +96,7 @@ const entityByKind = {
   projects: "project"
 } as const;
 const clothPurposeOptions = ["服装", "手工"];
+const patternTypeOptions = ["纸质", "电子"];
 const clothMaterialTypeDefaults = [
   "棉",
   "亚麻",
@@ -686,6 +688,7 @@ function Fields(props: FieldsProps) {
           />
         ) : null}
         {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
+        {props.kind === "patterns" ? <UnitSelect name="patternType" label={t("patterns.patternType")} values={patternTypeOptions} value={props.item.patternType ?? patternTypeOptions[0]} labels={(value) => t(`patternType.${value}`)} /> : null}
         {props.kind === "patterns" ? <Field name="size" label={t("patterns.size")} defaultValue={props.item.size} /> : null}
         {props.kind === "patterns" ? <Field name="pieces" label={t("patterns.pieces")} type="number" inputMode="numeric" defaultValue={props.item.pieces} /> : null}
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
@@ -1085,6 +1088,20 @@ function FilterDrawer({
                 </Select>
               </label>
             </div>
+          ) : null}
+
+          {kind === "patterns" ? (
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">{t("patterns.patternType")}</span>
+              <Select value={draft.patternType} onChange={(event) => update("patternType", event.target.value)}>
+                <option value="">{t("common.all")}</option>
+                {patternTypeOptions.map((patternType) => (
+                  <option key={patternType} value={patternType}>
+                    {t(`patternType.${patternType}`)}
+                  </option>
+                ))}
+              </Select>
+            </label>
           ) : null}
 
           {kind === "cloths" || kind === "materials" || kind === "projects" ? (
@@ -1610,6 +1627,7 @@ function emptyFilters(): Filters {
     source: "",
     purpose: "",
     materialType: "",
+    patternType: "",
     from: "",
     to: "",
     used: "",
@@ -1626,7 +1644,7 @@ function emptyFilters(): Filters {
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
   );
 }
@@ -1640,6 +1658,7 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.source) params.set("source", filters.source);
   if (filters.purpose) params.set("purpose", filters.purpose);
   if (filters.materialType) params.set("materialType", filters.materialType);
+  if (filters.patternType) params.set("patternType", filters.patternType);
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.used) params.set("used", filters.used);
@@ -1734,6 +1753,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.price"), item.priceCents, money);
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
+    add(t("patterns.patternType"), item.patternType, (value) => t(`patternType.${value}`));
     add(t("patterns.size"), item.size);
     add(t("patterns.pieces"), item.pieces);
     add(t("common.source"), item.source);
@@ -1762,7 +1782,7 @@ function defaultItem(kind: Kind) {
   if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "服装", materialType: "其他" };
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
-  return {};
+  return { patternType: "纸质" };
 }
 
 function formToBody(kind: Kind, form: FormData) {
@@ -1790,7 +1810,7 @@ function formToBody(kind: Kind, form: FormData) {
     };
   }
   if (kind === "patterns") {
-    return { ...base, size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
+    return { ...base, patternType: form.get("patternType"), size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
   }
   if (kind === "materials") {
     return {

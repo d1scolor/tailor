@@ -121,6 +121,10 @@
     "服装": "Garment",
     "手工": "Craft"
   },
+  "patternType": {
+    "纸质": "Paper",
+    "电子": "Digital"
+  },
   "cloths": {
     "title": "Cloths",
     "add": "Add cloth",
@@ -145,6 +149,7 @@
     "cost": "Total cost",
     "usedCount": "Used",
     "unusedCount": "Never used",
+    "patternType": "Pattern type",
     "size": "Size",
     "pieces": "Pieces"
   },

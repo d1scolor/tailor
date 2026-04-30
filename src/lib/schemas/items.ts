@@ -25,6 +25,7 @@ export const clothSchema = baseItemSchema.extend({
 });
 
 export const patternSchema = baseItemSchema.extend({
+  patternType: z.enum(["纸质", "电子"]).default("纸质"),
   size: z.string().trim().nullable().optional(),
   pieces: nullableInt
 });

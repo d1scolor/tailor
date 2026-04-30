@@ -68,6 +68,10 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push("material_type = ?");
     args.push(params.get("materialType"));
   }
+  if (kind === "patterns" && params.get("patternType")) {
+    clauses.push("pattern_type = ?");
+    args.push(params.get("patternType"));
+  }
   const tags = parseIds(params.get("tags"));
   if (tags.length) {
     clauses.push(
@@ -171,12 +175,13 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO patterns
-          (user_id, name, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, pattern_type, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
+          input.patternType,
           input.size,
           input.pieces,
           input.source,
@@ -263,10 +268,11 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       );
     } else if (kind === "patterns") {
       db.prepare(
-        `UPDATE patterns SET name = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
+        `UPDATE patterns SET name = ?, pattern_type = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
          purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
+        input.patternType,
         input.size,
         input.pieces,
         input.source,

@@ -59,6 +59,7 @@ export const patterns = sqliteTable("patterns", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  patternType: text("pattern_type").notNull().default("纸质"),
   size: text("size"),
   pieces: integer("pieces"),
   source: text("source"),
