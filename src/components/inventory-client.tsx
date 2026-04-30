@@ -251,21 +251,17 @@ export function InventoryClient(props: Props) {
   useEffect(() => {
     const hasModal = Boolean(editing || selected || filterOpen || lightbox || confirmDelete);
     if (!hasModal) return;
-    const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousOverflow = document.body.style.overflow;
-    const previousPosition = document.body.style.position;
-    const previousTop = document.body.style.top;
-    const previousWidth = document.body.style.width;
+    const previousPaddingRight = document.body.style.paddingRight;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
     return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousOverflow;
-      document.body.style.position = previousPosition;
-      document.body.style.top = previousTop;
-      document.body.style.width = previousWidth;
-      window.scrollTo(0, scrollY);
+      document.body.style.paddingRight = previousPaddingRight;
     };
   }, [editing, selected, filterOpen, lightbox, confirmDelete]);
 
@@ -398,7 +394,6 @@ export function InventoryClient(props: Props) {
 
   function applyFilters(nextFilters: Filters) {
     setFilters(nextFilters);
-    setFilterOpen(false);
     void refresh(query, sort, nextFilters, dir);
   }
 
@@ -1024,14 +1019,17 @@ function FilterDrawer({
   }, [filters]);
 
   function update<K extends keyof Filters>(key: K, value: Filters[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    onApply(next);
   }
 
   const toggleTag = (tagId: number) => {
-    setDraft((current) => ({
-      ...current,
-      tagIds: current.tagIds.includes(tagId) ? current.tagIds.filter((id) => id !== tagId) : [...current.tagIds, tagId]
-    }));
+    const next = {
+      ...draft,
+      tagIds: draft.tagIds.includes(tagId) ? draft.tagIds.filter((id) => id !== tagId) : [...draft.tagIds, tagId]
+    };
+    onApply(next);
   };
 
   return (
@@ -1169,11 +1167,16 @@ function FilterDrawer({
           ) : null}
         </div>
         <div className="flex justify-end gap-2 border-t border-border pt-3">
-          <Button type="button" variant="secondary" onClick={() => setDraft(emptyFilters())}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              const next = emptyFilters();
+              setDraft(next);
+              onApply(next);
+            }}
+          >
             {t("common.reset")}
-          </Button>
-          <Button type="button" onClick={() => onApply(draft)}>
-            {t("common.apply")}
           </Button>
         </div>
       </Card>
@@ -1758,7 +1761,8 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
   }
   if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
   if (kind === "materials") {
-    return `${t("common.total")} ${numberValue(item.quantityTotal)} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}`;
+    const unit = item.unitName ? ` ${item.unitName}` : "";
+    return `${t("common.total")} ${numberValue(item.quantityTotal)}${unit} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}${unit}`;
   }
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
 }

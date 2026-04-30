@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           __html: `window.__TAILOR_CURRENCY_SYMBOL__=${JSON.stringify(currencySymbol)};`
         }}
       />
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-border bg-background px-4 py-3">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <Link href="/cloths" className="flex items-center gap-2 font-semibold">
             <Scissors className="h-5 w-5" aria-hidden />
