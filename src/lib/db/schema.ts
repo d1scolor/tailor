@@ -61,6 +61,7 @@ export const patterns = sqliteTable("patterns", {
   name: text("name").notNull(),
   patternType: text("pattern_type").notNull().default("paper"),
   difficulty: text("difficulty").notNull().default("medium"),
+  patternFor: text("pattern_for"),
   size: text("size"),
   pieces: integer("pieces"),
   source: text("source"),

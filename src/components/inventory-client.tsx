@@ -112,6 +112,33 @@ const entityByKind = {
 const clothPurposeOptions = ["garment", "craft"];
 const patternTypeOptions = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
+const patternForOptions = [
+  "headwear",
+  "scarves",
+  "tops",
+  "shirts",
+  "blouses",
+  "tunics",
+  "vests",
+  "sweaters",
+  "cardigans",
+  "jackets",
+  "coats",
+  "dresses",
+  "jumpsuits",
+  "skirts",
+  "pants",
+  "shorts",
+  "leggings",
+  "overalls",
+  "lingerie",
+  "sleepwear",
+  "swimwear",
+  "activewear",
+  "costumes",
+  "aprons",
+  "bags"
+];
 const toolConditionOptions = ["good", "maintenance", "broken", "retired"];
 const toolCategoryDefaults = ["剪裁工具", "测量工具", "缝纫机配件", "手缝工具", "熨烫工具", "标记工具", "收纳工具", "维修保养", "其他"];
 const clothMaterialTypeDefaults = [
@@ -571,10 +598,10 @@ export function InventoryClient(props: Props) {
 
       {editing ? (
         <ModalPortal>
-          <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
-            <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
+          <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
+            <Card className="max-h-[92dvh] w-full max-w-full overflow-x-hidden overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
-              <form key={`${props.kind}-${editing.id ?? "new"}`} className="space-y-4" onSubmit={submit}>
+              <form key={`${props.kind}-${editing.id ?? "new"}`} className="min-w-0 space-y-4" onSubmit={submit}>
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
                   <Button type="button" variant="ghost" onClick={closeEditor}>
@@ -655,7 +682,11 @@ export function InventoryClient(props: Props) {
         </ModalPortal>
       ) : null}
 
-      {lightbox ? <PhotoLightbox state={lightbox} setState={setLightbox} onClose={() => setLightbox(null)} /> : null}
+      {lightbox ? (
+        <ModalPortal>
+          <PhotoLightbox state={lightbox} setState={setLightbox} onClose={() => setLightbox(null)} />
+        </ModalPortal>
+      ) : null}
 
       {confirmDelete ? (
         <ConfirmSheet
@@ -756,6 +787,15 @@ function Fields(props: FieldsProps) {
         {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
         {props.kind === "patterns" ? <UnitSelect name="patternType" label={t("patterns.patternType")} values={patternTypeOptions} value={props.item.patternType ?? patternTypeOptions[0]} labels={(value) => t(`patternType.${value}`)} /> : null}
         {props.kind === "patterns" ? <UnitSelect name="difficulty" label={t("patterns.difficulty")} values={patternDifficultyOptions} value={props.item.difficulty ?? "medium"} labels={(value) => t(`patternDifficulty.${value}`)} /> : null}
+        {props.kind === "patterns" ? (
+          <TextChoiceField
+            name="patternFor"
+            label={t("patterns.patternFor")}
+            value={props.item.patternFor ?? ""}
+            options={patternForOptions}
+            labels={(value) => patternForLabel(value, t)}
+          />
+        ) : null}
         {props.kind === "patterns" ? <Field name="size" label={t("patterns.size")} defaultValue={props.item.size} /> : null}
         {props.kind === "patterns" ? <Field name="pieces" label={t("patterns.pieces")} type="number" inputMode="numeric" defaultValue={props.item.pieces} /> : null}
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
@@ -890,12 +930,14 @@ function TextChoiceField({
   label,
   value,
   options,
+  labels,
   required = false
 }: {
   name: string;
   label: string;
   value: string;
   options: string[];
+  labels?: (value: string) => string;
   required?: boolean;
 }) {
   const t = useTranslations();
@@ -918,7 +960,7 @@ function TextChoiceField({
         <option value="">{required ? t("common.select") : ""}</option>
         {knownOptions.map((item) => (
           <option key={item} value={item}>
-            {item}
+            {labels ? labels(item) : item}
           </option>
         ))}
         <option value="__custom">{t("common.custom")}</option>
@@ -1637,7 +1679,7 @@ function PhotoLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
@@ -1907,6 +1949,10 @@ function colorLabel(color: string, t: ReturnType<typeof useTranslations>) {
   return commonColors.includes(color) ? t(`colors.${color}`) : color;
 }
 
+function patternForLabel(value: string, t: ReturnType<typeof useTranslations>) {
+  return patternForOptions.includes(value) ? t(`patternFor.${value}`) : value;
+}
+
 function collectColors(groups: AnyItem[][]) {
   return [
     ...new Set(
@@ -1955,7 +2001,10 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
   if (kind === "cloths") {
     return `${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit} / ${t("common.remaining")} ${numberValue(item.lengthRemaining)} ${item.lengthUnit}`;
   }
-  if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
+  if (kind === "patterns") {
+    const patternFor = item.patternFor ? patternForLabel(item.patternFor, t) : "";
+    return [patternFor, item.size].filter(Boolean).join(" · ") || t("common.details");
+  }
   if (kind === "materials") {
     const unit = item.unitName ? ` ${item.unitName}` : "";
     return `${t("common.total")} ${numberValue(item.quantityTotal)}${unit} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}${unit}`;
@@ -2004,6 +2053,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => t(`patternType.${value}`));
     add(t("patterns.difficulty"), item.difficulty, (value) => t(`patternDifficulty.${value}`));
+    add(t("patterns.patternFor"), item.patternFor, (value) => patternForLabel(value, t));
     add(t("patterns.size"), item.size);
     add(t("patterns.pieces"), item.pieces);
     add(t("common.source"), item.source);
@@ -2070,7 +2120,14 @@ function formToBody(kind: Kind, form: FormData) {
     };
   }
   if (kind === "patterns") {
-    return { ...base, patternType: form.get("patternType"), difficulty: form.get("difficulty") || "medium", size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
+    return {
+      ...base,
+      patternType: form.get("patternType"),
+      difficulty: form.get("difficulty") || "medium",
+      patternFor: stringOrNull(form.get("patternFor")),
+      size: stringOrNull(form.get("size")),
+      pieces: numberOrNull(form.get("pieces"))
+    };
   }
   if (kind === "materials") {
     return {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseItemSchema, nullableInt, nullableNumber } from "./common";
+import { baseItemSchema, nullableInt, nullableNumber, nullableString } from "./common";
 
 export const entityTypeSchema = z.enum(["cloth", "pattern", "material", "project", "tool"]);
 export type EntityType = z.infer<typeof entityTypeSchema>;
@@ -27,6 +27,7 @@ export const clothSchema = baseItemSchema.extend({
 export const patternSchema = baseItemSchema.extend({
   patternType: z.enum(["paper", "digital"]).default("paper"),
   difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
+  patternFor: nullableString,
   size: z.string().trim().nullable().optional(),
   pieces: nullableInt
 });
