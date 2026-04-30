@@ -60,6 +60,7 @@ export const patterns = sqliteTable("patterns", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   patternType: text("pattern_type").notNull().default("paper"),
+  difficulty: text("difficulty").notNull().default("medium"),
   size: text("size"),
   pieces: integer("pieces"),
   source: text("source"),

@@ -83,6 +83,9 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "patterns", "pattern_type")) {
     db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT 'paper'");
   }
+  if (!columnExists(db, "patterns", "difficulty")) {
+    db.exec("ALTER TABLE patterns ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'");
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS tools (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

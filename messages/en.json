@@ -134,6 +134,11 @@
     "paper": "Paper",
     "digital": "Digital"
   },
+  "patternDifficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
   "toolCondition": {
     "good": "Good",
     "maintenance": "Needs maintenance",
@@ -165,6 +170,7 @@
     "usedCount": "Used",
     "unusedCount": "Never used",
     "patternType": "Pattern type",
+    "difficulty": "Difficulty",
     "size": "Size",
     "pieces": "Pieces"
   },

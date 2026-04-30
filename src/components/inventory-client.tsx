@@ -21,6 +21,7 @@ type Filters = {
   purpose: string;
   materialType: string;
   patternType: string;
+  difficulty: string;
   from: string;
   to: string;
   used: string;
@@ -110,6 +111,7 @@ const entityByKind = {
 } as const;
 const clothPurposeOptions = ["garment", "craft"];
 const patternTypeOptions = ["paper", "digital"];
+const patternDifficultyOptions = ["easy", "medium", "hard"];
 const toolConditionOptions = ["good", "maintenance", "broken", "retired"];
 const toolCategoryDefaults = ["剪裁工具", "测量工具", "缝纫机配件", "手缝工具", "熨烫工具", "标记工具", "收纳工具", "维修保养", "其他"];
 const clothMaterialTypeDefaults = [
@@ -750,6 +752,7 @@ function Fields(props: FieldsProps) {
         ) : null}
         {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
         {props.kind === "patterns" ? <UnitSelect name="patternType" label={t("patterns.patternType")} values={patternTypeOptions} value={props.item.patternType ?? patternTypeOptions[0]} labels={(value) => t(`patternType.${value}`)} /> : null}
+        {props.kind === "patterns" ? <UnitSelect name="difficulty" label={t("patterns.difficulty")} values={patternDifficultyOptions} value={props.item.difficulty ?? "medium"} labels={(value) => t(`patternDifficulty.${value}`)} /> : null}
         {props.kind === "patterns" ? <Field name="size" label={t("patterns.size")} defaultValue={props.item.size} /> : null}
         {props.kind === "patterns" ? <Field name="pieces" label={t("patterns.pieces")} type="number" inputMode="numeric" defaultValue={props.item.pieces} /> : null}
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
@@ -1170,17 +1173,30 @@ function FilterDrawer({
           ) : null}
 
           {kind === "patterns" ? (
-            <label className="block space-y-1">
-              <span className="text-sm font-medium">{t("patterns.patternType")}</span>
-              <Select value={draft.patternType} onChange={(event) => update("patternType", event.target.value)}>
-                <option value="">{t("common.all")}</option>
-                {patternTypeOptions.map((patternType) => (
-                  <option key={patternType} value={patternType}>
-                    {t(`patternType.${patternType}`)}
-                  </option>
-                ))}
-              </Select>
-            </label>
+            <div className="grid gap-3">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("patterns.patternType")}</span>
+                <Select value={draft.patternType} onChange={(event) => update("patternType", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {patternTypeOptions.map((patternType) => (
+                    <option key={patternType} value={patternType}>
+                      {t(`patternType.${patternType}`)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("patterns.difficulty")}</span>
+                <Select value={draft.difficulty} onChange={(event) => update("difficulty", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {patternDifficultyOptions.map((difficulty) => (
+                    <option key={difficulty} value={difficulty}>
+                      {t(`patternDifficulty.${difficulty}`)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            </div>
           ) : null}
 
           {kind === "tools" ? (
@@ -1745,6 +1761,7 @@ function emptyFilters(): Filters {
     purpose: "",
     materialType: "",
     patternType: "",
+    difficulty: "",
     from: "",
     to: "",
     used: "",
@@ -1763,7 +1780,7 @@ function emptyFilters(): Filters {
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
   );
 }
@@ -1778,6 +1795,7 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.purpose) params.set("purpose", filters.purpose);
   if (filters.materialType) params.set("materialType", filters.materialType);
   if (filters.patternType) params.set("patternType", filters.patternType);
+  if (filters.difficulty) params.set("difficulty", filters.difficulty);
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.used) params.set("used", filters.used);
@@ -1909,6 +1927,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => t(`patternType.${value}`));
+    add(t("patterns.difficulty"), item.difficulty, (value) => t(`patternDifficulty.${value}`));
     add(t("patterns.size"), item.size);
     add(t("patterns.pieces"), item.pieces);
     add(t("common.source"), item.source);
@@ -1947,7 +1966,7 @@ function defaultItem(kind: Kind) {
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "其他", condition: "good" };
-  return { patternType: "paper" };
+  return { patternType: "paper", difficulty: "medium" };
 }
 
 function formToBody(kind: Kind, form: FormData) {
@@ -1975,7 +1994,7 @@ function formToBody(kind: Kind, form: FormData) {
     };
   }
   if (kind === "patterns") {
-    return { ...base, patternType: form.get("patternType"), size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
+    return { ...base, patternType: form.get("patternType"), difficulty: form.get("difficulty") || "medium", size: stringOrNull(form.get("size")), pieces: numberOrNull(form.get("pieces")) };
   }
   if (kind === "materials") {
     return {
