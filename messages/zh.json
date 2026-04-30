@@ -14,13 +14,20 @@
     "sortCreated": "最近添加",
     "sortName": "名称",
     "sortPrice": "价格",
+    "sortDirection": "排序方向",
+    "asc": "升序",
+    "desc": "降序",
+    "refresh": "刷新",
     "grid": "网格",
     "list": "列表",
     "save": "保存",
+    "saving": "保存中",
     "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",
     "add": "添加",
+    "select": "请选择",
+    "custom": "自定义",
     "create": "新建",
     "logout": "退出登录",
     "name": "名称",
@@ -110,6 +117,10 @@
     "silver": "银色",
     "black": "黑色"
   },
+  "clothPurpose": {
+    "服装": "服装",
+    "手工": "手工"
+  },
   "cloths": {
     "title": "布料",
     "add": "添加布料",
@@ -123,7 +134,9 @@
     "hasStockLeft": "仅显示有剩余",
     "lengthUnit": "长度单位",
     "width": "幅宽",
-    "widthUnit": "宽度单位"
+    "widthUnit": "宽度单位",
+    "purpose": "布料用途",
+    "materialType": "材质"
   },
   "patterns": {
     "title": "纸样",

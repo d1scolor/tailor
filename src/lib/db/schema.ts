@@ -45,6 +45,8 @@ export const cloths = sqliteTable("cloths", {
   width: real("width"),
   widthUnit: text("width_unit"),
   colors: text("colors").notNull().default("[]"),
+  purpose: text("purpose").notNull().default("服装"),
+  materialType: text("material_type").notNull().default("其他"),
   source: text("source"),
   priceCents: integer("price_cents"),
   purchasedAt: text("purchased_at"),

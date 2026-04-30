@@ -14,13 +14,20 @@
     "sortCreated": "Recently added",
     "sortName": "Name A-Z",
     "sortPrice": "Price",
+    "sortDirection": "Sort direction",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "refresh": "Refresh",
     "grid": "Grid",
     "list": "List",
     "save": "Save",
+    "saving": "Saving",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
+    "select": "Select",
+    "custom": "Custom",
     "create": "Create",
     "logout": "Logout",
     "name": "Name",
@@ -110,6 +117,10 @@
     "silver": "Silver",
     "black": "Black"
   },
+  "clothPurpose": {
+    "服装": "Garment",
+    "手工": "Craft"
+  },
   "cloths": {
     "title": "Cloths",
     "add": "Add cloth",
@@ -123,7 +134,9 @@
     "hasStockLeft": "Has remaining length",
     "lengthUnit": "Length unit",
     "width": "Width",
-    "widthUnit": "Width unit"
+    "widthUnit": "Width unit",
+    "purpose": "Use",
+    "materialType": "Material"
   },
   "patterns": {
     "title": "Patterns",

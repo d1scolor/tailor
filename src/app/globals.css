@@ -26,12 +26,19 @@
 html,
 body {
   min-height: 100%;
+  scroll-behavior: auto;
 }
 
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: auto;
+}
+
+a,
+button {
+  touch-action: manipulation;
 }
 
 :focus-visible {

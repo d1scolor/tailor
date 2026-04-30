@@ -60,6 +60,14 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     );
     args.push(`%"${color}"%`);
   }
+  if (kind === "cloths" && params.get("purpose")) {
+    clauses.push("purpose = ?");
+    args.push(params.get("purpose"));
+  }
+  if (kind === "cloths" && params.get("materialType")) {
+    clauses.push("material_type = ?");
+    args.push(params.get("materialType"));
+  }
   const tags = parseIds(params.get("tags"));
   if (tags.length) {
     clauses.push(
@@ -136,8 +144,8 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO cloths
-          (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
@@ -149,6 +157,8 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
           input.width,
           input.widthUnit,
           encodeColors(input.colors),
+          input.purpose,
+          input.materialType,
           input.source,
           input.priceCents,
           input.purchasedAt,
@@ -232,7 +242,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       }
       db.prepare(
         `UPDATE cloths SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
-         width = ?, width_unit = ?, colors = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
+         width = ?, width_unit = ?, colors = ?, purpose = ?, material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
         input.quantity,
@@ -242,6 +252,8 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         input.width,
         input.widthUnit,
         encodeColors(input.colors),
+        input.purpose,
+        input.materialType,
         input.source,
         input.priceCents,
         input.purchasedAt,
@@ -540,6 +552,22 @@ export function upsertMeta(table: "material_categories" | "material_units", user
 
 export function listMeta(table: "material_categories" | "material_units", userId: number) {
   return getSqlite().prepare(`SELECT id, name, sort_order AS sortOrder FROM ${table} WHERE user_id = ? ORDER BY sort_order, name`).all(userId);
+}
+
+export function listSources(kind: Exclude<Kind, "projects">, userId: number) {
+  return (
+    getSqlite()
+      .prepare(`SELECT DISTINCT source FROM ${kind} WHERE user_id = ? AND source IS NOT NULL AND TRIM(source) != '' ORDER BY source`)
+      .all(userId) as Array<{ source: string }>
+  ).map((row) => row.source);
+}
+
+export function listClothMaterialTypes(userId: number) {
+  return (
+    getSqlite()
+      .prepare("SELECT DISTINCT material_type AS materialType FROM cloths WHERE user_id = ? AND material_type IS NOT NULL AND TRIM(material_type) != '' ORDER BY material_type")
+      .all(userId) as Array<{ materialType: string }>
+  ).map((row) => row.materialType);
 }
 
 export function parseIds(value: string | null) {
