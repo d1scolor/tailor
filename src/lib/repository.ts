@@ -1,12 +1,14 @@
+import crypto from "node:crypto";
 import { ApiError } from "@/lib/api";
 import { getSqlite } from "@/lib/db/client";
 import { lengthToMetres } from "@/lib/format";
-import { deletePhotoFilesSync } from "@/lib/images";
+import { copyPhotoFilesSync, deletePhotoFilesSync } from "@/lib/images";
 import { applyProjectLinks, restoreProjectLinks } from "@/lib/consumption";
 import { nowIso } from "@/lib/time";
 
 export type Kind = "cloths" | "patterns" | "materials" | "projects" | "tools";
 export type EntityType = "cloth" | "pattern" | "material" | "project" | "tool";
+export type DuplicableKind = Exclude<Kind, "projects">;
 
 const entityByKind: Record<Kind, EntityType> = {
   cloths: "cloth",
@@ -388,6 +390,146 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
     setTags(entityByKind[kind], id, input.tagIds as number[] | undefined);
     return getItem(kind, userId, id);
   })();
+}
+
+export function duplicateItem(kind: DuplicableKind, userId: number, id: number) {
+  const db = getSqlite();
+  const now = nowIso();
+  const copiedPhotos: Array<{ id: string; ext: string }> = [];
+  try {
+    return db.transaction(() => {
+      const existing = db.prepare(`SELECT * FROM ${kind} WHERE user_id = ? AND id = ?`).get(userId, id) as
+        | Record<string, unknown>
+        | undefined;
+      if (!existing) throw new ApiError("not_found", 404, "Item not found.");
+
+      let nextId: number;
+      if (kind === "cloths") {
+        const result = db
+          .prepare(
+            `INSERT INTO cloths
+            (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            userId,
+            existing.name,
+            existing.quantity,
+            existing.length_total,
+            existing.length_remaining,
+            existing.length_unit,
+            existing.width,
+            existing.width_unit,
+            existing.colors,
+            existing.purpose,
+            existing.material_type,
+            existing.source,
+            existing.price_cents,
+            existing.purchased_at,
+            existing.remarks,
+            now,
+            now
+          );
+        nextId = Number(result.lastInsertRowid);
+      } else if (kind === "patterns") {
+        const result = db
+          .prepare(
+            `INSERT INTO patterns
+            (user_id, name, pattern_type, size, pieces, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            userId,
+            existing.name,
+            existing.pattern_type,
+            existing.size,
+            existing.pieces,
+            existing.source,
+            existing.price_cents,
+            existing.purchased_at,
+            existing.remarks,
+            now,
+            now
+          );
+        nextId = Number(result.lastInsertRowid);
+      } else if (kind === "materials") {
+        const result = db
+          .prepare(
+            `INSERT INTO materials
+            (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            userId,
+            existing.name,
+            existing.category_id,
+            existing.unit_id,
+            existing.quantity_total,
+            existing.quantity_remaining,
+            existing.colors,
+            existing.source,
+            existing.price_cents,
+            existing.purchased_at,
+            existing.remarks,
+            now,
+            now
+          );
+        nextId = Number(result.lastInsertRowid);
+      } else {
+        const result = db
+          .prepare(
+            `INSERT INTO tools
+            (user_id, name, category, quantity, brand, model, source, price_cents, purchased_at, condition, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            userId,
+            existing.name,
+            existing.category,
+            existing.quantity,
+            existing.brand,
+            existing.model,
+            existing.source,
+            existing.price_cents,
+            existing.purchased_at,
+            existing.condition,
+            existing.remarks,
+            now,
+            now
+          );
+        nextId = Number(result.lastInsertRowid);
+      }
+
+      const entityType = entityByKind[kind];
+      const tagIds = (
+        db.prepare("SELECT tag_id AS tagId FROM entity_tags WHERE entity_type = ? AND entity_id = ?").all(entityType, id) as Array<{
+          tagId: number;
+        }>
+      ).map((tag) => tag.tagId);
+      setTags(entityType, nextId, tagIds);
+
+      const photos = db
+        .prepare(
+          `SELECT id, original_ext AS originalExt, is_cover AS isCover, sort_order AS sortOrder
+           FROM photos WHERE entity_type = ? AND entity_id = ? AND user_id = ?
+           ORDER BY sort_order ASC, created_at ASC`
+        )
+        .all(entityType, id, userId) as Array<{ id: string; originalExt: string; isCover: number; sortOrder: number }>;
+      for (const photo of photos) {
+        const nextPhotoId = crypto.randomUUID();
+        copyPhotoFilesSync(photo.id, nextPhotoId, photo.originalExt);
+        copiedPhotos.push({ id: nextPhotoId, ext: photo.originalExt });
+        db.prepare(
+          "INSERT INTO photos (id, user_id, entity_type, entity_id, original_ext, is_cover, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ).run(nextPhotoId, userId, entityType, nextId, photo.originalExt, photo.isCover, photo.sortOrder, now);
+      }
+
+      return getItem(kind, userId, nextId);
+    })();
+  } catch (error) {
+    for (const photo of copiedPhotos) deletePhotoFilesSync(photo.id, photo.ext);
+    throw error;
+  }
 }
 
 export function deleteItem(kind: Kind, userId: number, id: number) {
