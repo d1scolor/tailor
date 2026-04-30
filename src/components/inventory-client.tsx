@@ -490,6 +490,7 @@ export function InventoryClient(props: Props) {
               <option value="created">{t("common.sortCreated")}</option>
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
+              <option value="unitPrice">{t("common.sortUnitPrice")}</option>
             </Select>
           </label>
           <Select
@@ -536,7 +537,7 @@ export function InventoryClient(props: Props) {
       )}
 
       {editing ? (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
           <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
             <form key={`${props.kind}-${editing.id ?? "new"}`} className="space-y-4" onSubmit={submit}>
@@ -1753,11 +1754,11 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
 
 function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
   if (kind === "cloths") {
-    return `${t("common.remaining")} ${numberValue(item.lengthRemaining)} / ${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit}`;
+    return `${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit} / ${t("common.remaining")} ${numberValue(item.lengthRemaining)} ${item.lengthUnit}`;
   }
   if (kind === "patterns") return item.size ? `${item.size}` : t("common.details");
   if (kind === "materials") {
-    return `${t("common.remaining")} ${numberValue(item.quantityRemaining)} / ${t("common.total")} ${numberValue(item.quantityTotal)}`;
+    return `${t("common.total")} ${numberValue(item.quantityTotal)} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}`;
   }
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
 }

@@ -14,6 +14,7 @@
     "sortCreated": "Recently added",
     "sortName": "Name A-Z",
     "sortPrice": "Price",
+    "sortUnitPrice": "Unit price",
     "sortDirection": "Sort direction",
     "asc": "Ascending",
     "desc": "Descending",

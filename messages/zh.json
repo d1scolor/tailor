@@ -14,6 +14,7 @@
     "sortCreated": "最近添加",
     "sortName": "名称",
     "sortPrice": "价格",
+    "sortUnitPrice": "单价",
     "sortDirection": "排序方向",
     "asc": "升序",
     "desc": "降序",
