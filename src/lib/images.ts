@@ -42,6 +42,17 @@ export function deletePhotoFilesSync(id: string, ext: string) {
   fsSync.rmSync(path.join(thumbsDir, `${id}.webp`), { force: true });
 }
 
+export function copyPhotoFilesSync(sourceId: string, targetId: string, ext: string) {
+  try {
+    fsSync.copyFileSync(path.join(originalsDir, `${sourceId}.${ext}`), path.join(originalsDir, `${targetId}.${ext}`));
+    fsSync.copyFileSync(path.join(displayDir, `${sourceId}.webp`), path.join(displayDir, `${targetId}.webp`));
+    fsSync.copyFileSync(path.join(thumbsDir, `${sourceId}.webp`), path.join(thumbsDir, `${targetId}.webp`));
+  } catch (error) {
+    deletePhotoFilesSync(targetId, ext);
+    throw error;
+  }
+}
+
 export function photoPath(id: string, ext: string, variant: string) {
   if (variant === "original") return path.join(originalsDir, `${id}.${ext}`);
   if (variant === "display") return path.join(displayDir, `${id}.webp`);

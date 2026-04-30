@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Camera, ChevronLeft, ChevronRight, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -79,6 +80,7 @@ type DetailProps = {
   item: AnyItem;
   kind: Kind;
   onEdit: () => void;
+  onDuplicate?: () => void;
   onDelete: () => void;
   onClose: () => void;
   onOpenPhoto: (photos: string[], index: number) => void;
@@ -92,6 +94,12 @@ type PhotoStripProps = {
   onOpenPhoto?: (photos: string[], index: number) => void;
   onError?: (message: string) => void;
 };
+
+function ModalPortal({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? createPortal(children, document.body) : null;
+}
 
 const entityByKind = {
   cloths: "cloth",
@@ -370,6 +378,17 @@ export function InventoryClient(props: Props) {
     await refresh();
   }
 
+  async function duplicate(item: AnyItem) {
+    const response = await fetch(`/api/${props.kind}/${item.id}/duplicate`, { method: "POST" });
+    if (!response.ok) {
+      notify(t("common.error"));
+      return;
+    }
+    const { item: nextItem } = (await response.json()) as { item: AnyItem };
+    setSelected(nextItem);
+    await refresh();
+  }
+
   async function addTag(name: string) {
     if (!name.trim()) return;
     const response = await fetch("/api/tags", {
@@ -548,63 +567,68 @@ export function InventoryClient(props: Props) {
       )}
 
       {editing ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
-          <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
-            <form key={`${props.kind}-${editing.id ?? "new"}`} className="space-y-4" onSubmit={submit}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
-                <Button type="button" variant="ghost" onClick={closeEditor}>
-                  {t("common.cancel")}
-                </Button>
-              </div>
-              <section className="space-y-2">
-                <h3 className="text-sm font-medium">{t("common.photos")}</h3>
-                {editing.id ? (
-                  <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
-                ) : (
-                  <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
-                )}
-              </section>
-              <Fields
-                kind={props.kind}
-                item={editing}
-                tags={tagList}
-                categories={categoryList}
-                units={unitList}
-                clothOptions={props.clothOptions ?? []}
-                patternOptions={props.patternOptions ?? []}
-                materialOptions={props.materialOptions ?? []}
-                sourceOptions={sourceOptions}
-                materialTypeOptions={materialTypeOptions}
-                toolCategoryOptions={toolCategoryOptions}
-                onAddTag={addTag}
-                onAddCategory={(name) => createMeta("categories", name)}
-                onAddUnit={(name) => createMeta("units", name)}
-              />
-              <div className="sticky bottom-0 flex justify-end gap-2 bg-card py-3">
-                <Button type="button" variant="secondary" onClick={closeEditor}>
-                  {t("common.cancel")}
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? t("common.saving") : t("common.save")}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
+            <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+              <form key={`${props.kind}-${editing.id ?? "new"}`} className="space-y-4" onSubmit={submit}>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
+                  <Button type="button" variant="ghost" onClick={closeEditor}>
+                    {t("common.cancel")}
+                  </Button>
+                </div>
+                <section className="space-y-2">
+                  <h3 className="text-sm font-medium">{t("common.photos")}</h3>
+                  {editing.id ? (
+                    <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
+                  ) : (
+                    <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
+                  )}
+                </section>
+                <Fields
+                  kind={props.kind}
+                  item={editing}
+                  tags={tagList}
+                  categories={categoryList}
+                  units={unitList}
+                  clothOptions={props.clothOptions ?? []}
+                  patternOptions={props.patternOptions ?? []}
+                  materialOptions={props.materialOptions ?? []}
+                  sourceOptions={sourceOptions}
+                  materialTypeOptions={materialTypeOptions}
+                  toolCategoryOptions={toolCategoryOptions}
+                  onAddTag={addTag}
+                  onAddCategory={(name) => createMeta("categories", name)}
+                  onAddUnit={(name) => createMeta("units", name)}
+                />
+                <div className="sticky bottom-0 flex justify-end gap-2 bg-card py-3">
+                  <Button type="button" variant="secondary" onClick={closeEditor}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? t("common.saving") : t("common.save")}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </ModalPortal>
       ) : null}
 
-      {selected ? (
-        <Detail
-          item={selected}
-          kind={props.kind}
-          onEdit={() => openEdit(selected)}
-          onDelete={() => setConfirmDelete(selected)}
-          onClose={() => setSelected(null)}
-          onOpenPhoto={openLightbox}
-          onUploaded={() => refreshOpenItem(selected.id)}
-        />
+      {selected && !editing ? (
+        <ModalPortal>
+          <Detail
+            item={selected}
+            kind={props.kind}
+            onEdit={() => openEdit(selected)}
+            onDuplicate={props.kind === "projects" ? undefined : () => duplicate(selected)}
+            onDelete={() => setConfirmDelete(selected)}
+            onClose={() => setSelected(null)}
+            onOpenPhoto={openLightbox}
+            onUploaded={() => refreshOpenItem(selected.id)}
+          />
+        </ModalPortal>
       ) : null}
 
       {filterOpen ? (
@@ -1332,6 +1356,7 @@ function Detail({
   item,
   kind,
   onEdit,
+  onDuplicate,
   onDelete,
   onClose,
   onOpenPhoto,
@@ -1339,7 +1364,7 @@ function Detail({
 }: DetailProps) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-start justify-between gap-3">
@@ -1351,6 +1376,11 @@ function Detail({
             <Button size="sm" variant="secondary" onClick={onEdit}>
               {t("common.edit")}
             </Button>
+            {onDuplicate ? (
+              <Button size="icon" variant="secondary" aria-label={t("common.duplicate")} onClick={onDuplicate}>
+                <Copy className="h-4 w-4" aria-hidden />
+              </Button>
+            ) : null}
             <Button size="icon" variant="danger" aria-label={t("common.delete")} onClick={onDelete}>
               <Trash2 className="h-4 w-4" aria-hidden />
             </Button>
