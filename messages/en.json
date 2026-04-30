@@ -16,6 +16,7 @@
     "sortPrice": "Price",
     "sortUnitPrice": "Unit price",
     "sortQuantity": "Quantity",
+    "sortMetersLeft": "Meters left",
     "sortDirection": "Sort direction",
     "asc": "Ascending",
     "desc": "Descending",

@@ -16,6 +16,7 @@
     "sortPrice": "价格",
     "sortUnitPrice": "单价",
     "sortQuantity": "数量",
+    "sortMetersLeft": "剩余米数",
     "sortDirection": "排序方向",
     "asc": "升序",
     "desc": "降序",
