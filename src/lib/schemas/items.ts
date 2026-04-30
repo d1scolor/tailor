@@ -26,6 +26,7 @@ export const clothSchema = baseItemSchema.extend({
 
 export const patternSchema = baseItemSchema.extend({
   patternType: z.enum(["paper", "digital"]).default("paper"),
+  difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
   size: z.string().trim().nullable().optional(),
   pieces: nullableInt
 });

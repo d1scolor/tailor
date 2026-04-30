@@ -134,6 +134,11 @@
     "paper": "纸质",
     "digital": "电子"
   },
+  "patternDifficulty": {
+    "easy": "简单",
+    "medium": "中等",
+    "hard": "困难"
+  },
   "toolCondition": {
     "good": "正常",
     "maintenance": "需维护",
@@ -165,6 +170,7 @@
     "usedCount": "已使用",
     "unusedCount": "未使用",
     "patternType": "纸样类型",
+    "difficulty": "难度",
     "size": "尺码",
     "pieces": "张数"
   },
