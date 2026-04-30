@@ -21,17 +21,31 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
+    unitPrice: "CASE WHEN length_total > 0 THEN price_cents / length_total ELSE NULL END",
     remaining: "length_remaining"
   },
-  patterns: { name: "name", created: "created_at", purchased: "purchased_at", price: "price_cents" },
+  patterns: {
+    name: "name",
+    created: "created_at",
+    purchased: "purchased_at",
+    price: "price_cents",
+    unitPrice: "CASE WHEN pieces > 0 THEN price_cents / pieces ELSE price_cents END"
+  },
   materials: {
     name: "name",
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
+    unitPrice: "CASE WHEN quantity_total > 0 THEN price_cents / quantity_total ELSE NULL END",
     remaining: "quantity_remaining"
   },
-  projects: { name: "name", created: "created_at", price: "price_cents", value: "value_cents" }
+  projects: {
+    name: "name",
+    created: "created_at",
+    price: "price_cents",
+    value: "value_cents",
+    unitPrice: "CASE WHEN quantity > 0 THEN value_cents / quantity ELSE NULL END"
+  }
 };
 
 export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
