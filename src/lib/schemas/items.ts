@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { baseItemSchema, nullableInt, nullableNumber } from "./common";
 
-export const entityTypeSchema = z.enum(["cloth", "pattern", "material", "project"]);
+export const entityTypeSchema = z.enum(["cloth", "pattern", "material", "project", "tool"]);
 export type EntityType = z.infer<typeof entityTypeSchema>;
 
 const colorSchema = z
@@ -57,6 +57,14 @@ export const projectSchema = z.object({
   patternIds: z.array(z.coerce.number().int().positive()).default([]).optional(),
   cloths: z.array(projectLinkClothSchema).default([]).optional(),
   materials: z.array(projectLinkMaterialSchema).default([]).optional()
+});
+
+export const toolSchema = baseItemSchema.extend({
+  category: labelValueSchema.default("其他"),
+  quantity: z.coerce.number().int().positive().default(1),
+  brand: z.string().trim().nullable().optional(),
+  model: z.string().trim().nullable().optional(),
+  condition: z.enum(["正常", "需维护", "已损坏", "已停用"]).default("正常")
 });
 
 export const tagSchema = z.object({

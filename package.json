@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:restart": "bash scripts/restart-dev.sh",
+    "dev:restart:fg": "DEV_FOREGROUND=1 bash scripts/restart-dev.sh",
     "build": "npm run lint:i18n && next build",
     "start": "next start",
     "lint": "eslint . && npm run lint:i18n",

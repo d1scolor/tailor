@@ -123,6 +123,23 @@ export const projects = sqliteTable("projects", {
   updatedAt: text("updated_at").notNull()
 });
 
+export const tools = sqliteTable("tools", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("其他"),
+  quantity: integer("quantity").notNull().default(1),
+  brand: text("brand"),
+  model: text("model"),
+  source: text("source"),
+  priceCents: integer("price_cents"),
+  purchasedAt: text("purchased_at"),
+  condition: text("condition").notNull().default("正常"),
+  remarks: text("remarks"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull()
+});
+
 export const projectCloths = sqliteTable("project_cloths", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
