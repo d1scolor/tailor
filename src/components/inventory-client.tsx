@@ -298,13 +298,17 @@ export function InventoryClient(props: Props) {
   useEffect(() => {
     const hasModal = Boolean(editing || selected || filterOpen || lightbox || confirmDelete);
     if (!hasModal) return;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
     return () => {
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
     };
   }, [editing, selected, filterOpen, lightbox, confirmDelete]);
 

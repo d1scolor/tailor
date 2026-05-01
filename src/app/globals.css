@@ -27,7 +27,6 @@ html,
 body {
   min-height: 100%;
   scroll-behavior: auto;
-  scrollbar-gutter: stable;
 }
 
 body {
