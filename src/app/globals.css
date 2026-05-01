@@ -29,6 +29,10 @@ body {
   scroll-behavior: auto;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
