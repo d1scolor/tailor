@@ -74,6 +74,9 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "materials", "colors")) {
     db.exec("ALTER TABLE materials ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
   }
+  if (!columnExists(db, "materials", "usage_status")) {
+    db.exec("ALTER TABLE materials ADD COLUMN usage_status TEXT NOT NULL DEFAULT 'available'");
+  }
   if (!columnExists(db, "cloths", "purpose")) {
     db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
   }
