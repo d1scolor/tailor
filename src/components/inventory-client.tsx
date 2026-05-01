@@ -738,13 +738,13 @@ function ItemCard({
       {photo ? (
         <button
           type="button"
-          className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"}
+          className={view === "grid" ? "relative block aspect-square w-full overflow-hidden bg-muted p-0" : "relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted p-0"}
           onClick={(event) => {
             event.stopPropagation();
             onClick();
           }}
         >
-          <img src={`/api/photos/${photo}/thumb`} alt="" className="h-full w-full object-cover" />
+          <img src={`/api/photos/${photo}/thumb`} alt="" className="block h-full w-full object-cover" />
         </button>
       ) : (
         <div className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"} />
