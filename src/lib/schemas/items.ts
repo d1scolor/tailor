@@ -36,6 +36,7 @@ export const materialSchema = baseItemSchema.extend({
   categoryId: nullableInt,
   unitId: nullableInt,
   quantityTotal: z.coerce.number().positive(),
+  usageStatus: z.enum(["available", "used"]).default("available"),
   colors: colorsSchema
 });
 
@@ -45,14 +46,12 @@ export const projectLinkClothSchema = z.object({
 });
 
 export const projectLinkMaterialSchema = z.object({
-  materialId: z.coerce.number().int().positive(),
-  quantityUsed: z.coerce.number().positive()
+  materialId: z.coerce.number().int().positive()
 });
 
 export const projectSchema = z.object({
   name: z.string().trim().min(1).max(200),
   quantity: z.coerce.number().int().positive().default(1),
-  priceCents: nullableInt,
   valueCents: nullableInt,
   remarks: z.string().trim().nullable().optional(),
   tagIds: z.array(z.coerce.number().int().positive()).default([]).optional(),

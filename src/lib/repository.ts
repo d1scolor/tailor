@@ -143,7 +143,7 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     );
   }
   if (kind === "materials" && params.get("used")) {
-    clauses.push(params.get("used") === "true" ? "quantity_remaining < quantity_total" : "quantity_remaining = quantity_total");
+    clauses.push(params.get("used") === "true" ? "usage_status = 'used'" : "usage_status = 'available'");
   }
   if (kind === "materials" && params.get("categoryId")) {
     clauses.push("category_id = ?");
@@ -239,11 +239,12 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
         );
       id = Number(result.lastInsertRowid);
     } else if (kind === "materials") {
+      const usageStatus = input.usageStatus === "used" ? "used" : "available";
       const result = db
         .prepare(
           `INSERT INTO materials
-          (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
@@ -251,7 +252,8 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
           input.categoryId,
           input.unitId,
           input.quantityTotal,
-          input.quantityTotal,
+          usageStatus === "used" ? 0 : input.quantityTotal,
+          usageStatus,
           encodeColors(input.colors),
           input.source,
           input.priceCents,
@@ -288,10 +290,10 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO projects
-          (user_id, name, quantity, price_cents, value_cents, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, quantity, value_cents, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(userId, input.name, input.quantity, input.priceCents, input.valueCents, input.remarks, now, now);
+        .run(userId, input.name, input.quantity, input.valueCents, input.remarks, now, now);
       id = Number(result.lastInsertRowid);
       applyProjectLinks(db, id, userId, input as Parameters<typeof applyProjectLinks>[3]);
     }
@@ -354,13 +356,10 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         id
       );
     } else if (kind === "materials") {
-      const delta = Number(input.quantityTotal) - Number(existing.quantity_total);
-      const nextRemaining = Number(existing.quantity_remaining) + delta;
-      if (nextRemaining < 0) {
-        throw new ApiError("negative_remaining", 409, "Remove project consumption before reducing the total quantity.");
-      }
+      const usageStatus = input.usageStatus === "used" ? "used" : "available";
+      const nextRemaining = usageStatus === "used" ? 0 : Number(input.quantityTotal);
       db.prepare(
-        `UPDATE materials SET name = ?, category_id = ?, unit_id = ?, quantity_total = ?, quantity_remaining = ?,
+        `UPDATE materials SET name = ?, category_id = ?, unit_id = ?, quantity_total = ?, quantity_remaining = ?, usage_status = ?,
          colors = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
@@ -368,6 +367,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         input.unitId,
         input.quantityTotal,
         nextRemaining,
+        usageStatus,
         encodeColors(input.colors),
         input.source,
         input.priceCents,
@@ -397,8 +397,8 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
     } else {
       restoreProjectLinks(db, id);
       db.prepare(
-        `UPDATE projects SET name = ?, quantity = ?, price_cents = ?, value_cents = ?, remarks = ?, updated_at = ? WHERE id = ?`
-      ).run(input.name, input.quantity, input.priceCents, input.valueCents, input.remarks, now, id);
+        `UPDATE projects SET name = ?, quantity = ?, value_cents = ?, remarks = ?, updated_at = ? WHERE id = ?`
+      ).run(input.name, input.quantity, input.valueCents, input.remarks, now, id);
       applyProjectLinks(db, id, userId, input as Parameters<typeof applyProjectLinks>[3]);
     }
     setTags(entityByKind[kind], id, input.tagIds as number[] | undefined);
@@ -472,8 +472,8 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
         const result = db
           .prepare(
             `INSERT INTO materials
-            (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             userId,
@@ -482,6 +482,7 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
             existing.unit_id,
             existing.quantity_total,
             existing.quantity_remaining,
+            existing.usage_status,
             existing.colors,
             existing.source,
             existing.price_cents,
@@ -616,13 +617,13 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
   if (kind === "materials") {
     const rows = (filteredRows ??
       db
-        .prepare("SELECT price_cents AS priceCents, quantity_total AS quantityTotal, quantity_remaining AS quantityRemaining FROM materials WHERE user_id = ?")
-        .all(userId)) as Array<{ priceCents: number | null; quantityTotal: number; quantityRemaining: number }>;
+        .prepare("SELECT price_cents AS priceCents, usage_status AS usageStatus FROM materials WHERE user_id = ?")
+        .all(userId)) as Array<{ priceCents: number | null; usageStatus: string }>;
     return {
       count: rows.length,
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      used: rows.filter((row) => row.quantityRemaining < row.quantityTotal).length,
-      unused: rows.filter((row) => row.quantityRemaining === row.quantityTotal).length
+      used: rows.filter((row) => row.usageStatus === "used").length,
+      unused: rows.filter((row) => row.usageStatus !== "used").length
     };
   }
   if (kind === "tools") {
@@ -638,15 +639,13 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
     };
   }
   const rows = (filteredRows ??
-    db.prepare("SELECT id, quantity, price_cents AS priceCents, value_cents AS valueCents FROM projects WHERE user_id = ?").all(userId)) as Array<{
+    db.prepare("SELECT id, quantity, value_cents AS valueCents FROM projects WHERE user_id = ?").all(userId)) as Array<{
     id: number;
     quantity: number;
-    priceCents: number | null;
     valueCents: number | null;
   }>;
   return {
     count: rows.length,
-    totalCost: rows.reduce((sum, row) => sum + calculateProjectCost(row.id).totalCost, 0),
     totalValue: rows.reduce((sum, row) => sum + (row.valueCents ?? 0), 0),
     totalProduced: rows.reduce((sum, row) => sum + row.quantity, 0)
   };
@@ -659,9 +658,7 @@ function isPatternUsed(patternId: number) {
 
 export function calculateProjectCost(projectId: number) {
   const db = getSqlite();
-  const project = db.prepare("SELECT price_cents AS priceCents FROM projects WHERE id = ?").get(projectId) as
-    | { priceCents: number | null }
-    | undefined;
+  const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
   if (!project) throw new ApiError("not_found", 404, "Project not found.");
   const clothCost = (
     db
@@ -671,23 +668,7 @@ export function calculateProjectCost(projectId: number) {
       )
       .all(projectId) as Array<{ used: number; total: number; price: number | null }>
   ).reduce((sum, row) => sum + (row.total > 0 ? Math.round((row.used / row.total) * (row.price ?? 0)) : 0), 0);
-  const materialCost = (
-    db
-      .prepare(
-        `SELECT pm.quantity_used AS used, m.quantity_total AS total, m.price_cents AS price
-         FROM project_materials pm JOIN materials m ON m.id = pm.material_id WHERE pm.project_id = ?`
-      )
-      .all(projectId) as Array<{ used: number; total: number; price: number | null }>
-  ).reduce((sum, row) => sum + (row.total > 0 ? Math.round((row.used / row.total) * (row.price ?? 0)) : 0), 0);
-  const patternCost = (
-    db
-      .prepare(
-        `SELECT p.price_cents AS price FROM project_patterns pp JOIN patterns p ON p.id = pp.pattern_id WHERE pp.project_id = ?`
-      )
-      .all(projectId) as Array<{ price: number | null }>
-  ).reduce((sum, row) => sum + (row.price ?? 0), 0);
-  const extraCost = project.priceCents ?? 0;
-  return { clothCost, materialCost, patternCost, extraCost, totalCost: clothCost + materialCost + patternCost + extraCost };
+  return { clothCost, totalCost: clothCost };
 }
 
 export function setTags(entityType: EntityType, entityId: number, tagIds?: number[]) {
@@ -904,7 +885,7 @@ function withDetails(row: Record<string, unknown>, kind: Kind) {
       .prepare("SELECT cloth_id AS clothId, length_used AS lengthUsed FROM project_cloths WHERE project_id = ?")
       .all(id),
     materials: db
-      .prepare("SELECT material_id AS materialId, quantity_used AS quantityUsed FROM project_materials WHERE project_id = ?")
+      .prepare("SELECT material_id AS materialId FROM project_materials WHERE project_id = ?")
       .all(id),
     cost: calculateProjectCost(id)
   };

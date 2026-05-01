@@ -201,6 +201,10 @@
     "maintenance": "Maintenance",
     "other": "Other"
   },
+  "materialUsageStatus": {
+    "available": "Available",
+    "used": "Used up"
+  },
   "cloths": {
     "title": "Cloths",
     "add": "Add cloth",
@@ -241,23 +245,22 @@
     "category": "Category",
     "unit": "Unit",
     "quantityTotal": "Quantity total",
-    "quantityRemaining": "Quantity remaining"
+    "quantityRemaining": "Quantity remaining",
+    "usageStatus": "Status"
   },
   "projects": {
     "title": "Projects",
     "add": "Add project",
     "total": "Total projects",
     "cost": "Total cost",
+    "clothCost": "Cloth cost",
     "value": "Estimated value",
     "produced": "Items produced",
     "quantity": "Quantity",
-    "extraCost": "Extra cost",
     "patterns": "Patterns used",
     "cloths": "Cloths used",
     "materials": "Materials used",
-    "lengthUsed": "Length used",
-    "quantityUsed": "Quantity used",
-    "costCaveat": "Pattern cost is counted in full each time a pattern is used."
+    "lengthUsed": "Length used"
   },
   "tools": {
     "title": "Tools",

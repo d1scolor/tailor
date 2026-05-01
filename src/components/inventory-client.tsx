@@ -34,6 +34,7 @@ type Filters = {
   materialId: string;
   category: string;
   condition: string;
+  usageStatus: string;
 };
 type LightboxState = { photos: string[]; index: number };
 type StagedPhoto = { id: string; file: File; isCover: boolean };
@@ -112,6 +113,7 @@ const entityByKind = {
 const clothPurposeOptions = ["garment", "craft"];
 const patternTypeOptions = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
+const materialUsageStatusOptions = ["available", "used"];
 const patternForOptions = [
   "headwear",
   "scarves",
@@ -799,6 +801,7 @@ function Fields(props: FieldsProps) {
         {props.kind === "materials" ? <MetaSelect name="categoryId" label={t("materials.category")} options={props.categories} value={props.item.categoryId} onCreate={props.onAddCategory} /> : null}
         {props.kind === "materials" ? <MetaSelect name="unitId" label={t("materials.unit")} options={props.units} value={props.item.unitId} onCreate={props.onAddUnit} /> : null}
         {props.kind === "materials" ? <Field name="quantityTotal" label={t("materials.quantityTotal")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.quantityTotal} required /> : null}
+        {props.kind === "materials" ? <UnitSelect name="usageStatus" label={t("materials.usageStatus")} values={materialUsageStatusOptions} value={props.item.usageStatus ?? "available"} labels={(value) => t(`materialUsageStatus.${value}`)} /> : null}
         {props.kind === "tools" ? (
           <TextChoiceField
             name="category"
@@ -814,7 +817,7 @@ function Fields(props: FieldsProps) {
         {props.kind === "tools" ? <Field name="model" label={t("tools.model")} defaultValue={props.item.model} /> : null}
         {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "good"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
-        <Field name="priceCents" label={props.kind === "projects" ? t("projects.extraCost") : t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} />
+        {props.kind !== "projects" ? <Field name="priceCents" label={t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} /> : null}
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
         {props.kind !== "projects" ? <TextChoiceField name="source" label={t("common.source")} value={props.item.source ?? ""} options={props.sourceOptions} /> : null}
         {props.kind !== "projects" ? <Field name="purchasedAt" label={t("common.date")} type="date" defaultValue={props.item.purchasedAt} /> : null}
@@ -851,7 +854,7 @@ function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOp
     <div className="grid gap-3 md:grid-cols-3">
       <RepeatSelect title={t("projects.patterns")} name="patternIds" options={props.patternOptions} selected={props.item.patternIds ?? []} />
       <LinkSelect title={t("projects.cloths")} idName="clothId" amountName="lengthUsed" options={props.clothOptions} links={props.item.cloths ?? []} amountLabel={t("projects.lengthUsed")} />
-      <LinkSelect title={t("projects.materials")} idName="materialId" amountName="quantityUsed" options={props.materialOptions} links={props.item.materials ?? []} amountLabel={t("projects.quantityUsed")} />
+      <RepeatSelect title={t("projects.materials")} name="materialIds" options={props.materialOptions} selected={(props.item.materials ?? []).map((link: AnyItem) => link.materialId)} />
     </div>
   );
 }
@@ -1297,7 +1300,7 @@ function FilterDrawer({
             </label>
           ) : null}
 
-          {kind !== "projects" && kind !== "tools" ? (
+          {kind !== "projects" && kind !== "tools" && kind !== "materials" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.used")}</span>
               <Select value={draft.used} onChange={(event) => update("used", event.target.value)}>
@@ -1310,6 +1313,17 @@ function FilterDrawer({
 
           {kind === "materials" ? (
             <div className="grid gap-3">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("materials.usageStatus")}</span>
+                <Select value={draft.usageStatus} onChange={(event) => update("usageStatus", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {materialUsageStatusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {t(`materialUsageStatus.${status}`)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
               <OptionFilter label={t("materials.category")} value={draft.categoryId} options={categories} onChange={(value) => update("categoryId", value)} />
               <OptionFilter label={t("materials.unit")} value={draft.unitId} options={units} onChange={(value) => update("unitId", value)} />
             </div>
@@ -1547,7 +1561,6 @@ function Detail({
             </div>
           ))}
         </dl>
-        {kind === "projects" && item.cost ? <p className="mt-3 text-xs text-muted-foreground">{t("projects.costCaveat")}</p> : null}
       </Card>
     </div>
   );
@@ -1905,14 +1918,15 @@ function emptyFilters(): Filters {
     clothId: "",
     materialId: "",
     category: "",
-    condition: ""
+    condition: "",
+    usageStatus: ""
   };
 }
 
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.usageStatus || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
   );
 }
@@ -1940,6 +1954,7 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.materialId) params.set("materialId", filters.materialId);
   if (filters.category) params.set("category", filters.category);
   if (filters.condition) params.set("condition", filters.condition);
+  if (filters.usageStatus) params.set("used", filters.usageStatus === "used" ? "true" : "false");
   return params;
 }
 
@@ -1997,7 +2012,6 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
   if (kind === "projects") {
     return [
       { label: t("projects.total"), value: summary.count ?? 0 },
-      { label: t("projects.cost"), value: money(summary.totalCost) },
       { label: t("projects.value"), value: money(summary.totalValue) },
       { label: t("projects.produced"), value: summary.totalProduced ?? 0 }
     ];
@@ -2029,10 +2043,10 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
   }
   if (kind === "materials") {
     const unit = item.unitName ? ` ${item.unitName}` : "";
-    return `${t("common.total")} ${numberValue(item.quantityTotal)}${unit} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}${unit}`;
+    return `${t(`materialUsageStatus.${item.usageStatus ?? "available"}`)} · ${t("common.total")} ${numberValue(item.quantityTotal)}${unit}`;
   }
   if (kind === "tools") return `${item.category ? toolCategoryLabel(item.category, t) : t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
-  return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
+  return [t("projects.produced"), numberValue(item.quantity), item.valueCents ? money(item.valueCents) : ""].filter(Boolean).join(" · ");
 }
 
 function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
@@ -2082,6 +2096,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.price"), item.priceCents, money);
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "materials") {
+    add(t("materials.usageStatus"), item.usageStatus ?? "available", (value) => t(`materialUsageStatus.${value}`));
     add(t("materials.category"), item.categoryName);
     add(t("materials.unit"), item.unitName);
     add(t("materials.quantityTotal"), item.quantityTotal, numberValue);
@@ -2100,9 +2115,8 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.date"), item.purchasedAt);
   } else {
     add(t("projects.quantity"), item.quantity);
-    add(t("projects.extraCost"), item.priceCents, money);
     add(t("projects.value"), item.valueCents, money);
-    add(t("projects.cost"), item.cost?.totalCost, money);
+    add(t("projects.clothCost"), item.cost?.clothCost, money);
   }
 
   add(t("common.remarks"), item.remarks);
@@ -2111,7 +2125,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 
 function defaultItem(kind: Kind) {
   if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "garment", materialType: "other" };
-  if (kind === "materials") return {};
+  if (kind === "materials") return { usageStatus: "available" };
   if (kind === "projects") return { quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
   return { patternType: "paper", difficulty: "medium" };
@@ -2120,11 +2134,11 @@ function defaultItem(kind: Kind) {
 function formToBody(kind: Kind, form: FormData) {
   const base: Record<string, any> = {
     name: form.get("name"),
-    priceCents: centsFromDollars(form.get("priceCents")),
     remarks: stringOrNull(form.get("remarks")),
     tagIds: form.getAll("tagIds").map(Number)
   };
   if (kind !== "projects") {
+    base.priceCents = centsFromDollars(form.get("priceCents"));
     base.source = stringOrNull(form.get("source"));
     base.purchasedAt = stringOrNull(form.get("purchasedAt"));
   }
@@ -2157,6 +2171,7 @@ function formToBody(kind: Kind, form: FormData) {
       categoryId: numberOrNull(form.get("categoryId")),
       unitId: numberOrNull(form.get("unitId")),
       quantityTotal: Number(form.get("quantityTotal")),
+      usageStatus: form.get("usageStatus") || "available",
       colors: sanitizeColors(form.getAll("colors"))
     };
   }
@@ -2172,8 +2187,7 @@ function formToBody(kind: Kind, form: FormData) {
   }
   const clothIds = form.getAll("clothId");
   const clothAmounts = form.getAll("lengthUsed");
-  const materialIds = form.getAll("materialId");
-  const materialAmounts = form.getAll("quantityUsed");
+  const materialIds = form.getAll("materialIds");
   return {
     ...base,
     quantity: Number(form.get("quantity") || 1),
@@ -2182,9 +2196,7 @@ function formToBody(kind: Kind, form: FormData) {
     cloths: clothIds
       .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
       .filter((link) => link.clothId && link.lengthUsed),
-    materials: materialIds
-      .map((id, index) => ({ materialId: Number(id), quantityUsed: Number(materialAmounts[index]) }))
-      .filter((link) => link.materialId && link.quantityUsed)
+    materials: [...new Set(materialIds.map(Number).filter(Boolean))].map((materialId) => ({ materialId }))
   };
 }
 

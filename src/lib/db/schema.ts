@@ -104,6 +104,7 @@ export const materials = sqliteTable("materials", {
   unitId: integer("unit_id").references(() => materialUnits.id, { onDelete: "set null" }),
   quantityTotal: real("quantity_total").notNull(),
   quantityRemaining: real("quantity_remaining").notNull(),
+  usageStatus: text("usage_status").notNull().default("available"),
   colors: text("colors").notNull().default("[]"),
   source: text("source"),
   priceCents: integer("price_cents"),
@@ -159,12 +160,15 @@ export const projectPatterns = sqliteTable(
   (table) => ({ pk: primaryKey({ columns: [table.projectId, table.patternId] }) })
 );
 
-export const projectMaterials = sqliteTable("project_materials", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  materialId: integer("material_id").notNull().references(() => materials.id, { onDelete: "restrict" }),
-  quantityUsed: real("quantity_used").notNull()
-});
+export const projectMaterials = sqliteTable(
+  "project_materials",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    materialId: integer("material_id").notNull().references(() => materials.id, { onDelete: "restrict" })
+  },
+  (table) => ({ uniqueProjectMaterial: uniqueIndex("project_materials_project_material_idx").on(table.projectId, table.materialId) })
+);
 
 export const tags = sqliteTable(
   "tags",

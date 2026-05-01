@@ -5,7 +5,7 @@ import { nowIso } from "@/lib/time";
 type ProjectInput = {
   patternIds?: number[];
   cloths?: Array<{ clothId: number; lengthUsed: number }>;
-  materials?: Array<{ materialId: number; quantityUsed: number }>;
+  materials?: Array<{ materialId: number }>;
 };
 
 export function applyProjectLinks(db: Database.Database, projectId: number, userId: number, input: ProjectInput) {
@@ -25,13 +25,10 @@ export function applyProjectLinks(db: Database.Database, projectId: number, user
     );
   }
 
-  for (const link of groupLinks(input.materials ?? [], "materialId", "quantityUsed")) {
-    consumeMaterial(db, link.materialId, userId, link.quantityUsed);
-    db.prepare("INSERT INTO project_materials (project_id, material_id, quantity_used) VALUES (?, ?, ?)").run(
-      projectId,
-      link.materialId,
-      link.quantityUsed
-    );
+  for (const materialId of uniqueIds(input.materials?.map((link) => link.materialId) ?? [])) {
+    const material = db.prepare("SELECT id FROM materials WHERE id = ? AND user_id = ?").get(materialId, userId);
+    if (!material) throw new ApiError("material_not_found", 404, "Material not found.");
+    db.prepare("INSERT OR IGNORE INTO project_materials (project_id, material_id) VALUES (?, ?)").run(projectId, materialId);
   }
 }
 
@@ -50,6 +47,10 @@ function groupLinks<TIdKey extends string, TAmountKey extends string>(
   return [...grouped.entries()].map(([id, amount]) => ({ [idKey]: id, [amountKey]: amount }) as Record<TIdKey | TAmountKey, number>);
 }
 
+function uniqueIds(ids: number[]) {
+  return [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+}
+
 export function restoreProjectLinks(db: Database.Database, projectId: number) {
   const cloths = db
     .prepare("SELECT cloth_id AS clothId, length_used AS lengthUsed FROM project_cloths WHERE project_id = ?")
@@ -59,19 +60,6 @@ export function restoreProjectLinks(db: Database.Database, projectId: number) {
       link.lengthUsed,
       nowIso(),
       link.clothId
-    );
-  }
-
-  const materials = db
-    .prepare(
-      "SELECT material_id AS materialId, quantity_used AS quantityUsed FROM project_materials WHERE project_id = ?"
-    )
-    .all(projectId) as Array<{ materialId: number; quantityUsed: number }>;
-  for (const link of materials) {
-    db.prepare("UPDATE materials SET quantity_remaining = quantity_remaining + ?, updated_at = ? WHERE id = ?").run(
-      link.quantityUsed,
-      nowIso(),
-      link.materialId
     );
   }
 
@@ -93,21 +81,5 @@ export function consumeCloth(db: Database.Database, clothId: number, userId: num
     lengthUsed,
     nowIso(),
     clothId
-  );
-}
-
-export function consumeMaterial(db: Database.Database, materialId: number, userId: number, quantityUsed: number) {
-  if (quantityUsed <= 0) throw new ApiError("invalid_consumption", 409, "Quantity used must be positive.");
-  const material = db
-    .prepare("SELECT quantity_remaining AS quantityRemaining FROM materials WHERE id = ? AND user_id = ?")
-    .get(materialId, userId) as { quantityRemaining: number } | undefined;
-  if (!material) throw new ApiError("material_not_found", 404, "Material not found.");
-  if (quantityUsed > material.quantityRemaining) {
-    throw new ApiError("insufficient_material", 409, "The material does not have enough quantity remaining.");
-  }
-  db.prepare("UPDATE materials SET quantity_remaining = quantity_remaining - ?, updated_at = ? WHERE id = ?").run(
-    quantityUsed,
-    nowIso(),
-    materialId
   );
 }

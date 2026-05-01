@@ -201,6 +201,10 @@
     "maintenance": "维修保养",
     "other": "其他"
   },
+  "materialUsageStatus": {
+    "available": "可用",
+    "used": "已用完"
+  },
   "cloths": {
     "title": "布料",
     "add": "添加布料",
@@ -241,23 +245,22 @@
     "category": "分类",
     "unit": "单位",
     "quantityTotal": "总数量",
-    "quantityRemaining": "剩余数量"
+    "quantityRemaining": "剩余数量",
+    "usageStatus": "状态"
   },
   "projects": {
     "title": "作品",
     "add": "添加作品",
     "total": "作品数量",
     "cost": "总成本",
+    "clothCost": "布料成本",
     "value": "估值",
     "produced": "成品数量",
     "quantity": "数量",
-    "extraCost": "额外成本",
     "patterns": "使用纸样",
     "cloths": "使用布料",
     "materials": "使用辅料",
-    "lengthUsed": "使用长度",
-    "quantityUsed": "使用数量",
-    "costCaveat": "纸样成本在每次使用时按全价计算。"
+    "lengthUsed": "使用长度"
   },
   "tools": {
     "title": "工具",

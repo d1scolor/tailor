@@ -12,7 +12,7 @@ type Metric = {
 
 type Category = {
   key: "cloths" | "materials" | "patterns" | "tools" | "projects";
-  cost: number;
+  cost?: number;
   metrics: Metric[];
 };
 
@@ -67,7 +67,6 @@ export default async function OverviewPage() {
     },
     {
       key: "projects",
-      cost: projects.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: projects.count ?? 0 },
         { label: t("overview.produced"), value: projects.totalProduced ?? 0 },
@@ -76,7 +75,7 @@ export default async function OverviewPage() {
     }
   ];
   const spendingCategories = categories.filter((category) => category.key !== "projects");
-  const maxCategorySpend = Math.max(...spendingCategories.map((category) => category.cost), 1);
+  const maxCategorySpend = Math.max(...spendingCategories.map((category) => category.cost ?? 0), 1);
 
   return (
     <main className="space-y-5">
@@ -102,7 +101,7 @@ export default async function OverviewPage() {
                   <span className="text-muted-foreground">{money(category.cost)}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max((category.cost / maxCategorySpend) * 100, category.cost ? 4 : 0)}%` }} />
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(((category.cost ?? 0) / maxCategorySpend) * 100, category.cost ? 4 : 0)}%` }} />
                 </div>
               </div>
             ))}
@@ -116,7 +115,7 @@ export default async function OverviewPage() {
               <div key={category.key} className="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr]">
                 <div>
                   <div className="font-medium">{t(`nav.${category.key}`)}</div>
-                  <div className="text-sm text-muted-foreground">{money(category.cost)}</div>
+                  {category.cost !== undefined ? <div className="text-sm text-muted-foreground">{money(category.cost)}</div> : null}
                 </div>
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {category.metrics.map((metric) => (
