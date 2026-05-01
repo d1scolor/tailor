@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "@/lib/auth/cookie";
+import { isSessionCookieValue, sessionCookie } from "@/lib/auth/cookie";
 
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -29,17 +29,7 @@ export default function middleware(request: NextRequest) {
     return response;
   }
 
-  const response = NextResponse.next();
-  if (hasValidSessionCookie) {
-    response.cookies.set(sessionCookie, sessionId ?? "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: sessionMaxAgeSeconds
-    });
-  }
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

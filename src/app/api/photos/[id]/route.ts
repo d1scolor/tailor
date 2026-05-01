@@ -25,12 +25,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         | undefined;
       if (!photo) return;
       if (input.isCover) {
-        db.prepare("UPDATE photos SET is_cover = 0 WHERE entity_type = ? AND entity_id = ?").run(photo.entityType, photo.entityId);
+        db.prepare("UPDATE photos SET is_cover = 0 WHERE entity_type = ? AND entity_id = ? AND user_id = ?").run(
+          photo.entityType,
+          photo.entityId,
+          user.id
+        );
       }
-      db.prepare("UPDATE photos SET sort_order = COALESCE(?, sort_order), is_cover = COALESCE(?, is_cover) WHERE id = ?").run(
+      db.prepare("UPDATE photos SET sort_order = COALESCE(?, sort_order), is_cover = COALESCE(?, is_cover) WHERE id = ? AND user_id = ?").run(
         input.sortOrder ?? null,
         input.isCover === undefined ? null : input.isCover ? 1 : 0,
-        id
+        id,
+        user.id
       );
     })();
     return ok({ ok: true });
@@ -49,7 +54,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   ).get(id, user.id) as { originalExt: string; entityType: string; entityId: number; isCover: number } | undefined;
   if (!photo) return ok({ ok: true });
   db.transaction(() => {
-    db.prepare("DELETE FROM photos WHERE id = ?").run(id);
+    db.prepare("DELETE FROM photos WHERE id = ? AND user_id = ?").run(id, user.id);
     if (photo.isCover) {
       const next = db
         .prepare("SELECT id FROM photos WHERE entity_type = ? AND entity_id = ? ORDER BY sort_order, created_at LIMIT 1")
