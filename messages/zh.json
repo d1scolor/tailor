@@ -247,7 +247,7 @@
   },
   "overview": {
     "title": "概览",
-    "totalSpend": "总支出",
+    "inventorySpend": "库存支出",
     "inventoryItems": "库存条目",
     "clothRemaining": "剩余布料",
     "projectValue": "作品估值",

@@ -590,9 +590,6 @@ export function InventoryClient(props: Props) {
             🧵
           </div>
           <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
-          <Button className="mt-4" onClick={openCreate}>
-            {t(`${props.kind}.add`)}
-          </Button>
         </Card>
       )}
 
@@ -701,7 +698,7 @@ export function InventoryClient(props: Props) {
       {toast ? <Toast message={toast} /> : null}
 
       <Button
-        className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] right-4 h-14 w-14 rounded-full md:bottom-6"
+        className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] right-4 h-14 w-14 rounded-full md:hidden"
         size="icon"
         aria-label={t(`${props.kind}.add`)}
         onClick={openCreate}
@@ -858,6 +855,7 @@ function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOp
 }
 
 function RepeatSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
+  const t = useTranslations();
   const [rowCount, setRowCount] = useState(Math.max(1, selected.length));
 
   useEffect(() => {
@@ -868,7 +866,7 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium">{title}</legend>
       {Array.from({ length: rowCount }, (_, row) => (
-        <Select key={row} name={name} defaultValue={selected[row] ?? ""}>
+        <Select key={`${row}-${selected[row] ?? "empty"}`} name={name} defaultValue={selected[row] ?? ""}>
           <option value="" />
           {options.map((option) => (
             <option key={option.id} value={option.id}>
@@ -877,7 +875,7 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
           ))}
         </Select>
       ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={title} onClick={() => setRowCount((current) => current + 1)}>
+      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${title}`} onClick={() => setRowCount((current) => current + 1)}>
         <Plus className="h-4 w-4" aria-hidden />
       </Button>
     </fieldset>
@@ -885,6 +883,7 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
 }
 
 function LinkSelect(props: { title: string; idName: string; amountName: string; options: AnyItem[]; links: AnyItem[]; amountLabel: string }) {
+  const t = useTranslations();
   const [rowCount, setRowCount] = useState(Math.max(1, props.links.length));
 
   useEffect(() => {
@@ -907,7 +906,7 @@ function LinkSelect(props: { title: string; idName: string; amountName: string; 
           <Input name={props.amountName} type="number" inputMode="decimal" step="0.01" defaultValue={props.links[row]?.[props.amountName] ?? ""} placeholder={props.amountLabel} />
         </div>
       ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={props.title} onClick={() => setRowCount((current) => current + 1)}>
+      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${props.title}`} onClick={() => setRowCount((current) => current + 1)}>
         <Plus className="h-4 w-4" aria-hidden />
       </Button>
     </fieldset>
@@ -2169,7 +2168,7 @@ function formToBody(kind: Kind, form: FormData) {
     ...base,
     quantity: Number(form.get("quantity") || 1),
     valueCents: centsFromDollars(form.get("valueCents")),
-    patternIds: form.getAll("patternIds").map(Number).filter(Boolean),
+    patternIds: [...new Set(form.getAll("patternIds").map(Number).filter(Boolean))],
     cloths: clothIds
       .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
       .filter((link) => link.clothId && link.lengthUsed),

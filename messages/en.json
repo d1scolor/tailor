@@ -247,7 +247,7 @@
   },
   "overview": {
     "title": "Overview",
-    "totalSpend": "Total spend",
+    "inventorySpend": "Inventory spend",
     "inventoryItems": "Inventory items",
     "clothRemaining": "Cloth remaining",
     "projectValue": "Project value",
