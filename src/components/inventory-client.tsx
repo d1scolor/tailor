@@ -140,22 +140,22 @@ const patternForOptions = [
   "bags"
 ];
 const toolConditionOptions = ["good", "maintenance", "broken", "retired"];
-const toolCategoryDefaults = ["剪裁工具", "测量工具", "缝纫机配件", "手缝工具", "熨烫工具", "标记工具", "收纳工具", "维修保养", "其他"];
+const toolCategoryDefaults = ["cutting", "measuring", "sewingMachineAccessories", "handSewing", "pressing", "marking", "storage", "maintenance", "other"];
 const clothMaterialTypeDefaults = [
-  "棉",
-  "亚麻",
-  "羊毛",
-  "丝绸",
-  "粘胶",
-  "聚酯纤维",
-  "尼龙",
-  "牛仔布",
-  "帆布",
-  "针织",
-  "法兰绒",
-  "皮革",
-  "混纺",
-  "其他"
+  "cotton",
+  "linen",
+  "wool",
+  "silk",
+  "viscose",
+  "polyester",
+  "nylon",
+  "denim",
+  "canvas",
+  "knit",
+  "flannel",
+  "leather",
+  "blend",
+  "other"
 ];
 const commonColors = [
   "red",
@@ -590,9 +590,6 @@ export function InventoryClient(props: Props) {
             🧵
           </div>
           <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
-          <Button className="mt-4" onClick={openCreate}>
-            {t(`${props.kind}.add`)}
-          </Button>
         </Card>
       )}
 
@@ -701,7 +698,7 @@ export function InventoryClient(props: Props) {
       {toast ? <Toast message={toast} /> : null}
 
       <Button
-        className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] right-4 h-14 w-14 rounded-full md:bottom-6"
+        className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] right-4 h-14 w-14 rounded-full md:hidden"
         size="icon"
         aria-label={t(`${props.kind}.add`)}
         onClick={openCreate}
@@ -741,13 +738,13 @@ function ItemCard({
       {photo ? (
         <button
           type="button"
-          className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"}
+          className={view === "grid" ? "relative block aspect-square w-full overflow-hidden bg-muted p-0" : "relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted p-0"}
           onClick={(event) => {
             event.stopPropagation();
             onClick();
           }}
         >
-          <img src={`/api/photos/${photo}/thumb`} alt="" className="h-full w-full object-cover" />
+          <img src={`/api/photos/${photo}/thumb`} alt="" className="block h-full w-full object-cover" />
         </button>
       ) : (
         <div className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"} />
@@ -779,8 +776,9 @@ function Fields(props: FieldsProps) {
           <TextChoiceField
             name="materialType"
             label={t("cloths.materialType")}
-            value={props.item.materialType ?? "其他"}
+            value={props.item.materialType ?? "other"}
             options={[...new Set([...clothMaterialTypeDefaults, ...props.materialTypeOptions])]}
+            labels={(value) => clothMaterialTypeLabel(value, t)}
             required
           />
         ) : null}
@@ -805,8 +803,9 @@ function Fields(props: FieldsProps) {
           <TextChoiceField
             name="category"
             label={t("tools.category")}
-            value={props.item.category ?? "其他"}
+            value={props.item.category ?? "other"}
             options={[...new Set([...toolCategoryDefaults, ...props.toolCategoryOptions])]}
+            labels={(value) => toolCategoryLabel(value, t)}
             required
           />
         ) : null}
@@ -858,6 +857,7 @@ function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOp
 }
 
 function RepeatSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
+  const t = useTranslations();
   const [rowCount, setRowCount] = useState(Math.max(1, selected.length));
 
   useEffect(() => {
@@ -868,7 +868,7 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium">{title}</legend>
       {Array.from({ length: rowCount }, (_, row) => (
-        <Select key={row} name={name} defaultValue={selected[row] ?? ""}>
+        <Select key={`${row}-${selected[row] ?? "empty"}`} name={name} defaultValue={selected[row] ?? ""}>
           <option value="" />
           {options.map((option) => (
             <option key={option.id} value={option.id}>
@@ -877,7 +877,7 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
           ))}
         </Select>
       ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={title} onClick={() => setRowCount((current) => current + 1)}>
+      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${title}`} onClick={() => setRowCount((current) => current + 1)}>
         <Plus className="h-4 w-4" aria-hidden />
       </Button>
     </fieldset>
@@ -885,11 +885,12 @@ function RepeatSelect({ title, name, options, selected }: { title: string; name:
 }
 
 function LinkSelect(props: { title: string; idName: string; amountName: string; options: AnyItem[]; links: AnyItem[]; amountLabel: string }) {
+  const t = useTranslations();
   const [rowCount, setRowCount] = useState(Math.max(1, props.links.length));
 
   useEffect(() => {
     setRowCount(Math.max(1, props.links.length));
-  }, [props.links]);
+  }, [props.links.length]);
 
   return (
     <fieldset className="space-y-2">
@@ -907,7 +908,7 @@ function LinkSelect(props: { title: string; idName: string; amountName: string; 
           <Input name={props.amountName} type="number" inputMode="decimal" step="0.01" defaultValue={props.links[row]?.[props.amountName] ?? ""} placeholder={props.amountLabel} />
         </div>
       ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={props.title} onClick={() => setRowCount((current) => current + 1)}>
+      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${props.title}`} onClick={() => setRowCount((current) => current + 1)}>
         <Plus className="h-4 w-4" aria-hidden />
       </Button>
     </fieldset>
@@ -1221,7 +1222,7 @@ function FilterDrawer({
                   <option value="">{t("common.all")}</option>
                   {[...new Set([...clothMaterialTypeDefaults, ...materialTypeOptions])].map((materialType) => (
                     <option key={materialType} value={materialType}>
-                      {materialType}
+                      {clothMaterialTypeLabel(materialType, t)}
                     </option>
                   ))}
                 </Select>
@@ -1264,7 +1265,7 @@ function FilterDrawer({
                   <option value="">{t("common.all")}</option>
                   {[...new Set([...toolCategoryDefaults, ...toolCategoryOptions])].map((category) => (
                     <option key={category} value={category}>
-                      {category}
+                      {toolCategoryLabel(category, t)}
                     </option>
                   ))}
                 </Select>
@@ -1966,6 +1967,14 @@ function patternForLabel(value: string, t: ReturnType<typeof useTranslations>) {
   return patternForOptions.includes(value) ? t(`patternFor.${value}`) : value;
 }
 
+function clothMaterialTypeLabel(value: string, t: ReturnType<typeof useTranslations>) {
+  return clothMaterialTypeDefaults.includes(value) ? t(`clothMaterialType.${value}`) : value;
+}
+
+function toolCategoryLabel(value: string, t: ReturnType<typeof useTranslations>) {
+  return toolCategoryDefaults.includes(value) ? t(`toolCategory.${value}`) : value;
+}
+
 function collectColors(groups: AnyItem[][]) {
   return [
     ...new Set(
@@ -2022,7 +2031,7 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
     const unit = item.unitName ? ` ${item.unitName}` : "";
     return `${t("common.total")} ${numberValue(item.quantityTotal)}${unit} / ${t("common.remaining")} ${numberValue(item.quantityRemaining)}${unit}`;
   }
-  if (kind === "tools") return `${item.category ?? t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
+  if (kind === "tools") return `${item.category ? toolCategoryLabel(item.category, t) : t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
   return `${money(item.cost?.totalCost ?? item.priceCents)} / ${money(item.valueCents)}`;
 }
 
@@ -2056,7 +2065,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
   if (kind === "cloths") {
     add(t("cloths.quantity"), item.quantity);
     add(t("cloths.purpose"), item.purpose, (value) => t(`clothPurpose.${value}`));
-    add(t("cloths.materialType"), item.materialType);
+    add(t("cloths.materialType"), item.materialType, (value) => clothMaterialTypeLabel(value, t));
     add(t("cloths.lengthTotal"), item.lengthTotal, (value) => `${numberValue(value)} ${item.lengthUnit}`);
     add(t("cloths.lengthRemaining"), item.lengthRemaining, (value) => `${numberValue(value)} ${item.lengthUnit}`);
     add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
@@ -2081,7 +2090,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("common.price"), item.priceCents, money);
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "tools") {
-    add(t("tools.category"), item.category);
+    add(t("tools.category"), item.category, (value) => toolCategoryLabel(value, t));
     add(t("tools.quantity"), item.quantity);
     add(t("tools.brand"), item.brand);
     add(t("tools.model"), item.model);
@@ -2101,10 +2110,10 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 }
 
 function defaultItem(kind: Kind) {
-  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "garment", materialType: "其他" };
+  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "garment", materialType: "other" };
   if (kind === "materials") return {};
   if (kind === "projects") return { quantity: 1 };
-  if (kind === "tools") return { quantity: 1, category: "其他", condition: "good" };
+  if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
   return { patternType: "paper", difficulty: "medium" };
 }
 
@@ -2128,7 +2137,7 @@ function formToBody(kind: Kind, form: FormData) {
       width: numberOrNull(form.get("width")),
       widthUnit: stringOrNull(form.get("widthUnit")),
       purpose: form.get("purpose"),
-      materialType: stringOrNull(form.get("materialType")) ?? "其他",
+      materialType: stringOrNull(form.get("materialType")) ?? "other",
       colors: sanitizeColors(form.getAll("colors"))
     };
   }
@@ -2154,7 +2163,7 @@ function formToBody(kind: Kind, form: FormData) {
   if (kind === "tools") {
     return {
       ...base,
-      category: stringOrNull(form.get("category")) ?? "其他",
+      category: stringOrNull(form.get("category")) ?? "other",
       quantity: Number(form.get("quantity") || 1),
       brand: stringOrNull(form.get("brand")),
       model: stringOrNull(form.get("model")),
@@ -2169,7 +2178,7 @@ function formToBody(kind: Kind, form: FormData) {
     ...base,
     quantity: Number(form.get("quantity") || 1),
     valueCents: centsFromDollars(form.get("valueCents")),
-    patternIds: form.getAll("patternIds").map(Number).filter(Boolean),
+    patternIds: [...new Set(form.getAll("patternIds").map(Number).filter(Boolean))],
     cloths: clothIds
       .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
       .filter((link) => link.clothId && link.lengthUsed),

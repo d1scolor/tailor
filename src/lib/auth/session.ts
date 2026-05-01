@@ -50,6 +50,7 @@ export function clearSessionCookie(response: NextResponse) {
 }
 
 export function getUserBySession(sessionId?: string | null): AuthUser | null {
+  if (restoreState.readsBlocked) return null;
   if (!restoreState.writesBlocked) seedDatabase();
   if (!isSessionCookieValue(sessionId)) return null;
   const db = getSqlite();
@@ -77,6 +78,9 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
 }
 
 export function requireAuthFromRequest(request: NextRequest) {
+  if (restoreState.readsBlocked) {
+    return { user: null, response: jsonError("restore_in_progress", 503, "Restore is in progress.") };
+  }
   if (restoreState.writesBlocked && isMutatingRequest(request) && request.nextUrl.pathname !== "/api/backup/restore") {
     return { user: null, response: jsonError("restore_in_progress", 503, "Restore is in progress.") };
   }

@@ -28,7 +28,7 @@ export default async function OverviewPage() {
   const projects = summary("projects", user.id);
 
   const inventoryCount = (cloths.count ?? 0) + (materials.count ?? 0) + (patterns.count ?? 0) + (tools.count ?? 0);
-  const totalSpend = (cloths.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0) + (projects.totalCost ?? 0);
+  const inventorySpend = (cloths.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0);
   const categories: Category[] = [
     {
       key: "cloths",
@@ -85,7 +85,7 @@ export default async function OverviewPage() {
       </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
-        <SummaryCard label={t("overview.totalSpend")} value={money(totalSpend)} />
+        <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend)} />
         <SummaryCard label={t("overview.inventoryItems")} value={inventoryCount} />
         <SummaryCard label={t("overview.clothRemaining")} value={`${numberValue(cloths.lengthRemainingMetres)} m`} />
         <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0)} />

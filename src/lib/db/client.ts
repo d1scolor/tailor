@@ -78,7 +78,7 @@ function ensureAddedColumns(db: Sqlite) {
     db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
   }
   if (!columnExists(db, "cloths", "material_type")) {
-    db.exec("ALTER TABLE cloths ADD COLUMN material_type TEXT NOT NULL DEFAULT '其他'");
+    db.exec("ALTER TABLE cloths ADD COLUMN material_type TEXT NOT NULL DEFAULT 'other'");
   }
   if (!columnExists(db, "patterns", "pattern_type")) {
     db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT 'paper'");
@@ -94,7 +94,7 @@ function ensureAddedColumns(db: Sqlite) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT '其他',
+      category TEXT NOT NULL DEFAULT 'other',
       quantity INTEGER NOT NULL DEFAULT 1,
       brand TEXT,
       model TEXT,

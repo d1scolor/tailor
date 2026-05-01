@@ -168,8 +168,10 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
 
   const sort = sortColumns[kind][params.get("sort") ?? "created"] ?? "created_at";
   const dir = params.get("dir") === "asc" ? "ASC" : "DESC";
-  const rows = db.prepare(`SELECT * FROM ${kind} WHERE ${clauses.join(" AND ")} ORDER BY ${sort} ${dir}`).all(...args);
-  return rows.map((row) => withExtras(row as Record<string, unknown>, entityType));
+  const rows = db.prepare(`SELECT * FROM ${kind} WHERE ${clauses.join(" AND ")} ORDER BY ${sort} ${dir}`).all(...args) as Array<
+    Record<string, unknown>
+  >;
+  return withExtrasForRows(rows, entityType);
 }
 
 export function getItem(kind: Kind, userId: number, id: number) {
@@ -567,11 +569,11 @@ export function deleteItem(kind: Kind, userId: number, id: number) {
     }
     if (kind === "projects") restoreProjectLinks(db, id);
     const photosToDelete = db
-      .prepare("SELECT id, original_ext AS originalExt FROM photos WHERE entity_type = ? AND entity_id = ?")
-      .all(entityByKind[kind], id) as Array<{ id: string; originalExt: string }>;
+      .prepare("SELECT id, original_ext AS originalExt FROM photos WHERE entity_type = ? AND entity_id = ? AND user_id = ?")
+      .all(entityByKind[kind], id, userId) as Array<{ id: string; originalExt: string }>;
     db.prepare("DELETE FROM entity_tags WHERE entity_type = ? AND entity_id = ?").run(entityByKind[kind], id);
-    db.prepare("DELETE FROM photos WHERE entity_type = ? AND entity_id = ?").run(entityByKind[kind], id);
-    db.prepare(`DELETE FROM ${kind} WHERE id = ?`).run(id);
+    db.prepare("DELETE FROM photos WHERE entity_type = ? AND entity_id = ? AND user_id = ?").run(entityByKind[kind], id, userId);
+    db.prepare(`DELETE FROM ${kind} WHERE id = ? AND user_id = ?`).run(id, userId);
     return photosToDelete;
   })();
   for (const photo of deletedPhotos) deletePhotoFilesSync(photo.id, photo.originalExt);
@@ -752,6 +754,116 @@ function withExtras(row: Record<string, unknown>, entityType: EntityType) {
     }
   }
   return { ...camelize(row), ...extra, photos, tags };
+}
+
+function withExtrasForRows(rows: Array<Record<string, unknown>>, entityType: EntityType) {
+  if (!rows.length) return [];
+  const db = getSqlite();
+  const ids = rows.map((row) => Number(row.id));
+  const placeholders = ids.map(() => "?").join(",");
+  const photos = db
+    .prepare(
+      `SELECT entity_id AS entityId, id, is_cover AS isCover, sort_order AS sortOrder
+       FROM photos
+       WHERE entity_type = ? AND entity_id IN (${placeholders})
+       ORDER BY sort_order ASC, created_at ASC`
+    )
+    .all(entityType, ...ids) as Array<{ entityId: number; id: string; isCover: number; sortOrder: number }>;
+  const tags = db
+    .prepare(
+      `SELECT et.entity_id AS entityId, tags.id, tags.name, tags.color
+       FROM tags
+       JOIN entity_tags et ON et.tag_id = tags.id
+       WHERE et.entity_type = ? AND et.entity_id IN (${placeholders})
+       ORDER BY tags.name`
+    )
+    .all(entityType, ...ids) as Array<{ entityId: number; id: number; name: string; color: string | null }>;
+  const photosByEntity = groupBy(photos, (photo) => photo.entityId);
+  const tagsByEntity = groupBy(tags, (tag) => tag.entityId);
+  const extrasByEntity = extrasForRows(db, rows, entityType, ids, placeholders);
+
+  return rows.map((row) => {
+    const id = Number(row.id);
+    const extra: Record<string, unknown> = { ...(extrasByEntity.get(id) ?? {}) };
+    if (entityType === "cloth" || entityType === "material") {
+      extra.colors = decodeColors(row.colors);
+    }
+    return {
+      ...camelize(row),
+      ...extra,
+      photos: (photosByEntity.get(id) ?? []).map((photo) => ({ id: photo.id, isCover: photo.isCover, sortOrder: photo.sortOrder })),
+      tags: (tagsByEntity.get(id) ?? []).map((tag) => ({ id: tag.id, name: tag.name, color: tag.color }))
+    };
+  });
+}
+
+function extrasForRows(
+  db: ReturnType<typeof getSqlite>,
+  rows: Array<Record<string, unknown>>,
+  entityType: EntityType,
+  ids: number[],
+  placeholders: string
+) {
+  const extras = new Map<number, Record<string, unknown>>();
+  if (entityType === "project") {
+    const clothColors = db
+      .prepare(
+        `SELECT pc.project_id AS projectId, c.colors
+         FROM project_cloths pc
+         JOIN cloths c ON c.id = pc.cloth_id
+         WHERE pc.project_id IN (${placeholders})`
+      )
+      .all(...ids) as Array<{ projectId: number; colors: string | null }>;
+    const materialColors = db
+      .prepare(
+        `SELECT pm.project_id AS projectId, m.colors
+         FROM project_materials pm
+         JOIN materials m ON m.id = pm.material_id
+         WHERE pm.project_id IN (${placeholders})`
+      )
+      .all(...ids) as Array<{ projectId: number; colors: string | null }>;
+    for (const id of ids) {
+      const colors = [...clothColors, ...materialColors]
+        .filter((item) => item.projectId === id)
+        .flatMap((item) => decodeColors(item.colors));
+      extras.set(id, { colors: [...new Set(colors)] });
+    }
+  }
+  if (entityType === "material") {
+    const categoryIds = uniqueNumericValues(rows.map((row) => row.category_id));
+    const unitIds = uniqueNumericValues(rows.map((row) => row.unit_id));
+    const categories = loadNameMap(db, "material_categories", categoryIds);
+    const units = loadNameMap(db, "material_units", unitIds);
+    for (const row of rows) {
+      const id = Number(row.id);
+      extras.set(id, {
+        categoryName: categories.get(Number(row.category_id)),
+        unitName: units.get(Number(row.unit_id))
+      });
+    }
+  }
+  return extras;
+}
+
+function groupBy<T>(items: T[], keyFor: (item: T) => number) {
+  const grouped = new Map<number, T[]>();
+  for (const item of items) {
+    const key = keyFor(item);
+    grouped.set(key, [...(grouped.get(key) ?? []), item]);
+  }
+  return grouped;
+}
+
+function uniqueNumericValues(values: unknown[]) {
+  return [...new Set(values.map(Number).filter((value) => Number.isFinite(value) && value > 0))];
+}
+
+function loadNameMap(db: ReturnType<typeof getSqlite>, table: "material_categories" | "material_units", ids: number[]) {
+  if (!ids.length) return new Map<number, string>();
+  const rows = db
+    .prepare(`SELECT id, name FROM ${table} WHERE id IN (${ids.map(() => "?").join(",")})`)
+    .all(...ids) as Array<{ id: number; name: string }>;
+  return new Map(rows.map((row) => [row.id, row.name]));
 }
 
 function normalizeColor(value: unknown) {

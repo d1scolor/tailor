@@ -31,26 +31,32 @@ export async function POST(request: NextRequest) {
     if (!fs.existsSync(stagedDb) || !fs.existsSync(stagedPhotos)) {
       return Response.json({ error: "invalid_backup" }, { status: 400 });
     }
-    closeDb();
     const Database = (await import("better-sqlite3")).default;
     const tempDb = new Database(stagedDb);
     const integrity = tempDb.prepare("PRAGMA integrity_check").get() as { integrity_check: string };
     tempDb.close();
     if (integrity.integrity_check !== "ok") return Response.json({ error: "invalid_database" }, { status: 400 });
 
-    restoreState.writesBlocked = true;
     const backup = path.join(dataDir, `restore-backup-${dateForFile()}`);
-    fs.mkdirSync(backup, { recursive: true });
-    if (fs.existsSync(dbDir)) fs.renameSync(dbDir, path.join(backup, "db"));
-    if (fs.existsSync(photosDir)) fs.renameSync(photosDir, path.join(backup, "photos"));
-    fs.renameSync(path.join(staging, "db"), dbDir);
-    fs.renameSync(stagedPhotos, photosDir);
-    closeDb();
-    runMigrations();
-    restoreState.writesBlocked = false;
+    restoreState.readsBlocked = true;
+    restoreState.writesBlocked = true;
+    try {
+      closeDb();
+      fs.mkdirSync(backup, { recursive: true });
+      if (fs.existsSync(dbDir)) fs.renameSync(dbDir, path.join(backup, "db"));
+      if (fs.existsSync(photosDir)) fs.renameSync(photosDir, path.join(backup, "photos"));
+      fs.renameSync(path.join(staging, "db"), dbDir);
+      fs.renameSync(stagedPhotos, photosDir);
+      closeDb();
+      runMigrations();
+    } finally {
+      restoreState.readsBlocked = false;
+      restoreState.writesBlocked = false;
+    }
     fs.rmSync(staging, { recursive: true, force: true });
     return ok({ ok: true, backup });
   } catch (error) {
+    restoreState.readsBlocked = false;
     restoreState.writesBlocked = false;
     return handleApiError(error);
   }

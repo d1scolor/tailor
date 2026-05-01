@@ -21,7 +21,7 @@ export const clothSchema = baseItemSchema.extend({
   widthUnit: z.enum(["cm", "m", "in"]).nullable().optional(),
   colors: colorsSchema,
   purpose: z.enum(["garment", "craft"]).default("garment"),
-  materialType: labelValueSchema.default("其他")
+  materialType: labelValueSchema.default("other")
 });
 
 export const patternSchema = baseItemSchema.extend({
@@ -62,7 +62,7 @@ export const projectSchema = z.object({
 });
 
 export const toolSchema = baseItemSchema.extend({
-  category: labelValueSchema.default("其他"),
+  category: labelValueSchema.default("other"),
   quantity: z.coerce.number().int().positive().default(1),
   brand: z.string().trim().nullable().optional(),
   model: z.string().trim().nullable().optional(),
