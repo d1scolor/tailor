@@ -14,6 +14,7 @@ export default async function ClothsPage() {
       tags={listTags(user.id) as any}
       sourceOptions={listSources("cloths", user.id)}
       materialTypeOptions={listClothMaterialTypes(user.id)}
+      unitSystem={user.unitSystem}
     />
   );
 }

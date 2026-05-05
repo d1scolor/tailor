@@ -3,8 +3,9 @@ import { ApiError } from "@/lib/api";
 import { getSqlite } from "@/lib/db/client";
 import { lengthToMetres } from "@/lib/format";
 import { copyPhotoFilesSync, deletePhotoFilesSync } from "@/lib/images";
-import { applyProjectLinks, restoreProjectLinks } from "@/lib/consumption";
+import { applyProjectLinks, recomputeClothRemaining, restoreProjectLinks } from "@/lib/consumption";
 import { nowIso } from "@/lib/time";
+import { clothUnits, convertLength, normalizeUnitSystem } from "@/lib/units";
 
 export type Kind = "cloths" | "patterns" | "materials" | "projects" | "tools";
 export type EntityType = "cloth" | "pattern" | "material" | "project" | "tool";
@@ -27,7 +28,7 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
-    unitPrice: "CASE WHEN length_total > 0 THEN price_cents / length_total ELSE NULL END",
+    unitPrice: "CASE WHEN length_total > 0 AND width > 0 AND quantity > 0 THEN price_cents / (length_total * (width / CASE length_unit WHEN 'yd' THEN 36.0 ELSE 100.0 END) * quantity) ELSE NULL END",
     remaining: clothRemainingMetresSort,
     remainingMetres: clothRemainingMetresSort
   },
@@ -311,11 +312,15 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       | undefined;
     if (!existing) throw new ApiError("not_found", 404, "Item not found.");
     if (kind === "cloths") {
-      const delta = Number(input.lengthTotal) - Number(existing.length_total);
-      const nextRemaining = Number(existing.length_remaining) + delta;
-      if (nextRemaining < 0) {
+      const usedLength = (
+        db.prepare("SELECT COALESCE(SUM(length_used), 0) AS usedLength FROM project_cloths WHERE cloth_id = ?").get(id) as {
+          usedLength: number;
+        }
+      ).usedLength;
+      if (Number(input.lengthTotal) < usedLength) {
         throw new ApiError("negative_remaining", 409, "Remove project consumption before reducing the total length.");
       }
+      const nextRemaining = Number(input.lengthTotal) - usedLength;
       db.prepare(
         `UPDATE cloths SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
          width = ?, width_unit = ?, colors = ?, purpose = ?, material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
@@ -337,6 +342,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         now,
         id
       );
+      recomputeClothRemaining(db, [id]);
     } else if (kind === "patterns") {
       db.prepare(
         `UPDATE patterns SET name = ?, pattern_type = ?, difficulty = ?, pattern_for = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
@@ -430,7 +436,7 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
             existing.name,
             existing.quantity,
             existing.length_total,
-            existing.length_remaining,
+            existing.length_total,
             existing.length_unit,
             existing.width,
             existing.width_unit,
@@ -585,18 +591,25 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
   const db = getSqlite();
   const filteredRows = params.toString() ? listItems(kind, userId, params) : null;
   if (kind === "cloths") {
+    const user = db.prepare("SELECT unit_system AS unitSystem FROM users WHERE id = ?").get(userId) as { unitSystem?: string } | undefined;
+    const units = clothUnits(normalizeUnitSystem(user?.unitSystem));
     const rows = (filteredRows ??
       db
         .prepare("SELECT price_cents AS priceCents, length_total AS lengthTotal, length_remaining AS lengthRemaining, length_unit AS lengthUnit FROM cloths WHERE user_id = ?")
         .all(userId)) as Array<{ priceCents: number | null; lengthTotal: number; lengthRemaining: number; lengthUnit: string }>;
+    const usedMetres = rows.reduce(
+      (sum, row) => sum + lengthToMetres(row.lengthTotal - row.lengthRemaining, row.lengthUnit),
+      0
+    );
+    const remainingMetres = rows.reduce((sum, row) => sum + lengthToMetres(row.lengthRemaining, row.lengthUnit), 0);
     return {
       count: rows.length,
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      lengthUsedMetres: rows.reduce(
-        (sum, row) => sum + lengthToMetres(row.lengthTotal - row.lengthRemaining, row.lengthUnit),
-        0
-      ),
-      lengthRemainingMetres: rows.reduce((sum, row) => sum + lengthToMetres(row.lengthRemaining, row.lengthUnit), 0)
+      lengthUsed: convertLength(usedMetres, "m", units.lengthUnit),
+      lengthRemaining: convertLength(remainingMetres, "m", units.lengthUnit),
+      lengthUnit: units.lengthUnit,
+      lengthUsedMetres: usedMetres,
+      lengthRemainingMetres: remainingMetres
     };
   }
   if (kind === "patterns") {
@@ -937,6 +950,14 @@ export function listClothMaterialTypes(userId: number) {
       .prepare("SELECT DISTINCT material_type AS materialType FROM cloths WHERE user_id = ? AND material_type IS NOT NULL AND TRIM(material_type) != '' ORDER BY material_type")
       .all(userId) as Array<{ materialType: string }>
   ).map((row) => row.materialType);
+}
+
+export function listPatternTypes(userId: number) {
+  return (
+    getSqlite()
+      .prepare("SELECT DISTINCT pattern_type AS patternType FROM patterns WHERE user_id = ? AND pattern_type IS NOT NULL AND TRIM(pattern_type) != '' ORDER BY pattern_type")
+      .all(userId) as Array<{ patternType: string }>
+  ).map((row) => row.patternType);
 }
 
 export function parseIds(value: string | null) {

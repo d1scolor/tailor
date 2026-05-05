@@ -35,8 +35,8 @@ export default async function OverviewPage() {
       cost: cloths.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: cloths.count ?? 0 },
-        { label: t("cloths.usedLength"), value: `${numberValue(cloths.lengthUsedMetres)} m` },
-        { label: t("cloths.remainingLength"), value: `${numberValue(cloths.lengthRemainingMetres)} m` }
+        { label: t("cloths.usedLength"), value: `${numberValue(cloths.lengthUsed)} ${cloths.lengthUnit ?? "m"}` },
+        { label: t("cloths.remainingLength"), value: `${numberValue(cloths.lengthRemaining)} ${cloths.lengthUnit ?? "m"}` }
       ]
     },
     {
@@ -86,7 +86,7 @@ export default async function OverviewPage() {
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
         <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend)} />
         <SummaryCard label={t("overview.inventoryItems")} value={inventoryCount} />
-        <SummaryCard label={t("overview.clothRemaining")} value={`${numberValue(cloths.lengthRemainingMetres)} m`} />
+        <SummaryCard label={t("overview.clothRemaining")} value={`${numberValue(cloths.lengthRemaining)} ${cloths.lengthUnit ?? "m"}`} />
         <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0)} />
       </section>
 

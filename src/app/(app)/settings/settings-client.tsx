@@ -5,16 +5,19 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import type { UnitSystem } from "@/lib/units";
 
 type Item = { id: number; name: string; color?: string | null; sortOrder?: number };
 
 export function SettingsClient({
   locale,
+  unitSystem,
   tags,
   categories,
   units
 }: {
   locale: "en" | "zh";
+  unitSystem: UnitSystem;
   tags: Item[];
   categories: Item[];
   units: Item[];
@@ -35,6 +38,15 @@ export function SettingsClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locale: next })
+    });
+    window.location.reload();
+  }
+
+  async function setUnitSystem(next: UnitSystem) {
+    await fetch("/api/settings/unit-system", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unitSystem: next })
     });
     window.location.reload();
   }
@@ -76,6 +88,17 @@ export function SettingsClient({
           </Button>
           <Button variant={locale === "zh" ? "primary" : "secondary"} onClick={() => setLocale("zh")}>
             {t("settings.chinese")}
+          </Button>
+        </div>
+      </Card>
+      <Card className="space-y-3 p-4">
+        <h2 className="font-semibold">{t("settings.unitSystem")}</h2>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={unitSystem === "metric" ? "primary" : "secondary"} onClick={() => setUnitSystem("metric")}>
+            {t("settings.metricUnits")}
+          </Button>
+          <Button variant={unitSystem === "us" ? "primary" : "secondary"} onClick={() => setUnitSystem("us")}>
+            {t("settings.usUnits")}
           </Button>
         </div>
       </Card>

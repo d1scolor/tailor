@@ -9,6 +9,7 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       locale={user.locale}
+      unitSystem={user.unitSystem}
       tags={listTags(user.id) as any}
       categories={listMeta("material_categories", user.id) as any}
       units={listMeta("material_units", user.id) as any}

@@ -3,15 +3,17 @@
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { money, numberValue } from "@/lib/format";
+import { money, moneyDecimal, numberValue } from "@/lib/format";
 import type { Kind } from "@/lib/repository";
+import { clothUnits, type UnitSystem } from "@/lib/units";
 
 type AnyItem = Record<string, any>;
 type MetaItem = { id: number; name: string; sortOrder?: number };
+type PickerKind = Extract<Kind, "cloths" | "patterns" | "materials">;
 type CreateMetaHandler = {
   (name: string): Promise<MetaItem | null>;
 };
@@ -49,8 +51,13 @@ type Props = {
   patternOptions?: AnyItem[];
   materialOptions?: AnyItem[];
   sourceOptions?: string[];
+  clothSourceOptions?: string[];
+  patternSourceOptions?: string[];
+  materialSourceOptions?: string[];
   materialTypeOptions?: string[];
+  patternTypeOptions?: string[];
   toolCategoryOptions?: string[];
+  unitSystem?: UnitSystem;
 };
 type FieldsProps = {
   kind: Kind;
@@ -62,11 +69,30 @@ type FieldsProps = {
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   sourceOptions: string[];
+  clothSourceOptions: string[];
+  patternSourceOptions: string[];
+  materialSourceOptions: string[];
   materialTypeOptions: string[];
+  patternTypeOptions: string[];
   toolCategoryOptions: string[];
+  unitSystem: UnitSystem;
   onAddTag: (name: string) => void;
   onAddCategory: CreateMetaHandler;
   onAddUnit: CreateMetaHandler;
+  onOpenPhoto: (photos: string[], index: number) => void;
+};
+type BrowserResources = {
+  tags: MetaItem[];
+  categories: MetaItem[];
+  units: MetaItem[];
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
+  colorOptions: string[];
+  sourceOptions: string[];
+  materialTypeOptions: string[];
+  patternTypeOptions: string[];
+  toolCategoryOptions: string[];
 };
 type MetaSelectProps = {
   name: string;
@@ -81,6 +107,9 @@ type PhotoUploadedHandler = {
 type DetailProps = {
   item: AnyItem;
   kind: Kind;
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
   onEdit: () => void;
   onDuplicate?: () => void;
   onDelete: () => void;
@@ -111,7 +140,7 @@ const entityByKind = {
   tools: "tool"
 } as const;
 const clothPurposeOptions = ["garment", "craft"];
-const patternTypeOptions = ["paper", "digital"];
+const patternTypeDefaults = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
 const materialUsageStatusOptions = ["available", "used"];
 const patternForOptions = [
@@ -244,6 +273,7 @@ const colorSwatches: Record<string, string> = {
 
 export function InventoryClient(props: Props) {
   const t = useTranslations();
+  const unitSystem = props.unitSystem ?? "metric";
   const [items, setItems] = useState(props.items);
   const [summary, setSummary] = useState(props.summary);
   const [query, setQuery] = useState("");
@@ -264,6 +294,7 @@ export function InventoryClient(props: Props) {
   const [unitList, setUnitList] = useState(props.units ?? []);
   const [sourceOptions, setSourceOptions] = useState(props.sourceOptions ?? []);
   const [materialTypeOptions, setMaterialTypeOptions] = useState(props.materialTypeOptions ?? []);
+  const [patternTypeOptions, setPatternTypeOptions] = useState(props.patternTypeOptions ?? []);
   const [toolCategoryOptions, setToolCategoryOptions] = useState(props.toolCategoryOptions ?? []);
   const submitLockRef = useRef(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -363,12 +394,13 @@ export function InventoryClient(props: Props) {
         body: JSON.stringify(body)
       });
       if (!response.ok) {
-        notify(t("common.error"));
+        notify(await errorMessage(response, t));
         return;
       }
       const { item } = (await response.json()) as { item: AnyItem };
       rememberSource(body.source);
       rememberMaterialType(body.materialType);
+      rememberPatternType(body.patternType);
       rememberToolCategory(body.category);
       await uploadStagedPhotos(stagedPhotoFiles, props.kind, item.id);
       setStagedPhotoFiles([]);
@@ -385,12 +417,26 @@ export function InventoryClient(props: Props) {
 
   function openCreate() {
     setStagedPhotoFiles([]);
-    setEditing(defaultItem(props.kind));
+    setEditing(defaultItem(props.kind, unitSystem));
   }
 
   function openEdit(item: AnyItem) {
     setStagedPhotoFiles([]);
     setEditing(item);
+  }
+
+  async function openSelected(item: AnyItem) {
+    if (props.kind !== "projects") {
+      setSelected(item);
+      return;
+    }
+    const response = await fetch(`/api/${props.kind}/${item.id}`);
+    if (!response.ok) {
+      notify(await errorMessage(response, t));
+      return;
+    }
+    const { item: fullItem } = (await response.json()) as { item: AnyItem };
+    setSelected(fullItem);
   }
 
   function closeEditor() {
@@ -482,25 +528,31 @@ export function InventoryClient(props: Props) {
     setMaterialTypeOptions((current) => (current.includes(materialType) ? current : [...current, materialType].sort()));
   }
 
+  function rememberPatternType(value: unknown) {
+    const patternType = String(value ?? "").trim();
+    if (!patternType || props.kind !== "patterns") return;
+    setPatternTypeOptions((current) => (current.includes(patternType) ? current : [...current, patternType].sort()));
+  }
+
   function rememberToolCategory(value: unknown) {
     const category = String(value ?? "").trim();
     if (!category || props.kind !== "tools") return;
     setToolCategoryOptions((current) => (current.includes(category) ? current : [...current, category].sort()));
   }
 
-  const cards = useMemo(
-    () =>
-      items.map((item) => (
-        <ItemCard
-          key={item.id}
-          item={item}
-          kind={props.kind}
-          view={view}
-          onClick={() => setSelected(item)}
-        />
-      )),
-    [items, props.kind, view]
-  );
+  const browserResources = {
+    tags: tagList,
+    categories: categoryList,
+    units: unitList,
+    clothOptions: props.clothOptions ?? [],
+    patternOptions: props.patternOptions ?? [],
+    materialOptions: props.materialOptions ?? [],
+    colorOptions,
+    sourceOptions,
+    materialTypeOptions,
+    patternTypeOptions,
+    toolCategoryOptions
+  };
 
   return (
     <main className="space-y-5">
@@ -521,117 +573,81 @@ export function InventoryClient(props: Props) {
         ))}
       </section>
 
-      <div className="grid gap-2 md:flex md:flex-wrap md:items-center">
-        <label className="relative min-w-0 md:min-w-48 md:flex-1">
-          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden />
-          <Input
-            className="pl-9"
-            placeholder={t("common.search")}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              debounceRefresh(event.target.value, sort, filters, dir);
-            }}
-          />
-        </label>
-        <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
-          <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-sm">
-            <span className="border-r border-border px-3 text-sm font-medium text-muted-foreground">{t("common.sortBy")}</span>
-            <Select
-              aria-label={t("common.sort")}
-              value={sort}
-              onChange={(event) => {
-                const nextSort = event.target.value;
-                setSort(nextSort);
-                void refresh(query, nextSort, filters, dir);
-              }}
-              className="w-44 border-0 shadow-none"
-            >
-              <option value="created">{t("common.sortCreated")}</option>
-              <option value="name">{t("common.sortName")}</option>
-              <option value="price">{t("common.sortPrice")}</option>
-              <option value="unitPrice">{t("common.sortUnitPrice")}</option>
-              {props.kind === "cloths" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
-              {props.kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
-            </Select>
-          </label>
-          <Select
-            aria-label={t("common.sortDirection")}
-            value={dir}
-            onChange={(event) => {
-              const nextDir = event.target.value === "asc" ? "asc" : "desc";
-              setDir(nextDir);
-              void refresh(query, sort, filters, nextDir);
-            }}
-            className="w-32 shrink-0"
-          >
-            <option value="desc">{t("common.desc")}</option>
-            <option value="asc">{t("common.asc")}</option>
-          </Select>
-          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.refresh")} onClick={() => void refresh()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-          </Button>
-          <Button className="shrink-0" variant={hasFilters(filters) ? "primary" : "secondary"} onClick={() => setFilterOpen(true)}>
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            {t("common.filter")}
-          </Button>
-          <Button className="shrink-0" variant={view === "grid" ? "primary" : "secondary"} size="icon" aria-label={t("common.grid")} onClick={() => setView("grid")}>
-            <Grid2X2 className="h-4 w-4" aria-hidden />
-          </Button>
-          <Button className="shrink-0" variant={view === "list" ? "primary" : "secondary"} size="icon" aria-label={t("common.list")} onClick={() => setView("list")}>
-            <List className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
-      </div>
-
-      {items.length ? (
-        <section className={view === "grid" ? "grid grid-cols-2 gap-3 md:grid-cols-4" : "space-y-2"}>{cards}</section>
-      ) : (
-        <Card className="p-8 text-center">
-          <div className="text-4xl" aria-hidden>
-            🧵
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
-        </Card>
-      )}
+      <InventoryBrowserView
+        kind={props.kind}
+        items={items}
+        query={query}
+        sort={sort}
+        dir={dir}
+        view={view}
+        filters={filters}
+        filterOpen={filterOpen}
+        resources={browserResources}
+        onQueryChange={(nextQuery) => {
+          setQuery(nextQuery);
+          debounceRefresh(nextQuery, sort, filters, dir);
+        }}
+        onSortChange={(nextSort) => {
+          setSort(nextSort);
+          void refresh(query, nextSort, filters, dir);
+        }}
+        onDirChange={(nextDir) => {
+          setDir(nextDir);
+          void refresh(query, sort, filters, nextDir);
+        }}
+        onRefresh={() => void refresh()}
+        onFilterOpen={() => setFilterOpen(true)}
+        onFilterClose={() => setFilterOpen(false)}
+        onApplyFilters={applyFilters}
+        onViewChange={setView}
+        onItemClick={(item) => void openSelected(item)}
+      />
 
       {editing ? (
         <ModalPortal>
           <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
-            <Card className="max-h-[92dvh] w-full max-w-full overflow-x-hidden overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
-              <form key={`${props.kind}-${editing.id ?? "new"}`} className="min-w-0 space-y-4" onSubmit={submit}>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
-                  <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={closeEditor}>
-                    <X className="h-4 w-4" aria-hidden />
-                  </Button>
+            <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-0 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
+              <form key={`${props.kind}-${editing.id ?? "new"}`} className="flex min-h-0 w-full flex-col" onSubmit={submit}>
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
+                    <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={closeEditor}>
+                      <X className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </div>
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-medium">{t("common.photos")}</h3>
+                    {editing.id ? (
+                      <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
+                    ) : (
+                      <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
+                    )}
+                  </section>
+                  <Fields
+                    kind={props.kind}
+                    item={editing}
+                    tags={tagList}
+                    categories={categoryList}
+                    units={unitList}
+                    clothOptions={props.clothOptions ?? []}
+                    patternOptions={props.patternOptions ?? []}
+                    materialOptions={props.materialOptions ?? []}
+                    sourceOptions={sourceOptions}
+                    clothSourceOptions={props.clothSourceOptions ?? []}
+                    patternSourceOptions={props.patternSourceOptions ?? []}
+                    materialSourceOptions={props.materialSourceOptions ?? []}
+                    materialTypeOptions={materialTypeOptions}
+                    patternTypeOptions={patternTypeOptions}
+                    toolCategoryOptions={toolCategoryOptions}
+                    unitSystem={unitSystem}
+                    onAddTag={addTag}
+                    onAddCategory={(name) => createMeta("categories", name)}
+                    onAddUnit={(name) => createMeta("units", name)}
+                    onOpenPhoto={openLightbox}
+                  />
                 </div>
-                <section className="space-y-2">
-                  <h3 className="text-sm font-medium">{t("common.photos")}</h3>
-                  {editing.id ? (
-                    <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
-                  ) : (
-                    <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
-                  )}
-                </section>
-                <Fields
-                  kind={props.kind}
-                  item={editing}
-                  tags={tagList}
-                  categories={categoryList}
-                  units={unitList}
-                  clothOptions={props.clothOptions ?? []}
-                  patternOptions={props.patternOptions ?? []}
-                  materialOptions={props.materialOptions ?? []}
-                  sourceOptions={sourceOptions}
-                  materialTypeOptions={materialTypeOptions}
-                  toolCategoryOptions={toolCategoryOptions}
-                  onAddTag={addTag}
-                  onAddCategory={(name) => createMeta("categories", name)}
-                  onAddUnit={(name) => createMeta("units", name)}
-                />
-                <div className="sticky bottom-0 flex justify-end gap-2 bg-card py-3">
+                <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
                   <Button type="button" variant="secondary" onClick={closeEditor}>
                     {t("common.cancel")}
                   </Button>
@@ -650,33 +666,15 @@ export function InventoryClient(props: Props) {
           <Detail
             item={selected}
             kind={props.kind}
+            clothOptions={props.clothOptions ?? []}
+            patternOptions={props.patternOptions ?? []}
+            materialOptions={props.materialOptions ?? []}
             onEdit={() => openEdit(selected)}
             onDuplicate={props.kind === "projects" ? undefined : () => duplicate(selected)}
             onDelete={() => setConfirmDelete(selected)}
             onClose={() => setSelected(null)}
             onOpenPhoto={openLightbox}
             onUploaded={() => refreshOpenItem(selected.id)}
-          />
-        </ModalPortal>
-      ) : null}
-
-      {filterOpen ? (
-        <ModalPortal>
-          <FilterDrawer
-            kind={props.kind}
-            filters={filters}
-            tags={tagList}
-            categories={categoryList}
-            units={unitList}
-            clothOptions={props.clothOptions ?? []}
-            patternOptions={props.patternOptions ?? []}
-            materialOptions={props.materialOptions ?? []}
-            colorOptions={colorOptions}
-            sourceOptions={sourceOptions}
-            materialTypeOptions={materialTypeOptions}
-            toolCategoryOptions={toolCategoryOptions}
-            onApply={applyFilters}
-            onClose={() => setFilterOpen(false)}
           />
         </ModalPortal>
       ) : null}
@@ -711,16 +709,143 @@ export function InventoryClient(props: Props) {
   );
 }
 
+function InventoryBrowserView({
+  kind,
+  items,
+  query,
+  sort,
+  dir,
+  view,
+  filters,
+  filterOpen,
+  filterPortal = true,
+  resources,
+  selectedIds = [],
+  onQueryChange,
+  onSortChange,
+  onDirChange,
+  onRefresh,
+  onFilterOpen,
+  onFilterClose,
+  onApplyFilters,
+  onViewChange,
+  onItemClick
+}: {
+  kind: Kind;
+  items: AnyItem[];
+  query: string;
+  sort: string;
+  dir: "asc" | "desc";
+  view: "grid" | "list";
+  filters: Filters;
+  filterOpen: boolean;
+  filterPortal?: boolean;
+  resources: BrowserResources;
+  selectedIds?: number[];
+  onQueryChange: (query: string) => void;
+  onSortChange: (sort: string) => void;
+  onDirChange: (dir: "asc" | "desc") => void;
+  onRefresh: () => void;
+  onFilterOpen: () => void;
+  onFilterClose: () => void;
+  onApplyFilters: (filters: Filters) => void;
+  onViewChange: (view: "grid" | "list") => void;
+  onItemClick: (item: AnyItem) => void;
+}) {
+  const t = useTranslations();
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const filterDrawer = filterOpen ? (
+    <FilterDrawer
+      kind={kind}
+      filters={filters}
+      tags={resources.tags}
+      categories={resources.categories}
+      units={resources.units}
+      clothOptions={resources.clothOptions}
+      patternOptions={resources.patternOptions}
+      materialOptions={resources.materialOptions}
+      colorOptions={resources.colorOptions}
+      sourceOptions={resources.sourceOptions}
+      materialTypeOptions={resources.materialTypeOptions}
+      patternTypeOptions={resources.patternTypeOptions}
+      toolCategoryOptions={resources.toolCategoryOptions}
+      onApply={onApplyFilters}
+      onClose={onFilterClose}
+    />
+  ) : null;
+  return (
+    <>
+      <div className="grid gap-2 md:flex md:flex-wrap md:items-center">
+        <label className="relative min-w-0 md:min-w-48 md:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden />
+          <Input className="pl-9" placeholder={t("common.search")} value={query} onChange={(event) => onQueryChange(event.target.value)} />
+        </label>
+        <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
+          <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-sm">
+            <span className="border-r border-border px-3 text-sm font-medium text-muted-foreground">{t("common.sortBy")}</span>
+            <Select aria-label={t("common.sort")} value={sort} onChange={(event) => onSortChange(event.target.value)} className="w-44 border-0 shadow-none">
+              <option value="created">{t("common.sortCreated")}</option>
+              <option value="name">{t("common.sortName")}</option>
+              <option value="price">{t("common.sortPrice")}</option>
+              <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+              {kind === "cloths" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
+              {kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
+            </Select>
+          </label>
+          <Select aria-label={t("common.sortDirection")} value={dir} onChange={(event) => onDirChange(event.target.value === "asc" ? "asc" : "desc")} className="w-32 shrink-0">
+            <option value="desc">{t("common.desc")}</option>
+            <option value="asc">{t("common.asc")}</option>
+          </Select>
+          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.refresh")} onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button className="shrink-0" variant={hasFilters(filters) ? "primary" : "secondary"} onClick={onFilterOpen}>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            {t("common.filter")}
+          </Button>
+          <Button className="shrink-0" variant={view === "grid" ? "primary" : "secondary"} size="icon" aria-label={t("common.grid")} onClick={() => onViewChange("grid")}>
+            <Grid2X2 className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button className="shrink-0" variant={view === "list" ? "primary" : "secondary"} size="icon" aria-label={t("common.list")} onClick={() => onViewChange("list")}>
+            <List className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+
+      {items.length ? (
+        <section className={view === "grid" ? "grid grid-cols-2 gap-3 md:grid-cols-4" : "space-y-2"}>
+          {items.map((item) => (
+            <ItemCard key={item.id} item={item} kind={kind} view={view} selected={selectedSet.has(item.id)} onClick={() => onItemClick(item)} />
+          ))}
+        </section>
+      ) : (
+        <Card className="p-8 text-center">
+          <div className="text-4xl" aria-hidden>
+            🧵
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
+        </Card>
+      )}
+
+      {filterPortal ? (filterDrawer ? <ModalPortal>{filterDrawer}</ModalPortal> : null) : filterDrawer}
+    </>
+  );
+}
+
 function ItemCard({
   item,
   kind,
   view,
+  selected = false,
+  onPhotoClick,
   onClick
 }: {
   item: AnyItem;
   kind: Kind;
   view: "grid" | "list";
-  onClick: () => void;
+  selected?: boolean;
+  onPhotoClick?: (photos: string[], index: number) => void;
+  onClick?: () => void;
 }) {
   const t = useTranslations();
   const photoItems = item.photos ?? [];
@@ -731,19 +856,28 @@ function ItemCard({
   const unitPrice = unitPriceStat(kind, item, t);
   return (
     <Card
-      role="button"
-      tabIndex={0}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
-      onKeyDown={(event) => event.key === "Enter" && onClick()}
-      className={view === "grid" ? "overflow-hidden" : "flex items-center gap-3 p-2"}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") onClick?.();
+      }}
+      className={`${view === "grid" ? "relative overflow-hidden" : "relative flex items-center gap-3 p-2"} ${selected ? "ring-2 ring-primary" : ""}`}
     >
+      {selected ? (
+        <span className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+          <Check className="h-4 w-4" aria-hidden />
+        </span>
+      ) : null}
       {photo ? (
         <button
           type="button"
           className={view === "grid" ? "relative block aspect-square w-full overflow-hidden bg-muted p-0" : "relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted p-0"}
+          tabIndex={onClick || onPhotoClick ? 0 : -1}
           onClick={(event) => {
             event.stopPropagation();
-            onClick();
+            if (onPhotoClick) onPhotoClick(photos, coverIndex);
+            else onClick?.();
           }}
         >
           <img src={`/api/photos/${photo}/thumb`} alt="" className="block h-full w-full object-cover" />
@@ -764,15 +898,16 @@ function ItemCard({
 function Fields(props: FieldsProps) {
   const t = useTranslations();
   const [newTag, setNewTag] = useState("");
+  const units = clothUnits(props.unitSystem);
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2">
         <Field name="name" label={t("common.name")} defaultValue={props.item.name} required />
         {props.kind === "cloths" ? <Field name="quantity" label={t("cloths.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
-        {props.kind === "cloths" ? <Field name="lengthTotal" label={t("cloths.lengthTotal")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.lengthTotal} required /> : null}
-        {props.kind === "cloths" ? <UnitSelect name="lengthUnit" label={t("cloths.lengthUnit")} values={["m", "cm", "yd"]} value={props.item.lengthUnit ?? "m"} /> : null}
-        {props.kind === "cloths" ? <Field name="width" label={t("cloths.width")} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
-        {props.kind === "cloths" ? <UnitSelect name="widthUnit" label={t("cloths.widthUnit")} values={["cm", "m", "in"]} value={props.item.widthUnit ?? "cm"} /> : null}
+        {props.kind === "cloths" ? <Field name="lengthTotal" label={`${t("cloths.lengthTotal")} (${units.lengthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.lengthTotal} required /> : null}
+        {props.kind === "cloths" ? <input type="hidden" name="lengthUnit" value={units.lengthUnit} /> : null}
+        {props.kind === "cloths" ? <Field name="width" label={`${t("cloths.width")} (${units.widthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
+        {props.kind === "cloths" ? <input type="hidden" name="widthUnit" value={units.widthUnit} /> : null}
         {props.kind === "cloths" ? <UnitSelect name="purpose" label={t("cloths.purpose")} values={clothPurposeOptions} value={props.item.purpose ?? clothPurposeOptions[0]} labels={(value) => t(`clothPurpose.${value}`)} /> : null}
         {props.kind === "cloths" ? (
           <TextChoiceField
@@ -785,7 +920,16 @@ function Fields(props: FieldsProps) {
           />
         ) : null}
         {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
-        {props.kind === "patterns" ? <UnitSelect name="patternType" label={t("patterns.patternType")} values={patternTypeOptions} value={props.item.patternType ?? patternTypeOptions[0]} labels={(value) => t(`patternType.${value}`)} /> : null}
+        {props.kind === "patterns" ? (
+          <TextChoiceField
+            name="patternType"
+            label={t("patterns.patternType")}
+            value={props.item.patternType ?? patternTypeDefaults[0]}
+            options={[...new Set([...patternTypeDefaults, ...props.patternTypeOptions])]}
+            labels={(value) => patternTypeLabel(value, t)}
+            required
+          />
+        ) : null}
         {props.kind === "patterns" ? <UnitSelect name="difficulty" label={t("patterns.difficulty")} values={patternDifficultyOptions} value={props.item.difficulty ?? "medium"} labels={(value) => t(`patternDifficulty.${value}`)} /> : null}
         {props.kind === "patterns" ? (
           <TextChoiceField
@@ -848,74 +992,329 @@ function Fields(props: FieldsProps) {
   );
 }
 
-function ProjectLinks(props: { item: AnyItem; clothOptions: AnyItem[]; patternOptions: AnyItem[]; materialOptions: AnyItem[] }) {
+function ProjectLinks(props: {
+  item: AnyItem;
+  tags: MetaItem[];
+  categories: MetaItem[];
+  units: MetaItem[];
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
+  clothSourceOptions: string[];
+  patternSourceOptions: string[];
+  materialSourceOptions: string[];
+  materialTypeOptions: string[];
+  patternTypeOptions: string[];
+  onOpenPhoto: (photos: string[], index: number) => void;
+  unitSystem: UnitSystem;
+}) {
   const t = useTranslations();
+  const units = clothUnits(props.unitSystem);
+  const [pickerKind, setPickerKind] = useState<PickerKind | null>(null);
+  const [patternIds, setPatternIds] = useState<number[]>(() => props.item.patternIds ?? []);
+  const [materialIds, setMaterialIds] = useState<number[]>(() => (props.item.materials ?? []).map((link: AnyItem) => link.materialId));
+  const [clothLinks, setClothLinks] = useState<Array<{ clothId: number; lengthUsed: number | string }>>(() => props.item.cloths ?? []);
+  const itemKey = props.item.id ?? "new";
+
+  useEffect(() => {
+    setPatternIds(props.item.patternIds ?? []);
+    setMaterialIds((props.item.materials ?? []).map((link: AnyItem) => link.materialId));
+    setClothLinks(props.item.cloths ?? []);
+  }, [itemKey]);
+
+  const patternItems = selectedOptionItems(props.patternOptions, patternIds);
+  const materialItems = selectedOptionItems(props.materialOptions, materialIds);
+  const clothItems = selectedOptionItems(props.clothOptions, clothLinks.map((link) => link.clothId));
+  const pickerResources = (kind: PickerKind): BrowserResources => ({
+    tags: props.tags,
+    categories: props.categories,
+    units: props.units,
+    clothOptions: props.clothOptions,
+    patternOptions: props.patternOptions,
+    materialOptions: props.materialOptions,
+    colorOptions: collectColors([props.clothOptions, props.materialOptions]),
+    sourceOptions: kind === "cloths" ? props.clothSourceOptions : kind === "patterns" ? props.patternSourceOptions : props.materialSourceOptions,
+    materialTypeOptions: props.materialTypeOptions,
+    patternTypeOptions: props.patternTypeOptions,
+    toolCategoryOptions: []
+  });
+
+  function toggleId(id: number, setIds: (updater: (current: number[]) => number[]) => void) {
+    setIds((current) => (current.includes(id) ? current.filter((currentId) => currentId !== id) : [...current, id]));
+  }
+
+  function toggleCloth(item: AnyItem) {
+    setClothLinks((current) =>
+      current.some((link) => link.clothId === item.id)
+        ? current.filter((link) => link.clothId !== item.id)
+        : [...current, { clothId: item.id, lengthUsed: "" }]
+    );
+  }
+
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <RepeatSelect title={t("projects.patterns")} name="patternIds" options={props.patternOptions} selected={props.item.patternIds ?? []} />
-      <LinkSelect title={t("projects.cloths")} idName="clothId" amountName="lengthUsed" options={props.clothOptions} links={props.item.cloths ?? []} amountLabel={t("projects.lengthUsed")} />
-      <RepeatSelect title={t("projects.materials")} name="materialIds" options={props.materialOptions} selected={(props.item.materials ?? []).map((link: AnyItem) => link.materialId)} />
+    <div className="space-y-4">
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">{t("projects.patterns")}</h3>
+          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" aria-label={`${t("common.add")} ${t("projects.patterns")}`} onClick={() => setPickerKind("patterns")}>
+            <Plus className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+        {patternIds.map((id) => <input key={id} type="hidden" name="patternIds" value={id} />)}
+        <SelectedLinkList kind="patterns" items={patternItems} onRemove={(id) => setPatternIds((current) => current.filter((currentId) => currentId !== id))} onOpenPhoto={props.onOpenPhoto} />
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">{t("projects.cloths")}</h3>
+          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" aria-label={`${t("common.add")} ${t("projects.cloths")}`} onClick={() => setPickerKind("cloths")}>
+            <Plus className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+        {clothLinks.length ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            {clothLinks.map((link) => {
+              const item = clothItems.find((option) => option.id === link.clothId) ?? { id: link.clothId, name: String(link.clothId) };
+              return (
+                <div key={link.clothId} className="space-y-2 rounded-md border border-border p-2">
+                  <input type="hidden" name="clothId" value={link.clothId} />
+                  <SelectedItemCard item={item} kind="cloths" onRemove={() => setClothLinks((current) => current.filter((currentLink) => currentLink.clothId !== link.clothId))} onOpenPhoto={props.onOpenPhoto} />
+                  <label className="block space-y-1">
+                    <span className="text-sm font-medium">{`${t("projects.lengthUsed")} (${units.lengthUnit})`}</span>
+                    <Input
+                      name="lengthUsed"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      value={link.lengthUsed}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setClothLinks((current) => current.map((currentLink) => currentLink.clothId === link.clothId ? { ...currentLink, lengthUsed: nextValue } : currentLink));
+                      }}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">{t("projects.materials")}</h3>
+          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" aria-label={`${t("common.add")} ${t("projects.materials")}`} onClick={() => setPickerKind("materials")}>
+            <Plus className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+        {materialIds.map((id) => <input key={id} type="hidden" name="materialIds" value={id} />)}
+        <SelectedLinkList kind="materials" items={materialItems} onRemove={(id) => setMaterialIds((current) => current.filter((currentId) => currentId !== id))} onOpenPhoto={props.onOpenPhoto} />
+      </section>
+
+      {pickerKind ? (
+        <ModalPortal>
+          <ResourcePicker
+            kind={pickerKind}
+            title={pickerKind === "cloths" ? t("projects.cloths") : pickerKind === "patterns" ? t("projects.patterns") : t("projects.materials")}
+            initialItems={pickerKind === "cloths" ? props.clothOptions : pickerKind === "patterns" ? props.patternOptions : props.materialOptions}
+            selectedIds={pickerKind === "cloths" ? clothLinks.map((link) => link.clothId) : pickerKind === "patterns" ? patternIds : materialIds}
+            resources={pickerResources(pickerKind)}
+            onItemClick={(item) => {
+              if (pickerKind === "cloths") toggleCloth(item);
+              else if (pickerKind === "patterns") toggleId(item.id, setPatternIds);
+              else toggleId(item.id, setMaterialIds);
+            }}
+            onClose={() => setPickerKind(null)}
+          />
+        </ModalPortal>
+      ) : null}
     </div>
   );
 }
 
-function RepeatSelect({ title, name, options, selected }: { title: string; name: string; options: AnyItem[]; selected: number[] }) {
-  const t = useTranslations();
-  const [rowCount, setRowCount] = useState(Math.max(1, selected.length));
-
-  useEffect(() => {
-    setRowCount(Math.max(1, selected.length));
-  }, [selected.length]);
-
+function SelectedLinkList({
+  kind,
+  items,
+  onRemove,
+  onOpenPhoto
+}: {
+  kind: PickerKind;
+  items: AnyItem[];
+  onRemove: (id: number) => void;
+  onOpenPhoto: (photos: string[], index: number) => void;
+}) {
+  if (!items.length) return null;
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-sm font-medium">{title}</legend>
-      {Array.from({ length: rowCount }, (_, row) => (
-        <Select key={`${row}-${selected[row] ?? "empty"}`} name={name} defaultValue={selected[row] ?? ""}>
-          <option value="" />
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </Select>
+    <div className="grid gap-2 md:grid-cols-2">
+      {items.map((item) => (
+        <SelectedItemCard key={item.id} item={item} kind={kind} onRemove={() => onRemove(item.id)} onOpenPhoto={onOpenPhoto} />
       ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${title}`} onClick={() => setRowCount((current) => current + 1)}>
-        <Plus className="h-4 w-4" aria-hidden />
-      </Button>
-    </fieldset>
+    </div>
   );
 }
 
-function LinkSelect(props: { title: string; idName: string; amountName: string; options: AnyItem[]; links: AnyItem[]; amountLabel: string }) {
+function SelectedItemCard({
+  item,
+  kind,
+  onRemove,
+  onOpenPhoto
+}: {
+  item: AnyItem;
+  kind: PickerKind;
+  onRemove: () => void;
+  onOpenPhoto: (photos: string[], index: number) => void;
+}) {
   const t = useTranslations();
-  const [rowCount, setRowCount] = useState(Math.max(1, props.links.length));
+  return (
+    <div className="relative">
+      <ItemCard item={item} kind={kind} view="list" onPhotoClick={onOpenPhoto} />
+      <Button type="button" variant="secondary" size="icon" className="absolute right-2 top-2 z-20 h-8 w-8" aria-label={t("common.delete")} onClick={onRemove}>
+        <X className="h-4 w-4" aria-hidden />
+      </Button>
+    </div>
+  );
+}
+
+function ResourcePicker({
+  kind,
+  title,
+  initialItems,
+  selectedIds,
+  resources,
+  onItemClick,
+  onClose
+}: {
+  kind: PickerKind;
+  title: string;
+  initialItems: AnyItem[];
+  selectedIds: number[];
+  resources: BrowserResources;
+  onItemClick: (item: AnyItem) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations();
+  const [items, setItems] = useState(initialItems);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("name");
+  const [dir, setDir] = useState<"asc" | "desc">("asc");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [filters, setFilters] = useState<Filters>(() => emptyFilters());
+  const [filterOpen, setFilterOpen] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshSeqRef = useRef(0);
+  const browserResources = {
+    ...resources,
+    colorOptions: collectColors([resources.colorOptions.map((color) => ({ colors: [color] })), initialItems, items])
+  };
 
   useEffect(() => {
-    setRowCount(Math.max(1, props.links.length));
-  }, [props.links.length]);
+    setItems(initialItems);
+  }, [initialItems]);
+
+  useEffect(() => {
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousOverflow;
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (filterOpen) setFilterOpen(false);
+      else onClose();
+    }
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
+  }, [filterOpen, onClose]);
+
+  async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters, nextDir = dir) {
+    const requestId = ++refreshSeqRef.current;
+    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir);
+    const response = await fetch(`/api/${kind}?${params.toString()}`);
+    if (!response.ok) return;
+    const nextItems = (await response.json()).items;
+    if (requestId !== refreshSeqRef.current) return;
+    setItems(nextItems);
+  }
+
+  function debounceRefresh(nextQuery: string, nextSort = sort, nextFilters = filters, nextDir = dir) {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      void refresh(nextQuery, nextSort, nextFilters, nextDir);
+    }, 250);
+  }
+
+  function applyFilters(nextFilters: Filters) {
+    setFilters(nextFilters);
+    void refresh(query, sort, nextFilters, dir);
+  }
 
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-sm font-medium">{props.title}</legend>
-      {Array.from({ length: rowCount }, (_, row) => (
-        <div key={row} className="grid gap-2 md:grid-cols-2">
-          <Select name={props.idName} defaultValue={props.links[row]?.[props.idName] ?? ""}>
-            <option value="" />
-            {props.options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </Select>
-          <Input name={props.amountName} type="number" inputMode="decimal" step="0.01" defaultValue={props.links[row]?.[props.amountName] ?? ""} placeholder={props.amountLabel} />
+    <div className="fixed inset-0 z-[70] flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3" role="dialog" aria-modal="true" data-project-picker="true" onClick={onClose}>
+      <Card className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:h-[calc(100dvh-1.5rem)] md:max-w-5xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={onClose}>
+            <X className="h-4 w-4" aria-hidden />
+          </Button>
         </div>
-      ))}
-      <Button type="button" variant="secondary" size="icon" aria-label={`${t("common.add")} ${props.title}`} onClick={() => setRowCount((current) => current + 1)}>
-        <Plus className="h-4 w-4" aria-hidden />
-      </Button>
-    </fieldset>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-0 md:pr-1">
+          <InventoryBrowserView
+            kind={kind}
+            items={items}
+            query={query}
+            sort={sort}
+            dir={dir}
+            view={view}
+            filters={filters}
+            filterOpen={filterOpen}
+            filterPortal={false}
+            resources={browserResources}
+            selectedIds={selectedIds}
+            onQueryChange={(nextQuery) => {
+              setQuery(nextQuery);
+              debounceRefresh(nextQuery, sort, filters, dir);
+            }}
+            onSortChange={(nextSort) => {
+              setSort(nextSort);
+              void refresh(query, nextSort, filters, dir);
+            }}
+            onDirChange={(nextDir) => {
+              setDir(nextDir);
+              void refresh(query, sort, filters, nextDir);
+            }}
+            onRefresh={() => void refresh()}
+            onFilterOpen={() => setFilterOpen(true)}
+            onFilterClose={() => setFilterOpen(false)}
+            onApplyFilters={applyFilters}
+            onViewChange={setView}
+            onItemClick={onItemClick}
+          />
+        </div>
+        <div className="mt-3 flex justify-end border-t border-border pt-3">
+          <Button type="button" onClick={onClose}>
+            {t("common.apply")}
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
+}
+
+function selectedOptionItems(options: AnyItem[], selectedIds: number[]) {
+  const optionMap = new Map(options.map((option) => [option.id, option]));
+  return selectedIds.map((id) => optionMap.get(id) ?? { id, name: String(id) });
 }
 
 function Field(props: { name: string; label: string; defaultValue?: any; type?: string; step?: string; required?: boolean; inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"] }) {
@@ -1107,6 +1506,7 @@ function FilterDrawer({
   colorOptions,
   sourceOptions,
   materialTypeOptions,
+  patternTypeOptions,
   toolCategoryOptions,
   onApply,
   onClose
@@ -1122,6 +1522,7 @@ function FilterDrawer({
   colorOptions: string[];
   sourceOptions: string[];
   materialTypeOptions: string[];
+  patternTypeOptions: string[];
   toolCategoryOptions: string[];
   onApply: (filters: Filters) => void;
   onClose: () => void;
@@ -1239,9 +1640,9 @@ function FilterDrawer({
                 <span className="text-sm font-medium">{t("patterns.patternType")}</span>
                 <Select value={draft.patternType} onChange={(event) => update("patternType", event.target.value)}>
                   <option value="">{t("common.all")}</option>
-                  {patternTypeOptions.map((patternType) => (
+                  {[...new Set([...patternTypeDefaults, ...patternTypeOptions])].map((patternType) => (
                     <option key={patternType} value={patternType}>
-                      {t(`patternType.${patternType}`)}
+                      {patternTypeLabel(patternType, t)}
                     </option>
                   ))}
                 </Select>
@@ -1517,6 +1918,9 @@ function Toast({ message }: { message: string }) {
 function Detail({
   item,
   kind,
+  clothOptions,
+  patternOptions,
+  materialOptions,
   onEdit,
   onDuplicate,
   onDelete,
@@ -1553,6 +1957,15 @@ function Detail({
         </div>
         <ColorSwatches colors={item.colors ?? []} className="mt-3" />
         <PhotoStrip item={item} kind={kind} readOnly onUploaded={onUploaded} onOpenPhoto={onOpenPhoto} />
+        {kind === "projects" ? (
+          <ProjectLinkedDetails
+            item={item}
+            clothOptions={clothOptions}
+            patternOptions={patternOptions}
+            materialOptions={materialOptions}
+            onOpenPhoto={onOpenPhoto}
+          />
+        ) : null}
         <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
           {detailRows(kind, item, t).map((row) => (
             <div key={row.label} className="rounded-md bg-muted p-2">
@@ -1563,6 +1976,72 @@ function Detail({
         </dl>
       </Card>
     </div>
+  );
+}
+
+function ProjectLinkedDetails({
+  item,
+  clothOptions,
+  patternOptions,
+  materialOptions,
+  onOpenPhoto
+}: {
+  item: AnyItem;
+  clothOptions: AnyItem[];
+  patternOptions: AnyItem[];
+  materialOptions: AnyItem[];
+  onOpenPhoto: (photos: string[], index: number) => void;
+}) {
+  const t = useTranslations();
+  const patterns = selectedOptionItems(patternOptions, item.patternIds ?? []);
+  const clothLinks = (item.cloths ?? []) as Array<{ clothId: number; lengthUsed: number }>;
+  const cloths = selectedOptionItems(clothOptions, clothLinks.map((link) => link.clothId));
+  const materials = selectedOptionItems(materialOptions, (item.materials ?? []).map((link: AnyItem) => link.materialId));
+  if (!patterns.length && !cloths.length && !materials.length) return null;
+  return (
+    <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <LinkedDetailSection title={t("projects.patterns")} kind="patterns" items={patterns} onOpenPhoto={onOpenPhoto} />
+      <LinkedDetailSection
+        title={t("projects.cloths")}
+        kind="cloths"
+        items={cloths}
+        details={(linkedItem) => {
+          const link = clothLinks.find((itemLink) => itemLink.clothId === linkedItem.id);
+          return link ? `${t("projects.lengthUsed")} ${numberValue(link.lengthUsed)} ${linkedItem.lengthUnit ?? "m"}` : "";
+        }}
+        onOpenPhoto={onOpenPhoto}
+      />
+      <LinkedDetailSection title={t("projects.materials")} kind="materials" items={materials} onOpenPhoto={onOpenPhoto} />
+    </div>
+  );
+}
+
+function LinkedDetailSection({
+  title,
+  kind,
+  items,
+  details,
+  onOpenPhoto
+}: {
+  title: string;
+  kind: PickerKind;
+  items: AnyItem[];
+  details?: (item: AnyItem) => string;
+  onOpenPhoto: (photos: string[], index: number) => void;
+}) {
+  if (!items.length) return null;
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item.id} className="space-y-1">
+            <ItemCard item={item} kind={kind} view="list" onPhotoClick={onOpenPhoto} />
+            {details ? <p className="text-xs text-muted-foreground">{details(item)}</p> : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1982,6 +2461,10 @@ function patternForLabel(value: string, t: ReturnType<typeof useTranslations>) {
   return patternForOptions.includes(value) ? t(`patternFor.${value}`) : value;
 }
 
+function patternTypeLabel(value: string, t: ReturnType<typeof useTranslations>) {
+  return patternTypeDefaults.includes(value) ? t(`patternType.${value}`) : value;
+}
+
 function clothMaterialTypeLabel(value: string, t: ReturnType<typeof useTranslations>) {
   return clothMaterialTypeDefaults.includes(value) ? t(`clothMaterialType.${value}`) : value;
 }
@@ -2005,8 +2488,8 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
     return [
       { label: t("cloths.total"), value: summary.count ?? 0 },
       { label: t("cloths.cost"), value: money(summary.totalCost) },
-      { label: t("cloths.usedLength"), value: `${numberValue(summary.lengthUsedMetres)} m` },
-      { label: t("cloths.remainingLength"), value: `${numberValue(summary.lengthRemainingMetres)} m` }
+      { label: t("cloths.usedLength"), value: `${numberValue(summary.lengthUsed)} ${summary.lengthUnit ?? "m"}` },
+      { label: t("cloths.remainingLength"), value: `${numberValue(summary.lengthRemaining)} ${summary.lengthUnit ?? "m"}` }
     ];
   }
   if (kind === "projects") {
@@ -2051,7 +2534,8 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
 
 function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
   if (kind === "cloths" && item.priceCents && item.lengthTotal > 0) {
-    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.lengthTotal))}/${item.lengthUnit}`;
+    const value = clothUnitPriceValue(item);
+    if (value) return `${t("common.unitPrice")} ${value}`;
   }
   if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
     return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantityTotal))}/${item.unitName ?? t("common.unit")}`;
@@ -2067,6 +2551,12 @@ function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTransl
     return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantity))}/${t("common.piece")}`;
   }
   return "";
+}
+
+function clothUnitPriceValue(item: AnyItem) {
+  const units = item.lengthUnit === "yd" ? clothUnits("us") : clothUnits("metric");
+  const area = Number(item.lengthTotal) * (Number(item.width ?? 0) / units.widthPerLength) * Number(item.quantity ?? 1);
+  return area > 0 ? `${moneyDecimal(item.priceCents / area)}/${units.areaUnit}` : "";
 }
 
 function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
@@ -2085,9 +2575,10 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, money);
+    add(t("common.unitPrice"), clothUnitPriceValue(item));
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
-    add(t("patterns.patternType"), item.patternType, (value) => t(`patternType.${value}`));
+    add(t("patterns.patternType"), item.patternType, (value) => patternTypeLabel(value, t));
     add(t("patterns.difficulty"), item.difficulty, (value) => t(`patternDifficulty.${value}`));
     add(t("patterns.patternFor"), item.patternFor, (value) => patternForLabel(value, t));
     add(t("patterns.size"), item.size);
@@ -2123,8 +2614,9 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
   return rows;
 }
 
-function defaultItem(kind: Kind) {
-  if (kind === "cloths") return { quantity: 1, lengthUnit: "m", widthUnit: "cm", purpose: "garment", materialType: "other" };
+function defaultItem(kind: Kind, unitSystem: UnitSystem) {
+  const units = clothUnits(unitSystem);
+  if (kind === "cloths") return { quantity: 1, lengthUnit: units.lengthUnit, widthUnit: units.widthUnit, purpose: "garment", materialType: "other" };
   if (kind === "materials") return { usageStatus: "available" };
   if (kind === "projects") return { quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
@@ -2198,6 +2690,16 @@ function formToBody(kind: Kind, form: FormData) {
       .filter((link) => link.clothId && link.lengthUsed),
     materials: [...new Set(materialIds.map(Number).filter(Boolean))].map((materialId) => ({ materialId }))
   };
+}
+
+async function errorMessage(response: Response, t: ReturnType<typeof useTranslations>) {
+  try {
+    const body = await response.json();
+    if (typeof body?.message === "string" && body.message.trim()) return body.message;
+  } catch {
+    return t("common.error");
+  }
+  return t("common.error");
 }
 
 function stringOrNull(value: FormDataEntryValue | null) {
