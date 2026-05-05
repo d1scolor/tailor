@@ -9,12 +9,14 @@ type ProjectInput = {
 };
 
 export function applyProjectLinks(db: Database.Database, projectId: number, userId: number, input: ProjectInput) {
-  for (const link of groupLinks(input.cloths ?? [], "clothId", "lengthUsed")) {
-    consumeCloth(db, link.clothId, userId, link.lengthUsed);
+  const clothLinks = groupLinks(input.cloths ?? [], "clothId", "lengthUsed");
+  for (const link of clothLinks) {
+    validateClothUse(db, link.clothId, userId, link.lengthUsed);
     db.prepare(
       "INSERT INTO project_cloths (project_id, cloth_id, length_used, created_at) VALUES (?, ?, ?, ?)"
     ).run(projectId, link.clothId, link.lengthUsed, nowIso());
   }
+  recomputeClothRemaining(db, clothLinks.map((link) => link.clothId));
 
   for (const patternId of input.patternIds ?? []) {
     const pattern = db.prepare("SELECT id FROM patterns WHERE id = ? AND user_id = ?").get(patternId, userId);
@@ -52,34 +54,38 @@ function uniqueIds(ids: number[]) {
 }
 
 export function restoreProjectLinks(db: Database.Database, projectId: number) {
-  const cloths = db
-    .prepare("SELECT cloth_id AS clothId, length_used AS lengthUsed FROM project_cloths WHERE project_id = ?")
-    .all(projectId) as Array<{ clothId: number; lengthUsed: number }>;
-  for (const link of cloths) {
-    db.prepare("UPDATE cloths SET length_remaining = length_remaining + ?, updated_at = ? WHERE id = ?").run(
-      link.lengthUsed,
-      nowIso(),
-      link.clothId
-    );
-  }
+  const cloths = db.prepare("SELECT DISTINCT cloth_id AS clothId FROM project_cloths WHERE project_id = ?").all(projectId) as Array<{
+    clothId: number;
+  }>;
 
   db.prepare("DELETE FROM project_cloths WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_patterns WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_materials WHERE project_id = ?").run(projectId);
+  recomputeClothRemaining(db, cloths.map((link) => link.clothId));
 }
 
-export function consumeCloth(db: Database.Database, clothId: number, userId: number, lengthUsed: number) {
+export function validateClothUse(db: Database.Database, clothId: number, userId: number, lengthUsed: number) {
   if (lengthUsed <= 0) throw new ApiError("invalid_consumption", 409, "Length used must be positive.");
   const cloth = db
-    .prepare("SELECT length_remaining AS lengthRemaining FROM cloths WHERE id = ? AND user_id = ?")
-    .get(clothId, userId) as { lengthRemaining: number } | undefined;
+    .prepare(
+      `SELECT length_total AS lengthTotal,
+        COALESCE((SELECT SUM(length_used) FROM project_cloths WHERE cloth_id = cloths.id), 0) AS usedLength
+       FROM cloths WHERE id = ? AND user_id = ?`
+    )
+    .get(clothId, userId) as { lengthTotal: number; usedLength: number } | undefined;
   if (!cloth) throw new ApiError("cloth_not_found", 404, "Cloth not found.");
-  if (lengthUsed > cloth.lengthRemaining) {
+  if (lengthUsed > cloth.lengthTotal - cloth.usedLength) {
     throw new ApiError("insufficient_cloth", 409, "The cloth does not have enough length remaining.");
   }
-  db.prepare("UPDATE cloths SET length_remaining = length_remaining - ?, updated_at = ? WHERE id = ?").run(
-    lengthUsed,
-    nowIso(),
-    clothId
-  );
+}
+
+export function recomputeClothRemaining(db: Database.Database, clothIds: number[]) {
+  for (const clothId of uniqueIds(clothIds)) {
+    db.prepare(
+      `UPDATE cloths
+       SET length_remaining = MAX(length_total - COALESCE((SELECT SUM(length_used) FROM project_cloths WHERE cloth_id = cloths.id), 0), 0),
+           updated_at = ?
+       WHERE id = ?`
+    ).run(nowIso(), clothId);
+  }
 }

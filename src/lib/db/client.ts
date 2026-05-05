@@ -68,6 +68,9 @@ export function runMigrations(db = getSqlite()) {
 }
 
 function ensureAddedColumns(db: Sqlite) {
+  if (!columnExists(db, "users", "unit_system")) {
+    db.exec("ALTER TABLE users ADD COLUMN unit_system TEXT NOT NULL DEFAULT 'metric'");
+  }
   if (!columnExists(db, "cloths", "colors")) {
     db.exec("ALTER TABLE cloths ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
   }

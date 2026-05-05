@@ -16,9 +16,9 @@ const labelValueSchema = z.string().trim().min(1).max(80);
 export const clothSchema = baseItemSchema.extend({
   quantity: z.coerce.number().int().positive().default(1),
   lengthTotal: z.coerce.number().positive(),
-  lengthUnit: z.enum(["m", "cm", "yd"]).default("m"),
+  lengthUnit: z.enum(["m", "yd"]).default("m"),
   width: nullableNumber,
-  widthUnit: z.enum(["cm", "m", "in"]).nullable().optional(),
+  widthUnit: z.enum(["cm", "in"]).nullable().optional(),
   colors: colorsSchema,
   purpose: z.enum(["garment", "craft"]).default("garment"),
   materialType: labelValueSchema.default("other")

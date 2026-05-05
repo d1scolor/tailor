@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { InventoryClient } from "@/components/inventory-client";
 import { getCurrentUser } from "@/lib/auth/session";
-import { listItems, listSources, listTags, summary } from "@/lib/repository";
+import { listItems, listPatternTypes, listSources, listTags, summary } from "@/lib/repository";
 
 export default async function PatternsPage() {
   const user = await getCurrentUser();
@@ -13,6 +13,7 @@ export default async function PatternsPage() {
       summary={summary("patterns", user.id)}
       tags={listTags(user.id) as any}
       sourceOptions={listSources("patterns", user.id)}
+      patternTypeOptions={listPatternTypes(user.id)}
     />
   );
 }

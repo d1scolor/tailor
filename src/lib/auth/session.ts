@@ -6,12 +6,14 @@ import { getSqlite } from "@/lib/db/client";
 import { seedDatabase } from "@/lib/db/seed";
 import { restoreState } from "@/lib/restore-state";
 import { addDaysIso, nowIso } from "@/lib/time";
+import { normalizeUnitSystem, type UnitSystem } from "@/lib/units";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
 
 export type AuthUser = {
   id: number;
   username: string;
   locale: "en" | "zh";
+  unitSystem: UnitSystem;
   sessionId: string;
 };
 
@@ -56,13 +58,13 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
   const db = getSqlite();
   const row = db
     .prepare(
-      `SELECT sessions.id AS sessionId, sessions.expires_at AS expiresAt, users.id, users.username, users.locale
+      `SELECT sessions.id AS sessionId, sessions.expires_at AS expiresAt, users.id, users.username, users.locale, users.unit_system AS unitSystem
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.id = ?`
     )
     .get(sessionId) as
-    | { sessionId: string; expiresAt: string; id: number; username: string; locale: "en" | "zh" }
+    | { sessionId: string; expiresAt: string; id: number; username: string; locale: "en" | "zh"; unitSystem?: string }
     | undefined;
   if (!row) return null;
   if (new Date(row.expiresAt).getTime() <= Date.now()) {
@@ -74,7 +76,7 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
     db.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(expires, sessionId);
     db.prepare("DELETE FROM sessions WHERE user_id = ? AND expires_at <= ?").run(row.id, nowIso());
   }
-  return { id: row.id, username: row.username, locale: row.locale, sessionId: row.sessionId };
+  return { id: row.id, username: row.username, locale: row.locale, unitSystem: normalizeUnitSystem(row.unitSystem), sessionId: row.sessionId };
 }
 
 export function requireAuthFromRequest(request: NextRequest) {
