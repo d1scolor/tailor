@@ -308,7 +308,8 @@ export function InventoryClient(props: Props) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (lightbox) setLightbox(null);
+      if (confirmDelete) setConfirmDelete(null);
+      else if (lightbox) setLightbox(null);
       else if (filterOpen) setFilterOpen(false);
       else if (editing) {
         setStagedPhotoFiles([]);
@@ -318,7 +319,7 @@ export function InventoryClient(props: Props) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editing, selected, lightbox, filterOpen]);
+  }, [editing, selected, lightbox, filterOpen, confirmDelete]);
 
   useEffect(() => {
     return () => {
@@ -686,13 +687,15 @@ export function InventoryClient(props: Props) {
       ) : null}
 
       {confirmDelete ? (
-        <ConfirmSheet
-          message={t("common.confirmDelete")}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={() => {
-            void remove(confirmDelete);
-          }}
-        />
+        <ModalPortal>
+          <ConfirmSheet
+            message={t("common.confirmDelete")}
+            onCancel={() => setConfirmDelete(null)}
+            onConfirm={() => {
+              void remove(confirmDelete);
+            }}
+          />
+        </ModalPortal>
       ) : null}
 
       {toast ? <Toast message={toast} /> : null}
@@ -1890,7 +1893,7 @@ function ColorDot({ color }: { color: string }) {
 function ConfirmSheet({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
+    <div className="fixed inset-0 z-[80] flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
       <Card className="w-full rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-w-sm md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <p className="text-base font-medium">{message}</p>
