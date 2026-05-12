@@ -21,6 +21,8 @@
     "asc": "升序",
     "desc": "降序",
     "refresh": "刷新",
+    "refreshing": "刷新中",
+    "refreshFailed": "刷新失败",
     "grid": "网格",
     "list": "列表",
     "save": "保存",
