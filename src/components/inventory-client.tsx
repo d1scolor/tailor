@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -596,7 +596,6 @@ export function InventoryClient(props: Props) {
           setDir(nextDir);
           void refresh(query, sort, filters, nextDir);
         }}
-        onRefresh={() => void refresh()}
         onFilterOpen={() => setFilterOpen(true)}
         onFilterClose={() => setFilterOpen(false)}
         onApplyFilters={applyFilters}
@@ -727,7 +726,6 @@ function InventoryBrowserView({
   onQueryChange,
   onSortChange,
   onDirChange,
-  onRefresh,
   onFilterOpen,
   onFilterClose,
   onApplyFilters,
@@ -748,7 +746,6 @@ function InventoryBrowserView({
   onQueryChange: (query: string) => void;
   onSortChange: (sort: string) => void;
   onDirChange: (dir: "asc" | "desc") => void;
-  onRefresh: () => void;
   onFilterOpen: () => void;
   onFilterClose: () => void;
   onApplyFilters: (filters: Filters) => void;
@@ -799,9 +796,6 @@ function InventoryBrowserView({
             <option value="desc">{t("common.desc")}</option>
             <option value="asc">{t("common.asc")}</option>
           </Select>
-          <Button className="shrink-0" variant="secondary" size="icon" aria-label={t("common.refresh")} onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-          </Button>
           <Button className="shrink-0" variant={hasFilters(filters) ? "primary" : "secondary"} onClick={onFilterOpen}>
             <SlidersHorizontal className="h-4 w-4" aria-hidden />
             {t("common.filter")}
@@ -1297,7 +1291,6 @@ function ResourcePicker({
               setDir(nextDir);
               void refresh(query, sort, filters, nextDir);
             }}
-            onRefresh={() => void refresh()}
             onFilterOpen={() => setFilterOpen(true)}
             onFilterClose={() => setFilterOpen(false)}
             onApplyFilters={applyFilters}

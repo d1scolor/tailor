@@ -21,6 +21,8 @@
     "asc": "Ascending",
     "desc": "Descending",
     "refresh": "Refresh",
+    "refreshing": "Refreshing",
+    "refreshFailed": "Refresh failed",
     "grid": "Grid",
     "list": "List",
     "save": "Save",
