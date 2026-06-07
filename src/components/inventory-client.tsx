@@ -7,7 +7,7 @@ import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, L
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { money, moneyDecimal, numberValue } from "@/lib/format";
+import { money, numberValue } from "@/lib/format";
 import type { Kind } from "@/lib/repository";
 import { clothUnits, type UnitSystem } from "@/lib/units";
 
@@ -607,8 +607,8 @@ export function InventoryClient(props: Props) {
         <ModalPortal>
           <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
             <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-0 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
-              <form key={`${props.kind}-${editing.id ?? "new"}`} className="flex min-h-0 w-full flex-col" onSubmit={submit}>
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+              <form key={`${props.kind}-${editing.id ?? "new"}`} className="flex min-h-0 min-w-0 w-full flex-col overflow-x-hidden" onSubmit={submit}>
+                <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
                   <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
@@ -647,7 +647,7 @@ export function InventoryClient(props: Props) {
                     onOpenPhoto={openLightbox}
                   />
                 </div>
-                <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+                <div className="flex min-w-0 shrink-0 justify-end gap-2 border-t border-border bg-card px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
                   <Button type="button" variant="secondary" onClick={closeEditor}>
                     {t("common.cancel")}
                   </Button>
@@ -787,7 +787,14 @@ function InventoryBrowserView({
               <option value="created">{t("common.sortCreated")}</option>
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
-              <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+              {kind === "cloths" ? (
+                <>
+                  <option value="unitPriceLength">{t("common.sortUnitPriceLength")}</option>
+                  <option value="unitPriceSize">{t("common.sortUnitPriceSize")}</option>
+                </>
+              ) : (
+                <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+              )}
               {kind === "cloths" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
               {kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
             </Select>
@@ -882,7 +889,7 @@ function ItemCard({
       ) : (
         <div className={view === "grid" ? "relative aspect-square bg-muted" : "relative h-16 w-16 shrink-0 rounded-md bg-muted"} />
       )}
-      <div className={view === "grid" ? "p-3" : "min-w-0"}>
+      <div className={view === "grid" ? "min-w-0 p-3" : "min-w-0"}>
         <h2 className="truncate text-sm font-semibold">{item.name}</h2>
         <p className="mt-1 truncate text-xs text-muted-foreground">{stat}</p>
         {unitPrice ? <p className="mt-1 truncate text-xs text-muted-foreground">{unitPrice}</p> : null}
@@ -974,8 +981,8 @@ function Fields(props: FieldsProps) {
             </label>
           ))}
         </div>
-        <div className="flex gap-2">
-          <Input value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder={t("common.tags")} />
+        <div className="flex min-w-0 gap-2">
+          <Input className="min-w-0" value={newTag} onChange={(event) => setNewTag(event.target.value)} placeholder={t("common.tags")} />
           <Button type="button" variant="secondary" onClick={() => { void props.onAddTag(newTag); setNewTag(""); }}>
             {t("common.add")}
           </Button>
@@ -1049,7 +1056,7 @@ function ProjectLinks(props: {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">{t("projects.patterns")}</h3>
@@ -1073,7 +1080,7 @@ function ProjectLinks(props: {
             {clothLinks.map((link) => {
               const item = clothItems.find((option) => option.id === link.clothId) ?? { id: link.clothId, name: String(link.clothId) };
               return (
-                <div key={link.clothId} className="space-y-2 rounded-md border border-border p-2">
+                <div key={link.clothId} className="min-w-0 space-y-2 overflow-hidden rounded-md border border-border p-2">
                   <input type="hidden" name="clothId" value={link.clothId} />
                   <SelectedItemCard item={item} kind="cloths" onRemove={() => setClothLinks((current) => current.filter((currentLink) => currentLink.clothId !== link.clothId))} onOpenPhoto={props.onOpenPhoto} />
                   <label className="block space-y-1">
@@ -1165,7 +1172,7 @@ function SelectedItemCard({
 }) {
   const t = useTranslations();
   return (
-    <div className="relative">
+    <div className="relative min-w-0 overflow-hidden">
       <ItemCard item={item} kind={kind} view="list" onPhotoClick={onOpenPhoto} />
       <Button type="button" variant="secondary" size="icon" className="absolute right-2 top-2 z-20 h-8 w-8" aria-label={t("common.delete")} onClick={onRemove}>
         <X className="h-4 w-4" aria-hidden />
@@ -1257,8 +1264,8 @@ function ResourcePicker({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end bg-black/40 p-0 md:block md:overflow-y-auto md:p-3" role="dialog" aria-modal="true" data-project-picker="true" onClick={onClose}>
-      <Card className="flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:h-[calc(100dvh-1.5rem)] md:max-w-5xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3" role="dialog" aria-modal="true" data-project-picker="true" onClick={onClose}>
+      <Card className="flex max-h-[94dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:h-[calc(100dvh-1.5rem)] md:max-w-5xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
@@ -1266,7 +1273,7 @@ function ResourcePicker({
             <X className="h-4 w-4" aria-hidden />
           </Button>
         </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-0 md:pr-1">
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain pr-0 md:pr-1">
           <InventoryBrowserView
             kind={kind}
             items={items}
@@ -1413,8 +1420,8 @@ function MetaSelect({ name, label, options, value, onCreate }: MetaSelectProps) 
         ))}
       </Select>
       {onCreate ? (
-        <div className="flex gap-2">
-          <Input value={newName} onChange={(event) => setNewName(event.target.value)} placeholder={label} />
+        <div className="flex min-w-0 gap-2">
+          <Input className="min-w-0" value={newName} onChange={(event) => setNewName(event.target.value)} placeholder={label} />
           <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" onClick={createOption}>
             {t("common.add")}
           </Button>
@@ -1460,14 +1467,14 @@ function ColorField({ value }: { value: string[] }) {
       {colors.map((color) => (
         <input key={color} type="hidden" name="colors" value={color} />
       ))}
-      <div className="flex gap-2">
+      <div className="flex min-w-0 gap-2">
         <ColorSelect value={presetColor} options={commonColors} placeholder={t("common.selectColor")} onChange={setPresetColor} />
         <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" disabled={!presetColor || colors.length >= 5} onClick={addPresetColor}>
           {t("common.add")}
         </Button>
       </div>
-      <div className="flex gap-2">
-        <Input value={customColor} onChange={(event) => setCustomColor(event.target.value)} placeholder={t("common.customColor")} maxLength={30} />
+      <div className="flex min-w-0 gap-2">
+        <Input className="min-w-0" value={customColor} onChange={(event) => setCustomColor(event.target.value)} placeholder={t("common.customColor")} maxLength={30} />
         <Button type="button" variant="secondary" className="min-w-14 whitespace-nowrap px-3" disabled={!customColor.trim() || colors.length >= 5} onClick={addCustomColor}>
           {t("common.add")}
         </Button>
@@ -1546,8 +1553,8 @@ function FilterDrawer({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
-      <Card className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t("common.filters")}</h2>
@@ -1555,7 +1562,7 @@ function FilterDrawer({
             <X className="h-4 w-4" aria-hidden />
           </Button>
         </div>
-        <div className="mt-4 flex-1 space-y-4 overflow-y-auto overscroll-contain">
+        <div className="mt-4 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain">
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{t("common.tags")}</legend>
             <div className="flex flex-wrap gap-2">
@@ -1586,7 +1593,7 @@ function FilterDrawer({
                   </datalist>
                 ) : null}
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <label className="block space-y-1">
                   <span className="text-sm font-medium">{t("common.from")}</span>
                   <Input type="date" value={draft.from} onChange={(event) => update("from", event.target.value)} />
@@ -1886,8 +1893,8 @@ function ColorDot({ color }: { color: string }) {
 function ConfirmSheet({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-[80] flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
-      <Card className="w-full rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-w-sm md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[80] flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
+      <Card className="w-full max-w-full rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-w-sm md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <p className="text-base font-medium">{message}</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -1926,12 +1933,12 @@ function Detail({
 }: DetailProps) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-[60] flex items-end bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
-      <Card className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+      <Card className="max-h-[92dvh] w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">{item.name}</h2>
+          <div className="min-w-0">
+            <h2 className="break-words text-lg font-semibold">{item.name}</h2>
             <p className="text-sm text-muted-foreground">{primaryStat(kind, item, t)}</p>
           </div>
           <div className="flex gap-1">
@@ -1962,9 +1969,9 @@ function Detail({
             onOpenPhoto={onOpenPhoto}
           />
         ) : null}
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           {detailRows(kind, item, t).map((row) => (
-            <div key={row.label} className="rounded-md bg-muted p-2">
+            <div key={row.label} className="min-w-0 rounded-md bg-muted p-2">
               <dt className="text-xs text-muted-foreground">{row.label}</dt>
               <dd className="break-words">{row.value}</dd>
             </div>
@@ -2530,7 +2537,7 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
 
 function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
   if (kind === "cloths" && item.priceCents && item.lengthTotal > 0) {
-    const value = clothUnitPriceValue(item);
+    const value = clothUnitPriceLengthValue(item);
     if (value) return `${t("common.unitPrice")} ${value}`;
   }
   if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
@@ -2549,10 +2556,10 @@ function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTransl
   return "";
 }
 
-function clothUnitPriceValue(item: AnyItem) {
+function clothUnitPriceLengthValue(item: AnyItem) {
   const units = item.lengthUnit === "yd" ? clothUnits("us") : clothUnits("metric");
-  const area = Number(item.lengthTotal) * (Number(item.width ?? 0) / units.widthPerLength) * Number(item.quantity ?? 1);
-  return area > 0 ? `${moneyDecimal(item.priceCents / area)}/${units.areaUnit}` : "";
+  const length = Number(item.lengthTotal) * Number(item.quantity ?? 1);
+  return length > 0 ? `${money(Math.round(item.priceCents / length))}/${units.lengthUnit}` : "";
 }
 
 function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
@@ -2571,7 +2578,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, money);
-    add(t("common.unitPrice"), clothUnitPriceValue(item));
+    add(t("common.unitPrice"), clothUnitPriceLengthValue(item));
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => patternTypeLabel(value, t));

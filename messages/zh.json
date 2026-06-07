@@ -15,6 +15,8 @@
     "sortName": "名称",
     "sortPrice": "价格",
     "sortUnitPrice": "单价",
+    "sortUnitPriceLength": "单价（长度）",
+    "sortUnitPriceSize": "单价（尺寸）",
     "sortQuantity": "数量",
     "sortMetersLeft": "剩余米数",
     "sortDirection": "排序方向",
