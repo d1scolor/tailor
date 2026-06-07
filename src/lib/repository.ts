@@ -21,6 +21,8 @@ const entityByKind: Record<Kind, EntityType> = {
 
 const clothRemainingMetresSort =
   "CASE length_unit WHEN 'cm' THEN length_remaining / 100.0 WHEN 'yd' THEN length_remaining * 0.9144 ELSE length_remaining END";
+const clothAreaUnitPriceSort =
+  "CASE WHEN length_total > 0 AND width > 0 AND quantity > 0 THEN price_cents / (length_total * (width / CASE length_unit WHEN 'yd' THEN 36.0 ELSE 100.0 END) * quantity) ELSE NULL END";
 
 const sortColumns: Record<Kind, Record<string, string>> = {
   cloths: {
@@ -28,7 +30,9 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
-    unitPrice: "CASE WHEN length_total > 0 AND width > 0 AND quantity > 0 THEN price_cents / (length_total * (width / CASE length_unit WHEN 'yd' THEN 36.0 ELSE 100.0 END) * quantity) ELSE NULL END",
+    unitPrice: clothAreaUnitPriceSort,
+    unitPriceSize: clothAreaUnitPriceSort,
+    unitPriceLength: "CASE WHEN length_total > 0 AND quantity > 0 THEN price_cents / (length_total * quantity) ELSE NULL END",
     remaining: clothRemainingMetresSort,
     remainingMetres: clothRemainingMetresSort
   },

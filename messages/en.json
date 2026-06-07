@@ -15,6 +15,8 @@
     "sortName": "Name A-Z",
     "sortPrice": "Price",
     "sortUnitPrice": "Unit price",
+    "sortUnitPriceLength": "Unit price (length)",
+    "sortUnitPriceSize": "Unit price (size)",
     "sortQuantity": "Quantity",
     "sortMetersLeft": "Meters left",
     "sortDirection": "Sort direction",
