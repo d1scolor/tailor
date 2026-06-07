@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  ["cloths", "/cloths"],
+  ["fabrics", "/fabrics"],
   ["materials", "/materials"],
   ["patterns", "/patterns"],
   ["tools", "/tools"],
@@ -18,7 +18,7 @@ const tabs = [
 
 const icons = {
   overview: BarChart3,
-  cloths: Shirt,
+  fabrics: Shirt,
   patterns: Scissors,
   materials: Package,
   projects: FolderKanban,

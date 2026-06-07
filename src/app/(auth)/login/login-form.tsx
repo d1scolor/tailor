@@ -22,7 +22,7 @@ export function LoginForm() {
         password: form.get("password")
       })
     });
-    if (response.ok) window.location.href = "/cloths";
+    if (response.ok) window.location.href = "/fabrics";
     else setError(true);
   }
 

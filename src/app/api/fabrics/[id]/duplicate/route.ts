@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (response) return response;
   try {
     const { id } = idParamSchema.parse(await params);
-    return ok({ item: duplicateItem("cloths", user.id, id) }, { status: 201 });
+    return ok({ item: duplicateItem("fabrics", user.id, id) }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

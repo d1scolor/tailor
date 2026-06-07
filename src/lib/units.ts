@@ -4,7 +4,7 @@ export function normalizeUnitSystem(value: unknown): UnitSystem {
   return value === "us" ? "us" : "metric";
 }
 
-export function clothUnits(unitSystem: UnitSystem) {
+export function fabricUnits(unitSystem: UnitSystem) {
   return unitSystem === "us" ? { lengthUnit: "yd", widthUnit: "in", areaUnit: "yd²", widthPerLength: 36 } : { lengthUnit: "m", widthUnit: "cm", areaUnit: "m²", widthPerLength: 100 };
 }
 

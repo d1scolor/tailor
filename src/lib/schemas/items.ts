@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { baseItemSchema, nullableInt, nullableNumber, nullableString } from "./common";
 
-export const entityTypeSchema = z.enum(["cloth", "pattern", "material", "project", "tool"]);
+export const entityTypeSchema = z.enum(["fabric", "pattern", "material", "project", "tool"]);
 export type EntityType = z.infer<typeof entityTypeSchema>;
 
 const colorSchema = z
@@ -13,7 +13,7 @@ const colorSchema = z
 const colorsSchema = z.array(colorSchema).max(5).default([]).optional();
 const labelValueSchema = z.string().trim().min(1).max(80);
 
-export const clothSchema = baseItemSchema.extend({
+export const fabricSchema = baseItemSchema.extend({
   quantity: z.coerce.number().int().positive().default(1),
   lengthTotal: z.coerce.number().positive(),
   lengthUnit: z.enum(["m", "yd"]).default("m"),
@@ -40,8 +40,8 @@ export const materialSchema = baseItemSchema.extend({
   colors: colorsSchema
 });
 
-export const projectLinkClothSchema = z.object({
-  clothId: z.coerce.number().int().positive(),
+export const projectLinkFabricSchema = z.object({
+  fabricId: z.coerce.number().int().positive(),
   lengthUsed: z.coerce.number().positive()
 });
 
@@ -56,7 +56,7 @@ export const projectSchema = z.object({
   remarks: z.string().trim().nullable().optional(),
   tagIds: z.array(z.coerce.number().int().positive()).default([]).optional(),
   patternIds: z.array(z.coerce.number().int().positive()).default([]).optional(),
-  cloths: z.array(projectLinkClothSchema).default([]).optional(),
+  fabrics: z.array(projectLinkFabricSchema).default([]).optional(),
   materials: z.array(projectLinkMaterialSchema).default([]).optional()
 });
 

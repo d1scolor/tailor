@@ -35,7 +35,7 @@ export const photos = sqliteTable("photos", {
   createdAt: text("created_at").notNull()
 });
 
-export const cloths = sqliteTable("cloths", {
+export const fabrics = sqliteTable("fabrics", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
@@ -144,10 +144,10 @@ export const tools = sqliteTable("tools", {
   updatedAt: text("updated_at").notNull()
 });
 
-export const projectCloths = sqliteTable("project_cloths", {
+export const projectFabrics = sqliteTable("project_fabrics", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  clothId: integer("cloth_id").notNull().references(() => cloths.id, { onDelete: "restrict" }),
+  fabricId: integer("fabric_id").notNull().references(() => fabrics.id, { onDelete: "restrict" }),
   lengthUsed: real("length_used").notNull(),
   createdAt: text("created_at").notNull()
 });

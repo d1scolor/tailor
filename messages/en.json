@@ -85,7 +85,7 @@
   },
   "nav": {
     "overview": "Overview",
-    "cloths": "Cloths",
+    "fabrics": "Fabrics",
     "patterns": "Patterns",
     "materials": "Materials",
     "projects": "Projects",
@@ -132,11 +132,11 @@
     "silver": "Silver",
     "black": "Black"
   },
-  "clothPurpose": {
+  "fabricPurpose": {
     "garment": "Garment",
     "craft": "Craft"
   },
-  "clothMaterialType": {
+  "fabricMaterialType": {
     "cotton": "Cotton",
     "linen": "Linen",
     "wool": "Wool",
@@ -209,10 +209,10 @@
     "available": "Available",
     "used": "Used up"
   },
-  "cloths": {
-    "title": "Cloths",
-    "add": "Add cloth",
-    "total": "Total cloths",
+  "fabrics": {
+    "title": "Fabrics",
+    "add": "Add fabric",
+    "total": "Total fabrics",
     "cost": "Total cost",
     "usedLength": "Used length",
     "remainingLength": "Remaining length",
@@ -257,12 +257,12 @@
     "add": "Add project",
     "total": "Total projects",
     "cost": "Total cost",
-    "clothCost": "Cloth cost",
+    "fabricCost": "Fabric cost",
     "value": "Estimated value",
     "produced": "Items produced",
     "quantity": "Quantity",
     "patterns": "Patterns used",
-    "cloths": "Cloths used",
+    "fabrics": "Fabrics used",
     "materials": "Materials used",
     "lengthUsed": "Length used"
   },
@@ -283,7 +283,7 @@
     "title": "Overview",
     "inventorySpend": "Inventory spend",
     "inventoryItems": "Inventory items",
-    "clothRemaining": "Cloth remaining",
+    "fabricRemaining": "Fabric remaining",
     "projectValue": "Project value",
     "spending": "Spending",
     "categoryMetrics": "Category metrics",

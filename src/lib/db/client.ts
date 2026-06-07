@@ -71,8 +71,8 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "users", "unit_system")) {
     db.exec("ALTER TABLE users ADD COLUMN unit_system TEXT NOT NULL DEFAULT 'metric'");
   }
-  if (!columnExists(db, "cloths", "colors")) {
-    db.exec("ALTER TABLE cloths ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
+  if (!columnExists(db, "fabrics", "colors")) {
+    db.exec("ALTER TABLE fabrics ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
   }
   if (!columnExists(db, "materials", "colors")) {
     db.exec("ALTER TABLE materials ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
@@ -80,11 +80,11 @@ function ensureAddedColumns(db: Sqlite) {
   if (!columnExists(db, "materials", "usage_status")) {
     db.exec("ALTER TABLE materials ADD COLUMN usage_status TEXT NOT NULL DEFAULT 'available'");
   }
-  if (!columnExists(db, "cloths", "purpose")) {
-    db.exec("ALTER TABLE cloths ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
+  if (!columnExists(db, "fabrics", "purpose")) {
+    db.exec("ALTER TABLE fabrics ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
   }
-  if (!columnExists(db, "cloths", "material_type")) {
-    db.exec("ALTER TABLE cloths ADD COLUMN material_type TEXT NOT NULL DEFAULT 'other'");
+  if (!columnExists(db, "fabrics", "material_type")) {
+    db.exec("ALTER TABLE fabrics ADD COLUMN material_type TEXT NOT NULL DEFAULT 'other'");
   }
   if (!columnExists(db, "patterns", "pattern_type")) {
     db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT 'paper'");

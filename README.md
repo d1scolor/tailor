@@ -1,6 +1,6 @@
 # Tailor
 
-Personal sewing inventory for cloths, patterns, materials, and finished projects.
+Personal sewing inventory for fabrics, patterns, materials, and finished projects.
 
 ## Local development
 

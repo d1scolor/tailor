@@ -3,38 +3,38 @@ import { ApiError } from "@/lib/api";
 import { getSqlite } from "@/lib/db/client";
 import { lengthToMetres } from "@/lib/format";
 import { copyPhotoFilesSync, deletePhotoFilesSync } from "@/lib/images";
-import { applyProjectLinks, recomputeClothRemaining, restoreProjectLinks } from "@/lib/consumption";
+import { applyProjectLinks, recomputeFabricRemaining, restoreProjectLinks } from "@/lib/consumption";
 import { nowIso } from "@/lib/time";
-import { clothUnits, convertLength, normalizeUnitSystem } from "@/lib/units";
+import { fabricUnits, convertLength, normalizeUnitSystem } from "@/lib/units";
 
-export type Kind = "cloths" | "patterns" | "materials" | "projects" | "tools";
-export type EntityType = "cloth" | "pattern" | "material" | "project" | "tool";
+export type Kind = "fabrics" | "patterns" | "materials" | "projects" | "tools";
+export type EntityType = "fabric" | "pattern" | "material" | "project" | "tool";
 export type DuplicableKind = Exclude<Kind, "projects">;
 
 const entityByKind: Record<Kind, EntityType> = {
-  cloths: "cloth",
+  fabrics: "fabric",
   patterns: "pattern",
   materials: "material",
   projects: "project",
   tools: "tool"
 };
 
-const clothRemainingMetresSort =
+const fabricRemainingMetresSort =
   "CASE length_unit WHEN 'cm' THEN length_remaining / 100.0 WHEN 'yd' THEN length_remaining * 0.9144 ELSE length_remaining END";
-const clothAreaUnitPriceSort =
+const fabricAreaUnitPriceSort =
   "CASE WHEN length_total > 0 AND width > 0 AND quantity > 0 THEN price_cents / (length_total * (width / CASE length_unit WHEN 'yd' THEN 36.0 ELSE 100.0 END) * quantity) ELSE NULL END";
 
 const sortColumns: Record<Kind, Record<string, string>> = {
-  cloths: {
+  fabrics: {
     name: "name",
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
-    unitPrice: clothAreaUnitPriceSort,
-    unitPriceSize: clothAreaUnitPriceSort,
+    unitPrice: fabricAreaUnitPriceSort,
+    unitPriceSize: fabricAreaUnitPriceSort,
     unitPriceLength: "CASE WHEN length_total > 0 AND quantity > 0 THEN price_cents / (length_total * quantity) ELSE NULL END",
-    remaining: clothRemainingMetresSort,
-    remainingMetres: clothRemainingMetresSort
+    remaining: fabricRemainingMetresSort,
+    remainingMetres: fabricRemainingMetresSort
   },
   patterns: {
     name: "name",
@@ -84,22 +84,22 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     args.push(`%${escapeLike(source)}%`);
   }
   const color = normalizeColor(params.get("color"));
-  if (color && (kind === "cloths" || kind === "materials")) {
+  if (color && (kind === "fabrics" || kind === "materials")) {
     clauses.push(`${kind}.colors LIKE ?`);
     args.push(`%"${color}"%`);
   }
   if (color && kind === "projects") {
     clauses.push(
-      `(EXISTS (SELECT 1 FROM project_cloths pc JOIN cloths c ON c.id = pc.cloth_id WHERE pc.project_id = projects.id AND c.colors LIKE ?)
+      `(EXISTS (SELECT 1 FROM project_fabrics pc JOIN fabrics c ON c.id = pc.fabric_id WHERE pc.project_id = projects.id AND c.colors LIKE ?)
         OR EXISTS (SELECT 1 FROM project_materials pm JOIN materials m ON m.id = pm.material_id WHERE pm.project_id = projects.id AND m.colors LIKE ?))`
     );
     args.push(`%"${color}"%`, `%"${color}"%`);
   }
-  if (kind === "cloths" && params.get("purpose")) {
+  if (kind === "fabrics" && params.get("purpose")) {
     clauses.push("purpose = ?");
     args.push(params.get("purpose"));
   }
-  if (kind === "cloths" && params.get("materialType")) {
+  if (kind === "fabrics" && params.get("materialType")) {
     clauses.push("material_type = ?");
     args.push(params.get("materialType"));
   }
@@ -136,8 +136,8 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push(`${kind}.purchased_at <= ?`);
     args.push(params.get("to"));
   }
-  if (kind === "cloths" && params.get("hasStockLeft") === "true") clauses.push("length_remaining > 0");
-  if (kind === "cloths" && params.get("used")) {
+  if (kind === "fabrics" && params.get("hasStockLeft") === "true") clauses.push("length_remaining > 0");
+  if (kind === "fabrics" && params.get("used")) {
     clauses.push(params.get("used") === "true" ? "length_remaining < length_total" : "length_remaining = length_total");
   }
   if (kind === "patterns" && params.get("used")) {
@@ -162,9 +162,9 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push("EXISTS (SELECT 1 FROM project_patterns pp WHERE pp.project_id = projects.id AND pp.pattern_id = ?)");
     args.push(Number(params.get("patternId")));
   }
-  if (kind === "projects" && params.get("clothId")) {
-    clauses.push("EXISTS (SELECT 1 FROM project_cloths pc WHERE pc.project_id = projects.id AND pc.cloth_id = ?)");
-    args.push(Number(params.get("clothId")));
+  if (kind === "projects" && params.get("fabricId")) {
+    clauses.push("EXISTS (SELECT 1 FROM project_fabrics pc WHERE pc.project_id = projects.id AND pc.fabric_id = ?)");
+    args.push(Number(params.get("fabricId")));
   }
   if (kind === "projects" && params.get("materialId")) {
     clauses.push("EXISTS (SELECT 1 FROM project_materials pm WHERE pm.project_id = projects.id AND pm.material_id = ?)");
@@ -193,10 +193,10 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
   const now = nowIso();
   return db.transaction(() => {
     let id: number;
-    if (kind === "cloths") {
+    if (kind === "fabrics") {
       const result = db
         .prepare(
-          `INSERT INTO cloths
+          `INSERT INTO fabrics
           (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
@@ -315,9 +315,9 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       | Record<string, unknown>
       | undefined;
     if (!existing) throw new ApiError("not_found", 404, "Item not found.");
-    if (kind === "cloths") {
+    if (kind === "fabrics") {
       const usedLength = (
-        db.prepare("SELECT COALESCE(SUM(length_used), 0) AS usedLength FROM project_cloths WHERE cloth_id = ?").get(id) as {
+        db.prepare("SELECT COALESCE(SUM(length_used), 0) AS usedLength FROM project_fabrics WHERE fabric_id = ?").get(id) as {
           usedLength: number;
         }
       ).usedLength;
@@ -326,7 +326,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       }
       const nextRemaining = Number(input.lengthTotal) - usedLength;
       db.prepare(
-        `UPDATE cloths SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
+        `UPDATE fabrics SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
          width = ?, width_unit = ?, colors = ?, purpose = ?, material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
@@ -346,7 +346,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         now,
         id
       );
-      recomputeClothRemaining(db, [id]);
+      recomputeFabricRemaining(db, [id]);
     } else if (kind === "patterns") {
       db.prepare(
         `UPDATE patterns SET name = ?, pattern_type = ?, difficulty = ?, pattern_for = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
@@ -428,10 +428,10 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
       if (!existing) throw new ApiError("not_found", 404, "Item not found.");
 
       let nextId: number;
-      if (kind === "cloths") {
+      if (kind === "fabrics") {
         const result = db
           .prepare(
-            `INSERT INTO cloths
+            `INSERT INTO fabrics
             (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
@@ -564,9 +564,9 @@ export function deleteItem(kind: Kind, userId: number, id: number) {
   const deletedPhotos = db.transaction(() => {
     const existing = db.prepare(`SELECT id FROM ${kind} WHERE user_id = ? AND id = ?`).get(userId, id);
     if (!existing) throw new ApiError("not_found", 404, "Item not found.");
-    if (kind === "cloths") {
-      const count = db.prepare("SELECT COUNT(*) AS count FROM project_cloths WHERE cloth_id = ?").get(id) as { count: number };
-      if (count.count) throw new ApiError("linked", 409, "This cloth is used by a project.");
+    if (kind === "fabrics") {
+      const count = db.prepare("SELECT COUNT(*) AS count FROM project_fabrics WHERE fabric_id = ?").get(id) as { count: number };
+      if (count.count) throw new ApiError("linked", 409, "This fabric is used by a project.");
     }
     if (kind === "patterns") {
       const count = db.prepare("SELECT COUNT(*) AS count FROM project_patterns WHERE pattern_id = ?").get(id) as { count: number };
@@ -594,12 +594,12 @@ export function deleteItem(kind: Kind, userId: number, id: number) {
 export function summary(kind: Kind, userId: number, params = new URLSearchParams()) {
   const db = getSqlite();
   const filteredRows = params.toString() ? listItems(kind, userId, params) : null;
-  if (kind === "cloths") {
+  if (kind === "fabrics") {
     const user = db.prepare("SELECT unit_system AS unitSystem FROM users WHERE id = ?").get(userId) as { unitSystem?: string } | undefined;
-    const units = clothUnits(normalizeUnitSystem(user?.unitSystem));
+    const units = fabricUnits(normalizeUnitSystem(user?.unitSystem));
     const rows = (filteredRows ??
       db
-        .prepare("SELECT price_cents AS priceCents, length_total AS lengthTotal, length_remaining AS lengthRemaining, length_unit AS lengthUnit FROM cloths WHERE user_id = ?")
+        .prepare("SELECT price_cents AS priceCents, length_total AS lengthTotal, length_remaining AS lengthRemaining, length_unit AS lengthUnit FROM fabrics WHERE user_id = ?")
         .all(userId)) as Array<{ priceCents: number | null; lengthTotal: number; lengthRemaining: number; lengthUnit: string }>;
     const usedMetres = rows.reduce(
       (sum, row) => sum + lengthToMetres(row.lengthTotal - row.lengthRemaining, row.lengthUnit),
@@ -677,15 +677,15 @@ export function calculateProjectCost(projectId: number) {
   const db = getSqlite();
   const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
   if (!project) throw new ApiError("not_found", 404, "Project not found.");
-  const clothCost = (
+  const fabricCost = (
     db
       .prepare(
         `SELECT pc.length_used AS used, c.length_total AS total, c.price_cents AS price
-         FROM project_cloths pc JOIN cloths c ON c.id = pc.cloth_id WHERE pc.project_id = ?`
+         FROM project_fabrics pc JOIN fabrics c ON c.id = pc.fabric_id WHERE pc.project_id = ?`
       )
       .all(projectId) as Array<{ used: number; total: number; price: number | null }>
   ).reduce((sum, row) => sum + (row.total > 0 ? Math.round((row.used / row.total) * (row.price ?? 0)) : 0), 0);
-  return { clothCost, totalCost: clothCost };
+  return { fabricCost, totalCost: fabricCost };
 }
 
 export function setTags(entityType: EntityType, entityId: number, tagIds?: number[]) {
@@ -716,14 +716,14 @@ function withExtras(row: Record<string, unknown>, entityType: EntityType) {
     )
     .all(entityType, id);
   const extra: Record<string, unknown> = {};
-  if (entityType === "cloth" || entityType === "material") {
+  if (entityType === "fabric" || entityType === "material") {
     extra.colors = decodeColors(row.colors);
   }
   if (entityType === "project") {
     const inherited = db
       .prepare(
-        `SELECT c.colors FROM project_cloths pc
-         JOIN cloths c ON c.id = pc.cloth_id
+        `SELECT c.colors FROM project_fabrics pc
+         JOIN fabrics c ON c.id = pc.fabric_id
          WHERE pc.project_id = ?`
       )
       .all(id) as Array<{ colors: string | null }>;
@@ -783,7 +783,7 @@ function withExtrasForRows(rows: Array<Record<string, unknown>>, entityType: Ent
   return rows.map((row) => {
     const id = Number(row.id);
     const extra: Record<string, unknown> = { ...(extrasByEntity.get(id) ?? {}) };
-    if (entityType === "cloth" || entityType === "material") {
+    if (entityType === "fabric" || entityType === "material") {
       extra.colors = decodeColors(row.colors);
     }
     return {
@@ -804,11 +804,11 @@ function extrasForRows(
 ) {
   const extras = new Map<number, Record<string, unknown>>();
   if (entityType === "project") {
-    const clothColors = db
+    const fabricColors = db
       .prepare(
         `SELECT pc.project_id AS projectId, c.colors
-         FROM project_cloths pc
-         JOIN cloths c ON c.id = pc.cloth_id
+         FROM project_fabrics pc
+         JOIN fabrics c ON c.id = pc.fabric_id
          WHERE pc.project_id IN (${placeholders})`
       )
       .all(...ids) as Array<{ projectId: number; colors: string | null }>;
@@ -821,7 +821,7 @@ function extrasForRows(
       )
       .all(...ids) as Array<{ projectId: number; colors: string | null }>;
     for (const id of ids) {
-      const colors = [...clothColors, ...materialColors]
+      const colors = [...fabricColors, ...materialColors]
         .filter((item) => item.projectId === id)
         .flatMap((item) => decodeColors(item.colors));
       extras.set(id, { colors: [...new Set(colors)] });
@@ -898,8 +898,8 @@ function withDetails(row: Record<string, unknown>, kind: Kind) {
     patternIds: (db.prepare("SELECT pattern_id AS patternId FROM project_patterns WHERE project_id = ?").all(id) as Array<{
       patternId: number;
     }>).map((item) => item.patternId),
-    cloths: db
-      .prepare("SELECT cloth_id AS clothId, length_used AS lengthUsed FROM project_cloths WHERE project_id = ?")
+    fabrics: db
+      .prepare("SELECT fabric_id AS fabricId, length_used AS lengthUsed FROM project_fabrics WHERE project_id = ?")
       .all(id),
     materials: db
       .prepare("SELECT material_id AS materialId FROM project_materials WHERE project_id = ?")
@@ -948,10 +948,10 @@ export function listToolCategories(userId: number) {
   ).map((row) => row.category);
 }
 
-export function listClothMaterialTypes(userId: number) {
+export function listFabricMaterialTypes(userId: number) {
   return (
     getSqlite()
-      .prepare("SELECT DISTINCT material_type AS materialType FROM cloths WHERE user_id = ? AND material_type IS NOT NULL AND TRIM(material_type) != '' ORDER BY material_type")
+      .prepare("SELECT DISTINCT material_type AS materialType FROM fabrics WHERE user_id = ? AND material_type IS NOT NULL AND TRIM(material_type) != '' ORDER BY material_type")
       .all(userId) as Array<{ materialType: string }>
   ).map((row) => row.materialType);
 }

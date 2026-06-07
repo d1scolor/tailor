@@ -85,7 +85,7 @@
   },
   "nav": {
     "overview": "概览",
-    "cloths": "布料",
+    "fabrics": "布料",
     "patterns": "纸样",
     "materials": "辅料",
     "projects": "作品",
@@ -132,11 +132,11 @@
     "silver": "银色",
     "black": "黑色"
   },
-  "clothPurpose": {
+  "fabricPurpose": {
     "garment": "服装",
     "craft": "手工"
   },
-  "clothMaterialType": {
+  "fabricMaterialType": {
     "cotton": "棉",
     "linen": "亚麻",
     "wool": "羊毛",
@@ -209,7 +209,7 @@
     "available": "可用",
     "used": "已用完"
   },
-  "cloths": {
+  "fabrics": {
     "title": "布料",
     "add": "添加布料",
     "total": "布料数量",
@@ -257,12 +257,12 @@
     "add": "添加作品",
     "total": "作品数量",
     "cost": "总成本",
-    "clothCost": "布料成本",
+    "fabricCost": "布料成本",
     "value": "估值",
     "produced": "成品数量",
     "quantity": "数量",
     "patterns": "使用纸样",
-    "cloths": "使用布料",
+    "fabrics": "使用布料",
     "materials": "使用辅料",
     "lengthUsed": "使用长度"
   },
@@ -283,7 +283,7 @@
     "title": "概览",
     "inventorySpend": "库存支出",
     "inventoryItems": "库存条目",
-    "clothRemaining": "剩余布料",
+    "fabricRemaining": "剩余布料",
     "projectValue": "作品估值",
     "spending": "支出",
     "categoryMetrics": "分类指标",

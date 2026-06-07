@@ -27,7 +27,7 @@ When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run
 
 Supported inventory tabs are:
 
-- `cloths`
+- `fabrics`
 - `patterns`
 - `materials`
 - `projects`
@@ -35,7 +35,7 @@ Supported inventory tabs are:
 
 The shared client is `src/components/inventory-client.tsx`. Prefer extending that shared surface over creating separate UI implementations unless the workflow is genuinely different.
 
-Projects are special: they link to cloths, patterns, and materials, consume remaining stock, and calculate costs. Avoid copying project logic to other item types. Be careful with changes to `src/lib/consumption.ts` and project cost calculation.
+Projects are special: they link to fabrics, patterns, and materials, consume remaining stock, and calculate costs. Avoid copying project logic to other item types. Be careful with changes to `src/lib/consumption.ts` and project cost calculation.
 
 ## Database And Migrations
 

@@ -4,19 +4,19 @@ import { nowIso } from "@/lib/time";
 
 type ProjectInput = {
   patternIds?: number[];
-  cloths?: Array<{ clothId: number; lengthUsed: number }>;
+  fabrics?: Array<{ fabricId: number; lengthUsed: number }>;
   materials?: Array<{ materialId: number }>;
 };
 
 export function applyProjectLinks(db: Database.Database, projectId: number, userId: number, input: ProjectInput) {
-  const clothLinks = groupLinks(input.cloths ?? [], "clothId", "lengthUsed");
-  for (const link of clothLinks) {
-    validateClothUse(db, link.clothId, userId, link.lengthUsed);
+  const fabricLinks = groupLinks(input.fabrics ?? [], "fabricId", "lengthUsed");
+  for (const link of fabricLinks) {
+    validateFabricUse(db, link.fabricId, userId, link.lengthUsed);
     db.prepare(
-      "INSERT INTO project_cloths (project_id, cloth_id, length_used, created_at) VALUES (?, ?, ?, ?)"
-    ).run(projectId, link.clothId, link.lengthUsed, nowIso());
+      "INSERT INTO project_fabrics (project_id, fabric_id, length_used, created_at) VALUES (?, ?, ?, ?)"
+    ).run(projectId, link.fabricId, link.lengthUsed, nowIso());
   }
-  recomputeClothRemaining(db, clothLinks.map((link) => link.clothId));
+  recomputeFabricRemaining(db, fabricLinks.map((link) => link.fabricId));
 
   for (const patternId of input.patternIds ?? []) {
     const pattern = db.prepare("SELECT id FROM patterns WHERE id = ? AND user_id = ?").get(patternId, userId);
@@ -54,38 +54,38 @@ function uniqueIds(ids: number[]) {
 }
 
 export function restoreProjectLinks(db: Database.Database, projectId: number) {
-  const cloths = db.prepare("SELECT DISTINCT cloth_id AS clothId FROM project_cloths WHERE project_id = ?").all(projectId) as Array<{
-    clothId: number;
+  const fabrics = db.prepare("SELECT DISTINCT fabric_id AS fabricId FROM project_fabrics WHERE project_id = ?").all(projectId) as Array<{
+    fabricId: number;
   }>;
 
-  db.prepare("DELETE FROM project_cloths WHERE project_id = ?").run(projectId);
+  db.prepare("DELETE FROM project_fabrics WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_patterns WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_materials WHERE project_id = ?").run(projectId);
-  recomputeClothRemaining(db, cloths.map((link) => link.clothId));
+  recomputeFabricRemaining(db, fabrics.map((link) => link.fabricId));
 }
 
-export function validateClothUse(db: Database.Database, clothId: number, userId: number, lengthUsed: number) {
+export function validateFabricUse(db: Database.Database, fabricId: number, userId: number, lengthUsed: number) {
   if (lengthUsed <= 0) throw new ApiError("invalid_consumption", 409, "Length used must be positive.");
-  const cloth = db
+  const fabric = db
     .prepare(
       `SELECT length_total AS lengthTotal,
-        COALESCE((SELECT SUM(length_used) FROM project_cloths WHERE cloth_id = cloths.id), 0) AS usedLength
-       FROM cloths WHERE id = ? AND user_id = ?`
+        COALESCE((SELECT SUM(length_used) FROM project_fabrics WHERE fabric_id = fabrics.id), 0) AS usedLength
+       FROM fabrics WHERE id = ? AND user_id = ?`
     )
-    .get(clothId, userId) as { lengthTotal: number; usedLength: number } | undefined;
-  if (!cloth) throw new ApiError("cloth_not_found", 404, "Cloth not found.");
-  if (lengthUsed > cloth.lengthTotal - cloth.usedLength) {
-    throw new ApiError("insufficient_cloth", 409, "The cloth does not have enough length remaining.");
+    .get(fabricId, userId) as { lengthTotal: number; usedLength: number } | undefined;
+  if (!fabric) throw new ApiError("fabric_not_found", 404, "Fabric not found.");
+  if (lengthUsed > fabric.lengthTotal - fabric.usedLength) {
+    throw new ApiError("insufficient_fabric", 409, "The fabric does not have enough length remaining.");
   }
 }
 
-export function recomputeClothRemaining(db: Database.Database, clothIds: number[]) {
-  for (const clothId of uniqueIds(clothIds)) {
+export function recomputeFabricRemaining(db: Database.Database, fabricIds: number[]) {
+  for (const fabricId of uniqueIds(fabricIds)) {
     db.prepare(
-      `UPDATE cloths
-       SET length_remaining = MAX(length_total - COALESCE((SELECT SUM(length_used) FROM project_cloths WHERE cloth_id = cloths.id), 0), 0),
+      `UPDATE fabrics
+       SET length_remaining = MAX(length_total - COALESCE((SELECT SUM(length_used) FROM project_fabrics WHERE fabric_id = fabrics.id), 0), 0),
            updated_at = ?
        WHERE id = ?`
-    ).run(nowIso(), clothId);
+    ).run(nowIso(), fabricId);
   }
 }
