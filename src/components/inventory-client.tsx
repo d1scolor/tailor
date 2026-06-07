@@ -9,11 +9,11 @@ import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { money, numberValue } from "@/lib/format";
 import type { Kind } from "@/lib/repository";
-import { clothUnits, type UnitSystem } from "@/lib/units";
+import { fabricUnits, type UnitSystem } from "@/lib/units";
 
 type AnyItem = Record<string, any>;
 type MetaItem = { id: number; name: string; sortOrder?: number };
-type PickerKind = Extract<Kind, "cloths" | "patterns" | "materials">;
+type PickerKind = Extract<Kind, "fabrics" | "patterns" | "materials">;
 type CreateMetaHandler = {
   (name: string): Promise<MetaItem | null>;
 };
@@ -32,7 +32,7 @@ type Filters = {
   categoryId: string;
   unitId: string;
   patternId: string;
-  clothId: string;
+  fabricId: string;
   materialId: string;
   category: string;
   condition: string;
@@ -47,11 +47,11 @@ type Props = {
   tags: MetaItem[];
   categories?: MetaItem[];
   units?: MetaItem[];
-  clothOptions?: AnyItem[];
+  fabricOptions?: AnyItem[];
   patternOptions?: AnyItem[];
   materialOptions?: AnyItem[];
   sourceOptions?: string[];
-  clothSourceOptions?: string[];
+  fabricSourceOptions?: string[];
   patternSourceOptions?: string[];
   materialSourceOptions?: string[];
   materialTypeOptions?: string[];
@@ -65,11 +65,11 @@ type FieldsProps = {
   tags: MetaItem[];
   categories: MetaItem[];
   units: MetaItem[];
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   sourceOptions: string[];
-  clothSourceOptions: string[];
+  fabricSourceOptions: string[];
   patternSourceOptions: string[];
   materialSourceOptions: string[];
   materialTypeOptions: string[];
@@ -85,7 +85,7 @@ type BrowserResources = {
   tags: MetaItem[];
   categories: MetaItem[];
   units: MetaItem[];
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   colorOptions: string[];
@@ -107,7 +107,7 @@ type PhotoUploadedHandler = {
 type DetailProps = {
   item: AnyItem;
   kind: Kind;
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   onEdit: () => void;
@@ -133,13 +133,13 @@ function ModalPortal({ children }: { children: ReactNode }) {
 }
 
 const entityByKind = {
-  cloths: "cloth",
+  fabrics: "fabric",
   patterns: "pattern",
   materials: "material",
   projects: "project",
   tools: "tool"
 } as const;
-const clothPurposeOptions = ["garment", "craft"];
+const fabricPurposeOptions = ["garment", "craft"];
 const patternTypeDefaults = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
 const materialUsageStatusOptions = ["available", "used"];
@@ -172,7 +172,7 @@ const patternForOptions = [
 ];
 const toolConditionOptions = ["good", "maintenance", "broken", "retired"];
 const toolCategoryDefaults = ["cutting", "measuring", "sewingMachineAccessories", "handSewing", "pressing", "marking", "storage", "maintenance", "other"];
-const clothMaterialTypeDefaults = [
+const fabricMaterialTypeDefaults = [
   "cotton",
   "linen",
   "wool",
@@ -301,8 +301,8 @@ export function InventoryClient(props: Props) {
   const refreshSeqRef = useRef(0);
   const title = t(`${props.kind}.title`);
   const colorOptions = useMemo(
-    () => collectColors([props.items, items, props.clothOptions ?? [], props.materialOptions ?? []]),
-    [items, props.items, props.clothOptions, props.materialOptions]
+    () => collectColors([props.items, items, props.fabricOptions ?? [], props.materialOptions ?? []]),
+    [items, props.items, props.fabricOptions, props.materialOptions]
   );
 
   useEffect(() => {
@@ -525,7 +525,7 @@ export function InventoryClient(props: Props) {
 
   function rememberMaterialType(value: unknown) {
     const materialType = String(value ?? "").trim();
-    if (!materialType || props.kind !== "cloths") return;
+    if (!materialType || props.kind !== "fabrics") return;
     setMaterialTypeOptions((current) => (current.includes(materialType) ? current : [...current, materialType].sort()));
   }
 
@@ -545,7 +545,7 @@ export function InventoryClient(props: Props) {
     tags: tagList,
     categories: categoryList,
     units: unitList,
-    clothOptions: props.clothOptions ?? [],
+    fabricOptions: props.fabricOptions ?? [],
     patternOptions: props.patternOptions ?? [],
     materialOptions: props.materialOptions ?? [],
     colorOptions,
@@ -630,11 +630,11 @@ export function InventoryClient(props: Props) {
                     tags={tagList}
                     categories={categoryList}
                     units={unitList}
-                    clothOptions={props.clothOptions ?? []}
+                    fabricOptions={props.fabricOptions ?? []}
                     patternOptions={props.patternOptions ?? []}
                     materialOptions={props.materialOptions ?? []}
                     sourceOptions={sourceOptions}
-                    clothSourceOptions={props.clothSourceOptions ?? []}
+                    fabricSourceOptions={props.fabricSourceOptions ?? []}
                     patternSourceOptions={props.patternSourceOptions ?? []}
                     materialSourceOptions={props.materialSourceOptions ?? []}
                     materialTypeOptions={materialTypeOptions}
@@ -666,7 +666,7 @@ export function InventoryClient(props: Props) {
           <Detail
             item={selected}
             kind={props.kind}
-            clothOptions={props.clothOptions ?? []}
+            fabricOptions={props.fabricOptions ?? []}
             patternOptions={props.patternOptions ?? []}
             materialOptions={props.materialOptions ?? []}
             onEdit={() => openEdit(selected)}
@@ -761,7 +761,7 @@ function InventoryBrowserView({
       tags={resources.tags}
       categories={resources.categories}
       units={resources.units}
-      clothOptions={resources.clothOptions}
+      fabricOptions={resources.fabricOptions}
       patternOptions={resources.patternOptions}
       materialOptions={resources.materialOptions}
       colorOptions={resources.colorOptions}
@@ -787,7 +787,7 @@ function InventoryBrowserView({
               <option value="created">{t("common.sortCreated")}</option>
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
-              {kind === "cloths" ? (
+              {kind === "fabrics" ? (
                 <>
                   <option value="unitPriceLength">{t("common.sortUnitPriceLength")}</option>
                   <option value="unitPriceSize">{t("common.sortUnitPriceSize")}</option>
@@ -795,7 +795,7 @@ function InventoryBrowserView({
               ) : (
                 <option value="unitPrice">{t("common.sortUnitPrice")}</option>
               )}
-              {kind === "cloths" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
+              {kind === "fabrics" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
               {kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
             </Select>
           </label>
@@ -902,28 +902,28 @@ function ItemCard({
 function Fields(props: FieldsProps) {
   const t = useTranslations();
   const [newTag, setNewTag] = useState("");
-  const units = clothUnits(props.unitSystem);
+  const units = fabricUnits(props.unitSystem);
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2">
         <Field name="name" label={t("common.name")} defaultValue={props.item.name} required />
-        {props.kind === "cloths" ? <Field name="quantity" label={t("cloths.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
-        {props.kind === "cloths" ? <Field name="lengthTotal" label={`${t("cloths.lengthTotal")} (${units.lengthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.lengthTotal} required /> : null}
-        {props.kind === "cloths" ? <input type="hidden" name="lengthUnit" value={units.lengthUnit} /> : null}
-        {props.kind === "cloths" ? <Field name="width" label={`${t("cloths.width")} (${units.widthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
-        {props.kind === "cloths" ? <input type="hidden" name="widthUnit" value={units.widthUnit} /> : null}
-        {props.kind === "cloths" ? <UnitSelect name="purpose" label={t("cloths.purpose")} values={clothPurposeOptions} value={props.item.purpose ?? clothPurposeOptions[0]} labels={(value) => t(`clothPurpose.${value}`)} /> : null}
-        {props.kind === "cloths" ? (
+        {props.kind === "fabrics" ? <Field name="quantity" label={t("fabrics.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
+        {props.kind === "fabrics" ? <Field name="lengthTotal" label={`${t("fabrics.lengthTotal")} (${units.lengthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.lengthTotal} required /> : null}
+        {props.kind === "fabrics" ? <input type="hidden" name="lengthUnit" value={units.lengthUnit} /> : null}
+        {props.kind === "fabrics" ? <Field name="width" label={`${t("fabrics.width")} (${units.widthUnit})`} type="number" inputMode="decimal" step="0.01" defaultValue={props.item.width} /> : null}
+        {props.kind === "fabrics" ? <input type="hidden" name="widthUnit" value={units.widthUnit} /> : null}
+        {props.kind === "fabrics" ? <UnitSelect name="purpose" label={t("fabrics.purpose")} values={fabricPurposeOptions} value={props.item.purpose ?? fabricPurposeOptions[0]} labels={(value) => t(`fabricPurpose.${value}`)} /> : null}
+        {props.kind === "fabrics" ? (
           <TextChoiceField
             name="materialType"
-            label={t("cloths.materialType")}
+            label={t("fabrics.materialType")}
             value={props.item.materialType ?? "other"}
-            options={[...new Set([...clothMaterialTypeDefaults, ...props.materialTypeOptions])]}
-            labels={(value) => clothMaterialTypeLabel(value, t)}
+            options={[...new Set([...fabricMaterialTypeDefaults, ...props.materialTypeOptions])]}
+            labels={(value) => fabricMaterialTypeLabel(value, t)}
             required
           />
         ) : null}
-        {props.kind === "cloths" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
+        {props.kind === "fabrics" || props.kind === "materials" ? <ColorField value={props.item.colors ?? []} /> : null}
         {props.kind === "patterns" ? (
           <TextChoiceField
             name="patternType"
@@ -1001,10 +1001,10 @@ function ProjectLinks(props: {
   tags: MetaItem[];
   categories: MetaItem[];
   units: MetaItem[];
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
-  clothSourceOptions: string[];
+  fabricSourceOptions: string[];
   patternSourceOptions: string[];
   materialSourceOptions: string[];
   materialTypeOptions: string[];
@@ -1013,31 +1013,31 @@ function ProjectLinks(props: {
   unitSystem: UnitSystem;
 }) {
   const t = useTranslations();
-  const units = clothUnits(props.unitSystem);
+  const units = fabricUnits(props.unitSystem);
   const [pickerKind, setPickerKind] = useState<PickerKind | null>(null);
   const [patternIds, setPatternIds] = useState<number[]>(() => props.item.patternIds ?? []);
   const [materialIds, setMaterialIds] = useState<number[]>(() => (props.item.materials ?? []).map((link: AnyItem) => link.materialId));
-  const [clothLinks, setClothLinks] = useState<Array<{ clothId: number; lengthUsed: number | string }>>(() => props.item.cloths ?? []);
+  const [fabricLinks, setFabricLinks] = useState<Array<{ fabricId: number; lengthUsed: number | string }>>(() => props.item.fabrics ?? []);
   const itemKey = props.item.id ?? "new";
 
   useEffect(() => {
     setPatternIds(props.item.patternIds ?? []);
     setMaterialIds((props.item.materials ?? []).map((link: AnyItem) => link.materialId));
-    setClothLinks(props.item.cloths ?? []);
+    setFabricLinks(props.item.fabrics ?? []);
   }, [itemKey]);
 
   const patternItems = selectedOptionItems(props.patternOptions, patternIds);
   const materialItems = selectedOptionItems(props.materialOptions, materialIds);
-  const clothItems = selectedOptionItems(props.clothOptions, clothLinks.map((link) => link.clothId));
+  const fabricItems = selectedOptionItems(props.fabricOptions, fabricLinks.map((link) => link.fabricId));
   const pickerResources = (kind: PickerKind): BrowserResources => ({
     tags: props.tags,
     categories: props.categories,
     units: props.units,
-    clothOptions: props.clothOptions,
+    fabricOptions: props.fabricOptions,
     patternOptions: props.patternOptions,
     materialOptions: props.materialOptions,
-    colorOptions: collectColors([props.clothOptions, props.materialOptions]),
-    sourceOptions: kind === "cloths" ? props.clothSourceOptions : kind === "patterns" ? props.patternSourceOptions : props.materialSourceOptions,
+    colorOptions: collectColors([props.fabricOptions, props.materialOptions]),
+    sourceOptions: kind === "fabrics" ? props.fabricSourceOptions : kind === "patterns" ? props.patternSourceOptions : props.materialSourceOptions,
     materialTypeOptions: props.materialTypeOptions,
     patternTypeOptions: props.patternTypeOptions,
     toolCategoryOptions: []
@@ -1047,11 +1047,11 @@ function ProjectLinks(props: {
     setIds((current) => (current.includes(id) ? current.filter((currentId) => currentId !== id) : [...current, id]));
   }
 
-  function toggleCloth(item: AnyItem) {
-    setClothLinks((current) =>
-      current.some((link) => link.clothId === item.id)
-        ? current.filter((link) => link.clothId !== item.id)
-        : [...current, { clothId: item.id, lengthUsed: "" }]
+  function toggleFabric(item: AnyItem) {
+    setFabricLinks((current) =>
+      current.some((link) => link.fabricId === item.id)
+        ? current.filter((link) => link.fabricId !== item.id)
+        : [...current, { fabricId: item.id, lengthUsed: "" }]
     );
   }
 
@@ -1070,19 +1070,19 @@ function ProjectLinks(props: {
 
       <section className="space-y-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium">{t("projects.cloths")}</h3>
-          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" aria-label={`${t("common.add")} ${t("projects.cloths")}`} onClick={() => setPickerKind("cloths")}>
+          <h3 className="text-sm font-medium">{t("projects.fabrics")}</h3>
+          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" aria-label={`${t("common.add")} ${t("projects.fabrics")}`} onClick={() => setPickerKind("fabrics")}>
             <Plus className="h-4 w-4" aria-hidden />
           </Button>
         </div>
-        {clothLinks.length ? (
+        {fabricLinks.length ? (
           <div className="grid gap-2 md:grid-cols-2">
-            {clothLinks.map((link) => {
-              const item = clothItems.find((option) => option.id === link.clothId) ?? { id: link.clothId, name: String(link.clothId) };
+            {fabricLinks.map((link) => {
+              const item = fabricItems.find((option) => option.id === link.fabricId) ?? { id: link.fabricId, name: String(link.fabricId) };
               return (
-                <div key={link.clothId} className="min-w-0 space-y-2 overflow-hidden rounded-md border border-border p-2">
-                  <input type="hidden" name="clothId" value={link.clothId} />
-                  <SelectedItemCard item={item} kind="cloths" onRemove={() => setClothLinks((current) => current.filter((currentLink) => currentLink.clothId !== link.clothId))} onOpenPhoto={props.onOpenPhoto} />
+                <div key={link.fabricId} className="min-w-0 space-y-2 overflow-hidden rounded-md border border-border p-2">
+                  <input type="hidden" name="fabricId" value={link.fabricId} />
+                  <SelectedItemCard item={item} kind="fabrics" onRemove={() => setFabricLinks((current) => current.filter((currentLink) => currentLink.fabricId !== link.fabricId))} onOpenPhoto={props.onOpenPhoto} />
                   <label className="block space-y-1">
                     <span className="text-sm font-medium">{`${t("projects.lengthUsed")} (${units.lengthUnit})`}</span>
                     <Input
@@ -1095,7 +1095,7 @@ function ProjectLinks(props: {
                       value={link.lengthUsed}
                       onChange={(event) => {
                         const nextValue = event.target.value;
-                        setClothLinks((current) => current.map((currentLink) => currentLink.clothId === link.clothId ? { ...currentLink, lengthUsed: nextValue } : currentLink));
+                        setFabricLinks((current) => current.map((currentLink) => currentLink.fabricId === link.fabricId ? { ...currentLink, lengthUsed: nextValue } : currentLink));
                       }}
                     />
                   </label>
@@ -1121,12 +1121,12 @@ function ProjectLinks(props: {
         <ModalPortal>
           <ResourcePicker
             kind={pickerKind}
-            title={pickerKind === "cloths" ? t("projects.cloths") : pickerKind === "patterns" ? t("projects.patterns") : t("projects.materials")}
-            initialItems={pickerKind === "cloths" ? props.clothOptions : pickerKind === "patterns" ? props.patternOptions : props.materialOptions}
-            selectedIds={pickerKind === "cloths" ? clothLinks.map((link) => link.clothId) : pickerKind === "patterns" ? patternIds : materialIds}
+            title={pickerKind === "fabrics" ? t("projects.fabrics") : pickerKind === "patterns" ? t("projects.patterns") : t("projects.materials")}
+            initialItems={pickerKind === "fabrics" ? props.fabricOptions : pickerKind === "patterns" ? props.patternOptions : props.materialOptions}
+            selectedIds={pickerKind === "fabrics" ? fabricLinks.map((link) => link.fabricId) : pickerKind === "patterns" ? patternIds : materialIds}
             resources={pickerResources(pickerKind)}
             onItemClick={(item) => {
-              if (pickerKind === "cloths") toggleCloth(item);
+              if (pickerKind === "fabrics") toggleFabric(item);
               else if (pickerKind === "patterns") toggleId(item.id, setPatternIds);
               else toggleId(item.id, setMaterialIds);
             }}
@@ -1503,7 +1503,7 @@ function FilterDrawer({
   tags,
   categories,
   units,
-  clothOptions,
+  fabricOptions,
   patternOptions,
   materialOptions,
   colorOptions,
@@ -1519,7 +1519,7 @@ function FilterDrawer({
   tags: MetaItem[];
   categories: MetaItem[];
   units: MetaItem[];
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   colorOptions: string[];
@@ -1606,30 +1606,30 @@ function FilterDrawer({
             </div>
           ) : null}
 
-          {kind === "cloths" ? (
+          {kind === "fabrics" ? (
             <div className="grid gap-3">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={draft.hasStockLeft} onChange={(event) => update("hasStockLeft", event.target.checked)} />
-                <span>{t("cloths.hasStockLeft")}</span>
+                <span>{t("fabrics.hasStockLeft")}</span>
               </label>
               <label className="block space-y-1">
-                <span className="text-sm font-medium">{t("cloths.purpose")}</span>
+                <span className="text-sm font-medium">{t("fabrics.purpose")}</span>
                 <Select value={draft.purpose} onChange={(event) => update("purpose", event.target.value)}>
                   <option value="">{t("common.all")}</option>
-                  {clothPurposeOptions.map((purpose) => (
+                  {fabricPurposeOptions.map((purpose) => (
                     <option key={purpose} value={purpose}>
-                      {t(`clothPurpose.${purpose}`)}
+                      {t(`fabricPurpose.${purpose}`)}
                     </option>
                   ))}
                 </Select>
               </label>
               <label className="block space-y-1">
-                <span className="text-sm font-medium">{t("cloths.materialType")}</span>
+                <span className="text-sm font-medium">{t("fabrics.materialType")}</span>
                 <Select value={draft.materialType} onChange={(event) => update("materialType", event.target.value)}>
                   <option value="">{t("common.all")}</option>
-                  {[...new Set([...clothMaterialTypeDefaults, ...materialTypeOptions])].map((materialType) => (
+                  {[...new Set([...fabricMaterialTypeDefaults, ...materialTypeOptions])].map((materialType) => (
                     <option key={materialType} value={materialType}>
-                      {clothMaterialTypeLabel(materialType, t)}
+                      {fabricMaterialTypeLabel(materialType, t)}
                     </option>
                   ))}
                 </Select>
@@ -1691,7 +1691,7 @@ function FilterDrawer({
             </div>
           ) : null}
 
-          {kind === "cloths" || kind === "materials" || kind === "projects" ? (
+          {kind === "fabrics" || kind === "materials" || kind === "projects" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.colors")}</span>
               <ColorSelect
@@ -1736,7 +1736,7 @@ function FilterDrawer({
           {kind === "projects" ? (
             <div className="grid gap-3">
               <OptionFilter label={t("projects.patterns")} value={draft.patternId} options={patternOptions} onChange={(value) => update("patternId", value)} />
-              <OptionFilter label={t("projects.cloths")} value={draft.clothId} options={clothOptions} onChange={(value) => update("clothId", value)} />
+              <OptionFilter label={t("projects.fabrics")} value={draft.fabricId} options={fabricOptions} onChange={(value) => update("fabricId", value)} />
               <OptionFilter label={t("projects.materials")} value={draft.materialId} options={materialOptions} onChange={(value) => update("materialId", value)} />
             </div>
           ) : null}
@@ -1921,7 +1921,7 @@ function Toast({ message }: { message: string }) {
 function Detail({
   item,
   kind,
-  clothOptions,
+  fabricOptions,
   patternOptions,
   materialOptions,
   onEdit,
@@ -1963,7 +1963,7 @@ function Detail({
         {kind === "projects" ? (
           <ProjectLinkedDetails
             item={item}
-            clothOptions={clothOptions}
+            fabricOptions={fabricOptions}
             patternOptions={patternOptions}
             materialOptions={materialOptions}
             onOpenPhoto={onOpenPhoto}
@@ -1984,32 +1984,32 @@ function Detail({
 
 function ProjectLinkedDetails({
   item,
-  clothOptions,
+  fabricOptions,
   patternOptions,
   materialOptions,
   onOpenPhoto
 }: {
   item: AnyItem;
-  clothOptions: AnyItem[];
+  fabricOptions: AnyItem[];
   patternOptions: AnyItem[];
   materialOptions: AnyItem[];
   onOpenPhoto: (photos: string[], index: number) => void;
 }) {
   const t = useTranslations();
   const patterns = selectedOptionItems(patternOptions, item.patternIds ?? []);
-  const clothLinks = (item.cloths ?? []) as Array<{ clothId: number; lengthUsed: number }>;
-  const cloths = selectedOptionItems(clothOptions, clothLinks.map((link) => link.clothId));
+  const fabricLinks = (item.fabrics ?? []) as Array<{ fabricId: number; lengthUsed: number }>;
+  const fabrics = selectedOptionItems(fabricOptions, fabricLinks.map((link) => link.fabricId));
   const materials = selectedOptionItems(materialOptions, (item.materials ?? []).map((link: AnyItem) => link.materialId));
-  if (!patterns.length && !cloths.length && !materials.length) return null;
+  if (!patterns.length && !fabrics.length && !materials.length) return null;
   return (
     <div className="mt-4 grid gap-3 md:grid-cols-2">
       <LinkedDetailSection title={t("projects.patterns")} kind="patterns" items={patterns} onOpenPhoto={onOpenPhoto} />
       <LinkedDetailSection
-        title={t("projects.cloths")}
-        kind="cloths"
-        items={cloths}
+        title={t("projects.fabrics")}
+        kind="fabrics"
+        items={fabrics}
         details={(linkedItem) => {
-          const link = clothLinks.find((itemLink) => itemLink.clothId === linkedItem.id);
+          const link = fabricLinks.find((itemLink) => itemLink.fabricId === linkedItem.id);
           return link ? `${t("projects.lengthUsed")} ${numberValue(link.lengthUsed)} ${linkedItem.lengthUnit ?? "m"}` : "";
         }}
         onOpenPhoto={onOpenPhoto}
@@ -2397,7 +2397,7 @@ function emptyFilters(): Filters {
     categoryId: "",
     unitId: "",
     patternId: "",
-    clothId: "",
+    fabricId: "",
     materialId: "",
     category: "",
     condition: "",
@@ -2409,7 +2409,7 @@ function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
     Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.usageStatus || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
-    Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.clothId || filters.materialId)
+    Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.fabricId || filters.materialId)
   );
 }
 
@@ -2432,7 +2432,7 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.categoryId) params.set("categoryId", filters.categoryId);
   if (filters.unitId) params.set("unitId", filters.unitId);
   if (filters.patternId) params.set("patternId", filters.patternId);
-  if (filters.clothId) params.set("clothId", filters.clothId);
+  if (filters.fabricId) params.set("fabricId", filters.fabricId);
   if (filters.materialId) params.set("materialId", filters.materialId);
   if (filters.category) params.set("category", filters.category);
   if (filters.condition) params.set("condition", filters.condition);
@@ -2468,8 +2468,8 @@ function patternTypeLabel(value: string, t: ReturnType<typeof useTranslations>) 
   return patternTypeDefaults.includes(value) ? t(`patternType.${value}`) : value;
 }
 
-function clothMaterialTypeLabel(value: string, t: ReturnType<typeof useTranslations>) {
-  return clothMaterialTypeDefaults.includes(value) ? t(`clothMaterialType.${value}`) : value;
+function fabricMaterialTypeLabel(value: string, t: ReturnType<typeof useTranslations>) {
+  return fabricMaterialTypeDefaults.includes(value) ? t(`fabricMaterialType.${value}`) : value;
 }
 
 function toolCategoryLabel(value: string, t: ReturnType<typeof useTranslations>) {
@@ -2487,12 +2487,12 @@ function collectColors(groups: AnyItem[][]) {
 }
 
 function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<typeof useTranslations>) {
-  if (kind === "cloths") {
+  if (kind === "fabrics") {
     return [
-      { label: t("cloths.total"), value: summary.count ?? 0 },
-      { label: t("cloths.cost"), value: money(summary.totalCost) },
-      { label: t("cloths.usedLength"), value: `${numberValue(summary.lengthUsed)} ${summary.lengthUnit ?? "m"}` },
-      { label: t("cloths.remainingLength"), value: `${numberValue(summary.lengthRemaining)} ${summary.lengthUnit ?? "m"}` }
+      { label: t("fabrics.total"), value: summary.count ?? 0 },
+      { label: t("fabrics.cost"), value: money(summary.totalCost) },
+      { label: t("fabrics.usedLength"), value: `${numberValue(summary.lengthUsed)} ${summary.lengthUnit ?? "m"}` },
+      { label: t("fabrics.remainingLength"), value: `${numberValue(summary.lengthRemaining)} ${summary.lengthUnit ?? "m"}` }
     ];
   }
   if (kind === "projects") {
@@ -2520,7 +2520,7 @@ function summaryCards(kind: Kind, summary: Record<string, any>, t: ReturnType<ty
 }
 
 function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
-  if (kind === "cloths") {
+  if (kind === "fabrics") {
     return `${t("common.total")} ${numberValue(item.lengthTotal)} ${item.lengthUnit} / ${t("common.remaining")} ${numberValue(item.lengthRemaining)} ${item.lengthUnit}`;
   }
   if (kind === "patterns") {
@@ -2536,8 +2536,8 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
 }
 
 function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
-  if (kind === "cloths" && item.priceCents && item.lengthTotal > 0) {
-    const value = clothUnitPriceLengthValue(item);
+  if (kind === "fabrics" && item.priceCents && item.lengthTotal > 0) {
+    const value = fabricUnitPriceLengthValue(item);
     if (value) return `${t("common.unitPrice")} ${value}`;
   }
   if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
@@ -2556,8 +2556,8 @@ function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTransl
   return "";
 }
 
-function clothUnitPriceLengthValue(item: AnyItem) {
-  const units = item.lengthUnit === "yd" ? clothUnits("us") : clothUnits("metric");
+function fabricUnitPriceLengthValue(item: AnyItem) {
+  const units = item.lengthUnit === "yd" ? fabricUnits("us") : fabricUnits("metric");
   const length = Number(item.lengthTotal) * Number(item.quantity ?? 1);
   return length > 0 ? `${money(Math.round(item.priceCents / length))}/${units.lengthUnit}` : "";
 }
@@ -2569,16 +2569,16 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     rows.push({ label, value: formatter ? formatter(value) : String(value) });
   };
 
-  if (kind === "cloths") {
-    add(t("cloths.quantity"), item.quantity);
-    add(t("cloths.purpose"), item.purpose, (value) => t(`clothPurpose.${value}`));
-    add(t("cloths.materialType"), item.materialType, (value) => clothMaterialTypeLabel(value, t));
-    add(t("cloths.lengthTotal"), item.lengthTotal, (value) => `${numberValue(value)} ${item.lengthUnit}`);
-    add(t("cloths.lengthRemaining"), item.lengthRemaining, (value) => `${numberValue(value)} ${item.lengthUnit}`);
-    add(t("cloths.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
+  if (kind === "fabrics") {
+    add(t("fabrics.quantity"), item.quantity);
+    add(t("fabrics.purpose"), item.purpose, (value) => t(`fabricPurpose.${value}`));
+    add(t("fabrics.materialType"), item.materialType, (value) => fabricMaterialTypeLabel(value, t));
+    add(t("fabrics.lengthTotal"), item.lengthTotal, (value) => `${numberValue(value)} ${item.lengthUnit}`);
+    add(t("fabrics.lengthRemaining"), item.lengthRemaining, (value) => `${numberValue(value)} ${item.lengthUnit}`);
+    add(t("fabrics.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, money);
-    add(t("common.unitPrice"), clothUnitPriceLengthValue(item));
+    add(t("common.unitPrice"), fabricUnitPriceLengthValue(item));
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => patternTypeLabel(value, t));
@@ -2610,7 +2610,7 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
   } else {
     add(t("projects.quantity"), item.quantity);
     add(t("projects.value"), item.valueCents, money);
-    add(t("projects.clothCost"), item.cost?.clothCost, money);
+    add(t("projects.fabricCost"), item.cost?.fabricCost, money);
   }
 
   add(t("common.remarks"), item.remarks);
@@ -2618,8 +2618,8 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
 }
 
 function defaultItem(kind: Kind, unitSystem: UnitSystem) {
-  const units = clothUnits(unitSystem);
-  if (kind === "cloths") return { quantity: 1, lengthUnit: units.lengthUnit, widthUnit: units.widthUnit, purpose: "garment", materialType: "other" };
+  const units = fabricUnits(unitSystem);
+  if (kind === "fabrics") return { quantity: 1, lengthUnit: units.lengthUnit, widthUnit: units.widthUnit, purpose: "garment", materialType: "other" };
   if (kind === "materials") return { usageStatus: "available" };
   if (kind === "projects") return { quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
@@ -2637,7 +2637,7 @@ function formToBody(kind: Kind, form: FormData) {
     base.source = stringOrNull(form.get("source"));
     base.purchasedAt = stringOrNull(form.get("purchasedAt"));
   }
-  if (kind === "cloths") {
+  if (kind === "fabrics") {
     return {
       ...base,
       quantity: Number(form.get("quantity") || 1),
@@ -2680,17 +2680,17 @@ function formToBody(kind: Kind, form: FormData) {
       condition: form.get("condition") || "good"
     };
   }
-  const clothIds = form.getAll("clothId");
-  const clothAmounts = form.getAll("lengthUsed");
+  const fabricIds = form.getAll("fabricId");
+  const fabricAmounts = form.getAll("lengthUsed");
   const materialIds = form.getAll("materialIds");
   return {
     ...base,
     quantity: Number(form.get("quantity") || 1),
     valueCents: centsFromDollars(form.get("valueCents")),
     patternIds: [...new Set(form.getAll("patternIds").map(Number).filter(Boolean))],
-    cloths: clothIds
-      .map((id, index) => ({ clothId: Number(id), lengthUsed: Number(clothAmounts[index]) }))
-      .filter((link) => link.clothId && link.lengthUsed),
+    fabrics: fabricIds
+      .map((id, index) => ({ fabricId: Number(id), lengthUsed: Number(fabricAmounts[index]) }))
+      .filter((link) => link.fabricId && link.lengthUsed),
     materials: [...new Set(materialIds.map(Number).filter(Boolean))].map((materialId) => ({ materialId }))
   };
 }

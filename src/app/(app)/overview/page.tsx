@@ -11,7 +11,7 @@ type Metric = {
 };
 
 type Category = {
-  key: "cloths" | "materials" | "patterns" | "tools" | "projects";
+  key: "fabrics" | "materials" | "patterns" | "tools" | "projects";
   cost?: number;
   metrics: Metric[];
 };
@@ -21,22 +21,22 @@ export default async function OverviewPage() {
   if (!user) redirect("/login");
 
   const t = await getTranslations();
-  const cloths = summary("cloths", user.id);
+  const fabrics = summary("fabrics", user.id);
   const materials = summary("materials", user.id);
   const patterns = summary("patterns", user.id);
   const tools = summary("tools", user.id);
   const projects = summary("projects", user.id);
 
-  const inventoryCount = (cloths.count ?? 0) + (materials.count ?? 0) + (patterns.count ?? 0) + (tools.count ?? 0);
-  const inventorySpend = (cloths.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0);
+  const inventoryCount = (fabrics.count ?? 0) + (materials.count ?? 0) + (patterns.count ?? 0) + (tools.count ?? 0);
+  const inventorySpend = (fabrics.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0);
   const categories: Category[] = [
     {
-      key: "cloths",
-      cost: cloths.totalCost ?? 0,
+      key: "fabrics",
+      cost: fabrics.totalCost ?? 0,
       metrics: [
-        { label: t("overview.count"), value: cloths.count ?? 0 },
-        { label: t("cloths.usedLength"), value: `${numberValue(cloths.lengthUsed)} ${cloths.lengthUnit ?? "m"}` },
-        { label: t("cloths.remainingLength"), value: `${numberValue(cloths.lengthRemaining)} ${cloths.lengthUnit ?? "m"}` }
+        { label: t("overview.count"), value: fabrics.count ?? 0 },
+        { label: t("fabrics.usedLength"), value: `${numberValue(fabrics.lengthUsed)} ${fabrics.lengthUnit ?? "m"}` },
+        { label: t("fabrics.remainingLength"), value: `${numberValue(fabrics.lengthRemaining)} ${fabrics.lengthUnit ?? "m"}` }
       ]
     },
     {
@@ -86,7 +86,7 @@ export default async function OverviewPage() {
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
         <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend)} />
         <SummaryCard label={t("overview.inventoryItems")} value={inventoryCount} />
-        <SummaryCard label={t("overview.clothRemaining")} value={`${numberValue(cloths.lengthRemaining)} ${cloths.lengthUnit ?? "m"}`} />
+        <SummaryCard label={t("overview.fabricRemaining")} value={`${numberValue(fabrics.lengthRemaining)} ${fabrics.lengthUnit ?? "m"}`} />
         <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0)} />
       </section>
 

@@ -18,7 +18,7 @@ const uploadSchema = z.object({
 export const runtime = "nodejs";
 
 const tableByEntity = {
-  cloth: "cloths",
+  fabric: "fabrics",
   pattern: "patterns",
   material: "materials",
   project: "projects",
