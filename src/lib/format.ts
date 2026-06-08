@@ -8,6 +8,10 @@ export function moneyDecimal(cents?: number | null, fractionDigits = 4) {
   return `${runtimeCurrencySymbol()}${(cents / 100).toFixed(fractionDigits)}`;
 }
 
+export function currencySymbol() {
+  return runtimeCurrencySymbol();
+}
+
 export function numberValue(value?: number | null) {
   if (value == null) return "";
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);

@@ -70,6 +70,7 @@
     "unit": "unit",
     "piece": "piece",
     "unitPrice": "Unit price",
+    "unitPriceWithUnit": "Unit price ({unit})",
     "upload": "Add photo",
     "uploadFailed": "Photo upload failed",
     "camera": "Camera",

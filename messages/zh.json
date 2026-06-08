@@ -70,6 +70,7 @@
     "unit": "单位",
     "piece": "件",
     "unitPrice": "单价",
+    "unitPriceWithUnit": "单价（{unit}）",
     "upload": "添加照片",
     "uploadFailed": "照片上传失败",
     "camera": "拍照",
