@@ -7,7 +7,7 @@ import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, L
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { money, numberValue } from "@/lib/format";
+import { currencySymbol, money, numberValue } from "@/lib/format";
 import type { Kind } from "@/lib/repository";
 import { fabricUnits, type UnitSystem } from "@/lib/units";
 
@@ -584,6 +584,7 @@ export function InventoryClient(props: Props) {
         filters={filters}
         filterOpen={filterOpen}
         resources={browserResources}
+        unitSystem={unitSystem}
         onQueryChange={(nextQuery) => {
           setQuery(nextQuery);
           debounceRefresh(nextQuery, sort, filters, dir);
@@ -722,6 +723,7 @@ function InventoryBrowserView({
   filterOpen,
   filterPortal = true,
   resources,
+  unitSystem,
   selectedIds = [],
   onQueryChange,
   onSortChange,
@@ -742,6 +744,7 @@ function InventoryBrowserView({
   filterOpen: boolean;
   filterPortal?: boolean;
   resources: BrowserResources;
+  unitSystem: UnitSystem;
   selectedIds?: number[];
   onQueryChange: (query: string) => void;
   onSortChange: (sort: string) => void;
@@ -753,6 +756,7 @@ function InventoryBrowserView({
   onItemClick: (item: AnyItem) => void;
 }) {
   const t = useTranslations();
+  const units = fabricUnits(unitSystem);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const filterDrawer = filterOpen ? (
     <FilterDrawer
@@ -783,14 +787,14 @@ function InventoryBrowserView({
         <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
           <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-sm">
             <span className="border-r border-border px-3 text-sm font-medium text-muted-foreground">{t("common.sortBy")}</span>
-            <Select aria-label={t("common.sort")} value={sort} onChange={(event) => onSortChange(event.target.value)} className="w-44 border-0 shadow-none">
+            <Select aria-label={t("common.sort")} value={sort} onChange={(event) => onSortChange(event.target.value)} className="w-52 border-0 shadow-none">
               <option value="created">{t("common.sortCreated")}</option>
               <option value="name">{t("common.sortName")}</option>
               <option value="price">{t("common.sortPrice")}</option>
               {kind === "fabrics" ? (
                 <>
-                  <option value="unitPriceLength">{t("common.sortUnitPriceLength")}</option>
-                  <option value="unitPriceSize">{t("common.sortUnitPriceSize")}</option>
+                  <option value="unitPriceLength">{unitPriceLabel(units.lengthUnit, t)}</option>
+                  <option value="unitPriceSize">{unitPriceLabel(units.areaUnit, t)}</option>
                 </>
               ) : (
                 <option value="unitPrice">{t("common.sortUnitPrice")}</option>
@@ -819,7 +823,7 @@ function InventoryBrowserView({
       {items.length ? (
         <section className={view === "grid" ? "grid grid-cols-2 gap-3 md:grid-cols-4" : "space-y-2"}>
           {items.map((item) => (
-            <ItemCard key={item.id} item={item} kind={kind} view={view} selected={selectedSet.has(item.id)} onClick={() => onItemClick(item)} />
+            <ItemCard key={item.id} item={item} kind={kind} view={view} selected={selectedSet.has(item.id)} activeSort={sort} onClick={() => onItemClick(item)} />
           ))}
         </section>
       ) : (
@@ -841,6 +845,7 @@ function ItemCard({
   kind,
   view,
   selected = false,
+  activeSort,
   onPhotoClick,
   onClick
 }: {
@@ -848,6 +853,7 @@ function ItemCard({
   kind: Kind;
   view: "grid" | "list";
   selected?: boolean;
+  activeSort?: string;
   onPhotoClick?: (photos: string[], index: number) => void;
   onClick?: () => void;
 }) {
@@ -857,7 +863,7 @@ function ItemCard({
   const coverIndex = Math.max(0, photoItems.findIndex((photo: AnyItem) => photo.isCover));
   const photo = photos[coverIndex];
   const stat = primaryStat(kind, item, t);
-  const unitPrice = unitPriceStat(kind, item, t);
+  const unitPrice = unitPriceStat(kind, item, t, activeSort);
   return (
     <Card
       role={onClick ? "button" : undefined}
@@ -1125,6 +1131,7 @@ function ProjectLinks(props: {
             initialItems={pickerKind === "fabrics" ? props.fabricOptions : pickerKind === "patterns" ? props.patternOptions : props.materialOptions}
             selectedIds={pickerKind === "fabrics" ? fabricLinks.map((link) => link.fabricId) : pickerKind === "patterns" ? patternIds : materialIds}
             resources={pickerResources(pickerKind)}
+            unitSystem={props.unitSystem}
             onItemClick={(item) => {
               if (pickerKind === "fabrics") toggleFabric(item);
               else if (pickerKind === "patterns") toggleId(item.id, setPatternIds);
@@ -1187,6 +1194,7 @@ function ResourcePicker({
   initialItems,
   selectedIds,
   resources,
+  unitSystem,
   onItemClick,
   onClose
 }: {
@@ -1195,6 +1203,7 @@ function ResourcePicker({
   initialItems: AnyItem[];
   selectedIds: number[];
   resources: BrowserResources;
+  unitSystem: UnitSystem;
   onItemClick: (item: AnyItem) => void;
   onClose: () => void;
 }) {
@@ -1285,6 +1294,7 @@ function ResourcePicker({
             filterOpen={filterOpen}
             filterPortal={false}
             resources={browserResources}
+            unitSystem={unitSystem}
             selectedIds={selectedIds}
             onQueryChange={(nextQuery) => {
               setQuery(nextQuery);
@@ -2535,9 +2545,9 @@ function primaryStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslat
   return [t("projects.produced"), numberValue(item.quantity), item.valueCents ? money(item.valueCents) : ""].filter(Boolean).join(" · ");
 }
 
-function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
+function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>, activeSort?: string) {
   if (kind === "fabrics" && item.priceCents && item.lengthTotal > 0) {
-    const value = fabricUnitPriceLengthValue(item);
+    const value = activeSort === "unitPriceSize" || activeSort === "unitPrice" ? fabricUnitPriceAreaValue(item) : fabricUnitPriceLengthValue(item);
     if (value) return `${t("common.unitPrice")} ${value}`;
   }
   if (kind === "materials" && item.priceCents && item.quantityTotal > 0) {
@@ -2557,9 +2567,44 @@ function unitPriceStat(kind: Kind, item: AnyItem, t: ReturnType<typeof useTransl
 }
 
 function fabricUnitPriceLengthValue(item: AnyItem) {
-  const units = item.lengthUnit === "yd" ? fabricUnits("us") : fabricUnits("metric");
-  const length = Number(item.lengthTotal) * Number(item.quantity ?? 1);
-  return length > 0 ? `${money(Math.round(item.priceCents / length))}/${units.lengthUnit}` : "";
+  const amount = fabricUnitPriceLengthAmount(item);
+  if (!amount) return "";
+  return `${amount}/${fabricUnitsForItem(item).lengthUnit}`;
+}
+
+function fabricUnitPriceAreaValue(item: AnyItem) {
+  const amount = fabricUnitPriceAreaAmount(item);
+  if (!amount) return "";
+  return `${amount}/${fabricUnitsForItem(item).areaUnit}`;
+}
+
+function fabricUnitPriceLengthAmount(item: AnyItem) {
+  if (item.priceCents == null) return "";
+  const length = fabricLengthTotal(item);
+  return length > 0 ? money(Math.round(Number(item.priceCents) / length)) : "";
+}
+
+function fabricUnitPriceAreaAmount(item: AnyItem) {
+  if (item.priceCents == null) return "";
+  const units = fabricUnitsForItem(item);
+  const area = fabricLengthTotal(item) * (Number(item.width) / units.widthPerLength);
+  return area > 0 ? money(Math.round(Number(item.priceCents) / area)) : "";
+}
+
+function fabricLengthTotal(item: AnyItem) {
+  return Number(item.lengthTotal) * Number(item.quantity ?? 1);
+}
+
+function fabricUnitsForItem(item: AnyItem) {
+  return item.lengthUnit === "yd" ? fabricUnits("us") : fabricUnits("metric");
+}
+
+function unitPriceUnit(unit: string) {
+  return `${currencySymbol()}/${unit}`;
+}
+
+function unitPriceLabel(unit: string, t: ReturnType<typeof useTranslations>) {
+  return t("common.unitPriceWithUnit", { unit: unitPriceUnit(unit) });
 }
 
 function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslations>) {
@@ -2578,7 +2623,8 @@ function detailRows(kind: Kind, item: AnyItem, t: ReturnType<typeof useTranslati
     add(t("fabrics.width"), item.width, (value) => `${numberValue(value)} ${item.widthUnit ?? ""}`.trim());
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, money);
-    add(t("common.unitPrice"), fabricUnitPriceLengthValue(item));
+    add(unitPriceLabel(fabricUnitsForItem(item).lengthUnit, t), fabricUnitPriceLengthAmount(item));
+    add(unitPriceLabel(fabricUnitsForItem(item).areaUnit, t), fabricUnitPriceAreaAmount(item));
     add(t("common.date"), item.purchasedAt);
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => patternTypeLabel(value, t));
