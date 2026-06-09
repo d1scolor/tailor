@@ -27,7 +27,7 @@ type Filters = {
   from: string;
   to: string;
   used: string;
-  hasStockLeft: boolean;
+  excludeUsedUp: boolean;
   color: string;
   categoryId: string;
   unitId: string;
@@ -274,13 +274,14 @@ const colorSwatches: Record<string, string> = {
 export function InventoryClient(props: Props) {
   const t = useTranslations();
   const unitSystem = props.unitSystem ?? "metric";
+  const defaultExcludeUsedUp = props.kind === "fabrics" || props.kind === "materials";
   const [items, setItems] = useState(props.items);
   const [summary, setSummary] = useState(props.summary);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("created");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [filters, setFilters] = useState<Filters>(() => emptyFilters());
+  const [filters, setFilters] = useState<Filters>(() => emptyFilters(defaultExcludeUsedUp));
   const [filterOpen, setFilterOpen] = useState(false);
   const [editing, setEditing] = useState<AnyItem | null>(null);
   const [selected, setSelected] = useState<AnyItem | null>(null);
@@ -585,6 +586,7 @@ export function InventoryClient(props: Props) {
         filterOpen={filterOpen}
         resources={browserResources}
         unitSystem={unitSystem}
+        defaultExcludeUsedUp={defaultExcludeUsedUp}
         onQueryChange={(nextQuery) => {
           setQuery(nextQuery);
           debounceRefresh(nextQuery, sort, filters, dir);
@@ -724,6 +726,7 @@ function InventoryBrowserView({
   filterPortal = true,
   resources,
   unitSystem,
+  defaultExcludeUsedUp,
   selectedIds = [],
   onQueryChange,
   onSortChange,
@@ -745,6 +748,7 @@ function InventoryBrowserView({
   filterPortal?: boolean;
   resources: BrowserResources;
   unitSystem: UnitSystem;
+  defaultExcludeUsedUp: boolean;
   selectedIds?: number[];
   onQueryChange: (query: string) => void;
   onSortChange: (sort: string) => void;
@@ -773,6 +777,7 @@ function InventoryBrowserView({
       materialTypeOptions={resources.materialTypeOptions}
       patternTypeOptions={resources.patternTypeOptions}
       toolCategoryOptions={resources.toolCategoryOptions}
+      defaultExcludeUsedUp={defaultExcludeUsedUp}
       onApply={onApplyFilters}
       onClose={onFilterClose}
     />
@@ -1295,6 +1300,7 @@ function ResourcePicker({
             filterPortal={false}
             resources={browserResources}
             unitSystem={unitSystem}
+            defaultExcludeUsedUp={false}
             selectedIds={selectedIds}
             onQueryChange={(nextQuery) => {
               setQuery(nextQuery);
@@ -1521,6 +1527,7 @@ function FilterDrawer({
   materialTypeOptions,
   patternTypeOptions,
   toolCategoryOptions,
+  defaultExcludeUsedUp,
   onApply,
   onClose
 }: {
@@ -1537,6 +1544,7 @@ function FilterDrawer({
   materialTypeOptions: string[];
   patternTypeOptions: string[];
   toolCategoryOptions: string[];
+  defaultExcludeUsedUp: boolean;
   onApply: (filters: Filters) => void;
   onClose: () => void;
 }) {
@@ -1550,6 +1558,26 @@ function FilterDrawer({
 
   function update<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...draft, [key]: value };
+    setDraft(next);
+    onApply(next);
+  }
+
+  function updateExcludeUsedUp(excludeUsedUp: boolean) {
+    const next = {
+      ...draft,
+      excludeUsedUp,
+      usageStatus: excludeUsedUp && draft.usageStatus === "used" ? "" : draft.usageStatus
+    };
+    setDraft(next);
+    onApply(next);
+  }
+
+  function updateMaterialUsageStatus(usageStatus: string) {
+    const next = {
+      ...draft,
+      usageStatus,
+      excludeUsedUp: usageStatus === "used" ? false : draft.excludeUsedUp
+    };
     setDraft(next);
     onApply(next);
   }
@@ -1616,12 +1644,15 @@ function FilterDrawer({
             </div>
           ) : null}
 
+          {kind === "fabrics" || kind === "materials" ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={draft.excludeUsedUp} onChange={(event) => updateExcludeUsedUp(event.target.checked)} />
+              <span>{t("common.excludeUsedUp")}</span>
+            </label>
+          ) : null}
+
           {kind === "fabrics" ? (
             <div className="grid gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={draft.hasStockLeft} onChange={(event) => update("hasStockLeft", event.target.checked)} />
-                <span>{t("fabrics.hasStockLeft")}</span>
-              </label>
               <label className="block space-y-1">
                 <span className="text-sm font-medium">{t("fabrics.purpose")}</span>
                 <Select value={draft.purpose} onChange={(event) => update("purpose", event.target.value)}>
@@ -1729,7 +1760,7 @@ function FilterDrawer({
             <div className="grid gap-3">
               <label className="block space-y-1">
                 <span className="text-sm font-medium">{t("materials.usageStatus")}</span>
-                <Select value={draft.usageStatus} onChange={(event) => update("usageStatus", event.target.value)}>
+                <Select value={draft.usageStatus} onChange={(event) => updateMaterialUsageStatus(event.target.value)}>
                   <option value="">{t("common.all")}</option>
                   {materialUsageStatusOptions.map((status) => (
                     <option key={status} value={status}>
@@ -1756,7 +1787,7 @@ function FilterDrawer({
             type="button"
             variant="secondary"
             onClick={() => {
-              const next = emptyFilters();
+              const next = emptyFilters(defaultExcludeUsedUp);
               setDraft(next);
               onApply(next);
             }}
@@ -2391,7 +2422,7 @@ function StagedPhotoPreview({
   );
 }
 
-function emptyFilters(): Filters {
+function emptyFilters(excludeUsedUp = false): Filters {
   return {
     tagIds: [],
     source: "",
@@ -2402,7 +2433,7 @@ function emptyFilters(): Filters {
     from: "",
     to: "",
     used: "",
-    hasStockLeft: false,
+    excludeUsedUp,
     color: "",
     categoryId: "",
     unitId: "",
@@ -2418,7 +2449,7 @@ function emptyFilters(): Filters {
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.usageStatus || filters.from || filters.to || filters.used || filters.hasStockLeft || filters.color) ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.usageStatus || filters.from || filters.to || filters.used || filters.excludeUsedUp || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.fabricId || filters.materialId)
   );
 }
@@ -2437,7 +2468,7 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.used) params.set("used", filters.used);
-  if (filters.hasStockLeft) params.set("hasStockLeft", "true");
+  if (filters.excludeUsedUp) params.set("excludeUsedUp", "true");
   if (filters.color) params.set("color", filters.color);
   if (filters.categoryId) params.set("categoryId", filters.categoryId);
   if (filters.unitId) params.set("unitId", filters.unitId);

@@ -6,11 +6,12 @@ import { listFabricMaterialTypes, listItems, listSources, listTags, summary } fr
 export default async function FabricsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const params = new URLSearchParams({ excludeUsedUp: "true" });
   return (
     <InventoryClient
       kind="fabrics"
-      items={listItems("fabrics", user.id, new URLSearchParams())}
-      summary={summary("fabrics", user.id)}
+      items={listItems("fabrics", user.id, params)}
+      summary={summary("fabrics", user.id, params)}
       tags={listTags(user.id) as any}
       sourceOptions={listSources("fabrics", user.id)}
       materialTypeOptions={listFabricMaterialTypes(user.id)}
