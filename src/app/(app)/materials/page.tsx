@@ -6,11 +6,12 @@ import { listItems, listMeta, listSources, listTags, summary } from "@/lib/repos
 export default async function MaterialsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const params = new URLSearchParams({ excludeUsedUp: "true" });
   return (
     <InventoryClient
       kind="materials"
-      items={listItems("materials", user.id, new URLSearchParams())}
-      summary={summary("materials", user.id)}
+      items={listItems("materials", user.id, params)}
+      summary={summary("materials", user.id, params)}
       tags={listTags(user.id) as any}
       sourceOptions={listSources("materials", user.id)}
       categories={listMeta("material_categories", user.id) as any}

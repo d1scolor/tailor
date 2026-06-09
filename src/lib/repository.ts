@@ -136,7 +136,7 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push(`${kind}.purchased_at <= ?`);
     args.push(params.get("to"));
   }
-  if (kind === "fabrics" && params.get("hasStockLeft") === "true") clauses.push("length_remaining > 0");
+  if (kind === "fabrics" && params.get("excludeUsedUp") === "true") clauses.push("length_remaining > 0");
   if (kind === "fabrics" && params.get("used")) {
     clauses.push(params.get("used") === "true" ? "length_remaining < length_total" : "length_remaining = length_total");
   }
@@ -149,6 +149,9 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
   }
   if (kind === "materials" && params.get("used")) {
     clauses.push(params.get("used") === "true" ? "usage_status = 'used'" : "usage_status = 'available'");
+  }
+  if (kind === "materials" && params.get("excludeUsedUp") === "true") {
+    clauses.push("usage_status != 'used' AND quantity_remaining > 0");
   }
   if (kind === "materials" && params.get("categoryId")) {
     clauses.push("category_id = ?");
