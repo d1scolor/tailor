@@ -12,6 +12,7 @@ services:
       INITIAL_PASSWORD: "changeme"
       BASE_URL: "https://tailor.example.com"
       DEFAULT_LOCALE: "zh"
+      DEFAULT_UNIT_SYSTEM: "metric"
       CURRENCY_SYMBOL: "¥"
       NEXT_PUBLIC_CURRENCY_SYMBOL: "¥"
       MAX_UPLOAD_MB: "20"

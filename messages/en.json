@@ -31,6 +31,8 @@
     "saving": "Saving",
     "cancel": "Cancel",
     "delete": "Delete",
+    "hide": "Hide",
+    "restore": "Restore",
     "edit": "Edit",
     "duplicate": "Duplicate",
     "add": "Add",
@@ -84,6 +86,19 @@
     "nextPassword": "New password",
     "login": "Log in",
     "invalid": "Invalid username or password"
+  },
+  "errors": {
+    "validation": "Check the entered values",
+    "invalid_metadata": "The selected value is not available",
+    "inactive_metadata": "The selected value is hidden",
+    "duplicate_name": "A value with this name already exists",
+    "managed_value": "Managed values cannot be renamed",
+    "negative_remaining": "Remove project usage before reducing the total length",
+    "invalid_consumption": "Length used must be positive",
+    "insufficient_fabric": "The fabric does not have enough length remaining",
+    "linked": "This item is used by a project",
+    "not_found": "The requested item was not found",
+    "unknown": "Something went wrong"
   },
   "nav": {
     "overview": "Overview",
@@ -301,8 +316,8 @@
     "chinese": "中文",
     "password": "Change password",
     "unitSystem": "Unit system",
-    "metricUnits": "Metric (m / cm)",
-    "usUnits": "US (yd / in)",
+    "metricUnits": "Metric (m / cm / kg / g)",
+    "imperialUnits": "Imperial (yd / in / lb / oz)",
     "manageTags": "Manage tags",
     "manageCategories": "Manage material categories",
     "manageUnits": "Manage material units",
@@ -316,6 +331,11 @@
     "heicNote": "If HEIC upload fails, set iPhone Camera Formats to Most Compatible so photos upload as JPEG."
   },
   "meta": {
+    "groups": {
+      "convertible": "Convertible",
+      "static": "Managed static",
+      "custom": "Custom"
+    },
     "categories": {
       "thread": "Thread",
       "button": "Button",
@@ -325,21 +345,27 @@
       "ribbon": "Ribbon",
       "lace": "Lace",
       "trim": "Trim",
-      "bias tape": "Bias tape",
+      "biasTape": "Bias tape",
       "snap": "Snap",
-      "hook & eye": "Hook & eye",
+      "hookAndEye": "Hook & eye",
       "velcro": "Velcro",
       "other": "Other"
     },
     "units": {
       "piece": "piece",
-      "m": "m",
-      "cm": "cm",
+      "metre": "metres",
+      "yard": "yards",
+      "centimetre": "centimetres",
+      "inch": "inches",
+      "kilogram": "kilograms",
+      "pound": "pounds",
+      "gram": "grams",
+      "ounce": "ounces",
       "ball": "ball",
       "spool": "spool",
       "pack": "pack",
       "roll": "roll",
-      "gram": "gram"
+      "unspecified": "unspecified unit"
     }
   }
 }

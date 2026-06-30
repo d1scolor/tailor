@@ -36,27 +36,15 @@ if (count === 0) {
     process.exit(1);
   }
   const timestamp = now();
-  db.prepare("INSERT INTO users (username, password_hash, locale, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(
+  db.prepare("INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
     process.env.INITIAL_USERNAME,
     bcrypt.hashSync(process.env.INITIAL_PASSWORD, 12),
     process.env.DEFAULT_LOCALE === "zh" ? "zh" : "en",
+    process.env.DEFAULT_UNIT_SYSTEM === "imperial" ? "imperial" : "metric",
     timestamp,
     timestamp
   );
   console.log("Created bootstrap user");
-}
-
-const categories = ["线", "纽扣", "拉链", "松紧带", "衬布", "织带", "蕾丝", "花边", "包边条", "按扣", "钩眼扣", "魔术贴", "其他"];
-const units = ["个", "米", "厘米", "团", "轴", "包", "卷", "克"];
-for (const user of db.prepare("SELECT id FROM users").all()) {
-  seed("material_categories", categories, user.id);
-  seed("material_units", units, user.id);
-}
-
-function seed(table, names, userId) {
-  if (db.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE user_id = ?`).get(userId).count > 0) return;
-  const insert = db.prepare(`INSERT INTO ${table} (user_id, name, sort_order, created_at) VALUES (?, ?, ?, ?)`);
-  names.forEach((name, index) => insert.run(userId, name, index, now()));
 }
 
 db.close();

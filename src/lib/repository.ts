@@ -1,15 +1,14 @@
 import crypto from "node:crypto";
 import { ApiError } from "@/lib/api";
 import { getSqlite } from "@/lib/db/client";
-import { lengthToMetres } from "@/lib/format";
 import { copyPhotoFilesSync, deletePhotoFilesSync } from "@/lib/images";
-import { applyProjectLinks, recomputeFabricRemaining, restoreProjectLinks } from "@/lib/consumption";
+import { applyProjectLinks, restoreProjectLinks } from "@/lib/consumption";
 import { nowIso } from "@/lib/time";
-import { fabricUnits, convertLength, normalizeUnitSystem } from "@/lib/units";
 
 export type Kind = "fabrics" | "patterns" | "materials" | "projects" | "tools";
 export type EntityType = "fabric" | "pattern" | "material" | "project" | "tool";
 export type DuplicableKind = Exclude<Kind, "projects">;
+const measurementEpsilon = 1e-9;
 
 const entityByKind: Record<Kind, EntityType> = {
   fabrics: "fabric",
@@ -19,10 +18,11 @@ const entityByKind: Record<Kind, EntityType> = {
   tools: "tool"
 };
 
-const fabricRemainingMetresSort =
-  "CASE length_unit WHEN 'cm' THEN length_remaining / 100.0 WHEN 'yd' THEN length_remaining * 0.9144 ELSE length_remaining END";
+const fabricUsedMetres =
+  "COALESCE((SELECT SUM(pf.length_used_m) FROM project_fabrics pf WHERE pf.fabric_id = fabrics.id), 0)";
+const fabricRemainingMetresSort = `MAX(length_total_m - ${fabricUsedMetres}, 0)`;
 const fabricAreaUnitPriceSort =
-  "CASE WHEN length_total > 0 AND width > 0 AND quantity > 0 THEN price_cents / (length_total * (width / CASE length_unit WHEN 'yd' THEN 36.0 ELSE 100.0 END) * quantity) ELSE NULL END";
+  "CASE WHEN length_total_m > 0 AND width_m > 0 THEN price_cents / (length_total_m * width_m) ELSE NULL END";
 
 const sortColumns: Record<Kind, Record<string, string>> = {
   fabrics: {
@@ -32,7 +32,7 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     price: "price_cents",
     unitPrice: fabricAreaUnitPriceSort,
     unitPriceSize: fabricAreaUnitPriceSort,
-    unitPriceLength: "CASE WHEN length_total > 0 AND quantity > 0 THEN price_cents / (length_total * quantity) ELSE NULL END",
+    unitPriceLength: "CASE WHEN length_total_m > 0 THEN price_cents / length_total_m ELSE NULL END",
     remaining: fabricRemainingMetresSort,
     remainingMetres: fabricRemainingMetresSort
   },
@@ -48,8 +48,8 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     created: "created_at",
     purchased: "purchased_at",
     price: "price_cents",
-    unitPrice: "CASE WHEN quantity_total > 0 THEN price_cents / quantity_total ELSE NULL END",
-    remaining: "quantity_remaining"
+    unitPrice: "CASE WHEN quantity_total_canonical > 0 THEN price_cents / quantity_total_canonical ELSE NULL END",
+    remaining: "CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END"
   },
   projects: {
     name: "name",
@@ -136,9 +136,9 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push(`${kind}.purchased_at <= ?`);
     args.push(params.get("to"));
   }
-  if (kind === "fabrics" && params.get("excludeUsedUp") === "true") clauses.push("length_remaining > 0");
+  if (kind === "fabrics" && params.get("excludeUsedUp") === "true") clauses.push(`${fabricRemainingMetresSort} > 0`);
   if (kind === "fabrics" && params.get("used")) {
-    clauses.push(params.get("used") === "true" ? "length_remaining < length_total" : "length_remaining = length_total");
+    clauses.push(params.get("used") === "true" ? `${fabricUsedMetres} > 0` : `${fabricUsedMetres} = 0`);
   }
   if (kind === "patterns" && params.get("used")) {
     clauses.push(
@@ -151,7 +151,7 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     clauses.push(params.get("used") === "true" ? "usage_status = 'used'" : "usage_status = 'available'");
   }
   if (kind === "materials" && params.get("excludeUsedUp") === "true") {
-    clauses.push("usage_status != 'used' AND quantity_remaining > 0");
+    clauses.push("usage_status != 'used' AND quantity_total_canonical > 0");
   }
   if (kind === "materials" && params.get("categoryId")) {
     clauses.push("category_id = ?");
@@ -176,7 +176,13 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
 
   const sort = sortColumns[kind][params.get("sort") ?? "created"] ?? "created_at";
   const dir = params.get("dir") === "asc" ? "ASC" : "DESC";
-  const rows = db.prepare(`SELECT * FROM ${kind} WHERE ${clauses.join(" AND ")} ORDER BY ${sort} ${dir}`).all(...args) as Array<
+  const projection =
+    kind === "fabrics"
+      ? `fabrics.*, ${fabricRemainingMetresSort} AS length_remaining_m`
+      : kind === "materials"
+        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END AS quantity_remaining_canonical"
+        : `${kind}.*`;
+  const rows = db.prepare(`SELECT ${projection} FROM ${kind} WHERE ${clauses.join(" AND ")} ORDER BY ${sort} ${dir}`).all(...args) as Array<
     Record<string, unknown>
   >;
   return withExtrasForRows(rows, entityType);
@@ -184,7 +190,13 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
 
 export function getItem(kind: Kind, userId: number, id: number) {
   const db = getSqlite();
-  const row = db.prepare(`SELECT * FROM ${kind} WHERE user_id = ? AND id = ?`).get(userId, id) as
+  const projection =
+    kind === "fabrics"
+      ? `fabrics.*, ${fabricRemainingMetresSort} AS length_remaining_m`
+      : kind === "materials"
+        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END AS quantity_remaining_canonical"
+        : `${kind}.*`;
+  const row = db.prepare(`SELECT ${projection} FROM ${kind} WHERE user_id = ? AND id = ?`).get(userId, id) as
     | Record<string, unknown>
     | undefined;
   if (!row) throw new ApiError("not_found", 404, "Item not found.");
@@ -200,18 +212,15 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO fabrics
-          (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, quantity, length_total_m, width_m, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
           input.quantity,
-          input.lengthTotal,
-          input.lengthTotal,
-          input.lengthUnit,
-          input.width,
-          input.widthUnit,
+          input.lengthTotalM,
+          input.widthM,
           encodeColors(input.colors),
           input.purpose,
           input.materialType,
@@ -248,19 +257,20 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       id = Number(result.lastInsertRowid);
     } else if (kind === "materials") {
       const usageStatus = input.usageStatus === "used" ? "used" : "available";
+      validateMetaReference(db, "material_units", userId, Number(input.unitId));
+      if (input.categoryId) validateMetaReference(db, "material_categories", userId, Number(input.categoryId));
       const result = db
         .prepare(
           `INSERT INTO materials
-          (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, category_id, unit_id, quantity_total_canonical, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
           input.categoryId,
           input.unitId,
-          input.quantityTotal,
-          usageStatus === "used" ? 0 : input.quantityTotal,
+          input.quantityTotalCanonical,
           usageStatus,
           encodeColors(input.colors),
           input.source,
@@ -320,25 +330,21 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
     if (!existing) throw new ApiError("not_found", 404, "Item not found.");
     if (kind === "fabrics") {
       const usedLength = (
-        db.prepare("SELECT COALESCE(SUM(length_used), 0) AS usedLength FROM project_fabrics WHERE fabric_id = ?").get(id) as {
+        db.prepare("SELECT COALESCE(SUM(length_used_m), 0) AS usedLength FROM project_fabrics WHERE fabric_id = ?").get(id) as {
           usedLength: number;
         }
       ).usedLength;
-      if (Number(input.lengthTotal) < usedLength) {
+      if (usedLength - Number(input.lengthTotalM) > measurementEpsilon) {
         throw new ApiError("negative_remaining", 409, "Remove project consumption before reducing the total length.");
       }
-      const nextRemaining = Number(input.lengthTotal) - usedLength;
       db.prepare(
-        `UPDATE fabrics SET name = ?, quantity = ?, length_total = ?, length_remaining = ?, length_unit = ?,
-         width = ?, width_unit = ?, colors = ?, purpose = ?, material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
+        `UPDATE fabrics SET name = ?, quantity = ?, length_total_m = ?, width_m = ?, colors = ?, purpose = ?,
+         material_type = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
         input.quantity,
-        input.lengthTotal,
-        nextRemaining,
-        input.lengthUnit,
-        input.width,
-        input.widthUnit,
+        input.lengthTotalM,
+        input.widthM,
         encodeColors(input.colors),
         input.purpose,
         input.materialType,
@@ -349,7 +355,6 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         now,
         id
       );
-      recomputeFabricRemaining(db, [id]);
     } else if (kind === "patterns") {
       db.prepare(
         `UPDATE patterns SET name = ?, pattern_type = ?, difficulty = ?, pattern_for = ?, size = ?, pieces = ?, source = ?, price_cents = ?,
@@ -370,16 +375,16 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
       );
     } else if (kind === "materials") {
       const usageStatus = input.usageStatus === "used" ? "used" : "available";
-      const nextRemaining = usageStatus === "used" ? 0 : Number(input.quantityTotal);
+      validateMetaReference(db, "material_units", userId, Number(input.unitId), Number(existing.unit_id));
+      if (input.categoryId) validateMetaReference(db, "material_categories", userId, Number(input.categoryId), Number(existing.category_id));
       db.prepare(
-        `UPDATE materials SET name = ?, category_id = ?, unit_id = ?, quantity_total = ?, quantity_remaining = ?, usage_status = ?,
+        `UPDATE materials SET name = ?, category_id = ?, unit_id = ?, quantity_total_canonical = ?, usage_status = ?,
          colors = ?, source = ?, price_cents = ?, purchased_at = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
         input.categoryId,
         input.unitId,
-        input.quantityTotal,
-        nextRemaining,
+        input.quantityTotalCanonical,
         usageStatus,
         encodeColors(input.colors),
         input.source,
@@ -435,18 +440,15 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
         const result = db
           .prepare(
             `INSERT INTO fabrics
-            (user_id, name, quantity, length_total, length_remaining, length_unit, width, width_unit, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            (user_id, name, quantity, length_total_m, width_m, colors, purpose, material_type, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             userId,
             existing.name,
             existing.quantity,
-            existing.length_total,
-            existing.length_total,
-            existing.length_unit,
-            existing.width,
-            existing.width_unit,
+            existing.length_total_m,
+            existing.width_m,
             existing.colors,
             existing.purpose,
             existing.material_type,
@@ -485,16 +487,15 @@ export function duplicateItem(kind: DuplicableKind, userId: number, id: number) 
         const result = db
           .prepare(
             `INSERT INTO materials
-            (user_id, name, category_id, unit_id, quantity_total, quantity_remaining, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            (user_id, name, category_id, unit_id, quantity_total_canonical, usage_status, colors, source, price_cents, purchased_at, remarks, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             userId,
             existing.name,
             existing.category_id,
             existing.unit_id,
-            existing.quantity_total,
-            existing.quantity_remaining,
+            existing.quantity_total_canonical,
             existing.usage_status,
             existing.colors,
             existing.source,
@@ -598,25 +599,21 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
   const db = getSqlite();
   const filteredRows = params.toString() ? listItems(kind, userId, params) : null;
   if (kind === "fabrics") {
-    const user = db.prepare("SELECT unit_system AS unitSystem FROM users WHERE id = ?").get(userId) as { unitSystem?: string } | undefined;
-    const units = fabricUnits(normalizeUnitSystem(user?.unitSystem));
     const rows = (filteredRows ??
       db
-        .prepare("SELECT price_cents AS priceCents, length_total AS lengthTotal, length_remaining AS lengthRemaining, length_unit AS lengthUnit FROM fabrics WHERE user_id = ?")
-        .all(userId)) as Array<{ priceCents: number | null; lengthTotal: number; lengthRemaining: number; lengthUnit: string }>;
-    const usedMetres = rows.reduce(
-      (sum, row) => sum + lengthToMetres(row.lengthTotal - row.lengthRemaining, row.lengthUnit),
-      0
-    );
-    const remainingMetres = rows.reduce((sum, row) => sum + lengthToMetres(row.lengthRemaining, row.lengthUnit), 0);
+        .prepare(
+          `SELECT price_cents AS priceCents, length_total_m AS lengthTotalM,
+             ${fabricRemainingMetresSort} AS lengthRemainingM
+           FROM fabrics WHERE user_id = ?`
+        )
+        .all(userId)) as Array<{ priceCents: number | null; lengthTotalM: number; lengthRemainingM: number }>;
+    const lengthUsedM = rows.reduce((sum, row) => sum + (row.lengthTotalM - row.lengthRemainingM), 0);
+    const lengthRemainingM = rows.reduce((sum, row) => sum + row.lengthRemainingM, 0);
     return {
       count: rows.length,
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      lengthUsed: convertLength(usedMetres, "m", units.lengthUnit),
-      lengthRemaining: convertLength(remainingMetres, "m", units.lengthUnit),
-      lengthUnit: units.lengthUnit,
-      lengthUsedMetres: usedMetres,
-      lengthRemainingMetres: remainingMetres
+      lengthUsedM,
+      lengthRemainingM
     };
   }
   if (kind === "patterns") {
@@ -683,7 +680,7 @@ export function calculateProjectCost(projectId: number) {
   const fabricCost = (
     db
       .prepare(
-        `SELECT pc.length_used AS used, c.length_total AS total, c.price_cents AS price
+        `SELECT pc.length_used_m AS used, c.length_total_m AS total, c.price_cents AS price
          FROM project_fabrics pc JOIN fabrics c ON c.id = pc.fabric_id WHERE pc.project_id = ?`
       )
       .all(projectId) as Array<{ used: number; total: number; price: number | null }>
@@ -742,16 +739,18 @@ function withExtras(row: Record<string, unknown>, entityType: EntityType) {
   if (entityType === "material") {
     const material = row as Record<string, unknown>;
     if (material.category_id) {
-      const category = db.prepare("SELECT name FROM material_categories WHERE id = ?").get(material.category_id) as
-        | { name: string }
+      const category = db.prepare("SELECT definition_key AS definitionKey, custom_name AS customName FROM material_categories WHERE id = ?").get(material.category_id) as
+        | { definitionKey: string | null; customName: string | null }
         | undefined;
-      extra.categoryName = category?.name;
+      extra.categoryDefinitionKey = category?.definitionKey;
+      extra.categoryCustomName = category?.customName;
     }
     if (material.unit_id) {
-      const unit = db.prepare("SELECT name FROM material_units WHERE id = ?").get(material.unit_id) as
-        | { name: string }
+      const unit = db.prepare("SELECT definition_key AS definitionKey, custom_name AS customName FROM material_units WHERE id = ?").get(material.unit_id) as
+        | { definitionKey: string | null; customName: string | null }
         | undefined;
-      extra.unitName = unit?.name;
+      extra.unitDefinitionKey = unit?.definitionKey;
+      extra.unitCustomName = unit?.customName;
     }
   }
   return { ...camelize(row), ...extra, photos, tags };
@@ -833,13 +832,15 @@ function extrasForRows(
   if (entityType === "material") {
     const categoryIds = uniqueNumericValues(rows.map((row) => row.category_id));
     const unitIds = uniqueNumericValues(rows.map((row) => row.unit_id));
-    const categories = loadNameMap(db, "material_categories", categoryIds);
-    const units = loadNameMap(db, "material_units", unitIds);
+    const categories = loadMetaMap(db, "material_categories", categoryIds);
+    const units = loadMetaMap(db, "material_units", unitIds);
     for (const row of rows) {
       const id = Number(row.id);
       extras.set(id, {
-        categoryName: categories.get(Number(row.category_id)),
-        unitName: units.get(Number(row.unit_id))
+        categoryDefinitionKey: categories.get(Number(row.category_id))?.definitionKey,
+        categoryCustomName: categories.get(Number(row.category_id))?.customName,
+        unitDefinitionKey: units.get(Number(row.unit_id))?.definitionKey,
+        unitCustomName: units.get(Number(row.unit_id))?.customName
       });
     }
   }
@@ -859,12 +860,12 @@ function uniqueNumericValues(values: unknown[]) {
   return [...new Set(values.map(Number).filter((value) => Number.isFinite(value) && value > 0))];
 }
 
-function loadNameMap(db: ReturnType<typeof getSqlite>, table: "material_categories" | "material_units", ids: number[]) {
-  if (!ids.length) return new Map<number, string>();
+function loadMetaMap(db: ReturnType<typeof getSqlite>, table: "material_categories" | "material_units", ids: number[]) {
+  if (!ids.length) return new Map<number, { definitionKey: string | null; customName: string | null }>();
   const rows = db
-    .prepare(`SELECT id, name FROM ${table} WHERE id IN (${ids.map(() => "?").join(",")})`)
-    .all(...ids) as Array<{ id: number; name: string }>;
-  return new Map(rows.map((row) => [row.id, row.name]));
+    .prepare(`SELECT id, definition_key AS definitionKey, custom_name AS customName FROM ${table} WHERE id IN (${ids.map(() => "?").join(",")})`)
+    .all(...ids) as Array<{ id: number; definitionKey: string | null; customName: string | null }>;
+  return new Map(rows.map((row) => [row.id, { definitionKey: row.definitionKey, customName: row.customName }]));
 }
 
 function normalizeColor(value: unknown) {
@@ -902,7 +903,7 @@ function withDetails(row: Record<string, unknown>, kind: Kind) {
       patternId: number;
     }>).map((item) => item.patternId),
     fabrics: db
-      .prepare("SELECT fabric_id AS fabricId, length_used AS lengthUsed FROM project_fabrics WHERE project_id = ?")
+      .prepare("SELECT fabric_id AS fabricId, length_used_m AS lengthUsedM FROM project_fabrics WHERE project_id = ?")
       .all(id),
     materials: db
       .prepare("SELECT material_id AS materialId FROM project_materials WHERE project_id = ?")
@@ -918,11 +919,18 @@ export function listTags(userId: number) {
 export function upsertMeta(table: "material_categories" | "material_units", userId: number, input: Record<string, unknown>) {
   const db = getSqlite();
   const now = nowIso();
+  const sortOrder =
+    input.sortOrder ??
+    (
+      db.prepare(`SELECT COALESCE(MAX(sort_order), -1) + 1 AS sortOrder FROM ${table} WHERE user_id = ?`).get(userId) as {
+        sortOrder: number;
+      }
+    ).sortOrder;
   try {
     const result = db
-      .prepare(`INSERT INTO ${table} (user_id, name, sort_order, created_at) VALUES (?, ?, ?, ?)`)
-      .run(userId, input.name, input.sortOrder ?? 0, now);
-    return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(result.lastInsertRowid);
+      .prepare(`INSERT INTO ${table} (user_id, custom_name, active, sort_order, created_at) VALUES (?, ?, 1, ?, ?)`)
+      .run(userId, input.name, sortOrder, now);
+    return getMetaItem(table, userId, Number(result.lastInsertRowid));
   } catch (error) {
     if (isSqliteConstraint(error)) {
       throw new ApiError("duplicate_name", 409, "A value with this name already exists.");
@@ -931,8 +939,80 @@ export function upsertMeta(table: "material_categories" | "material_units", user
   }
 }
 
-export function listMeta(table: "material_categories" | "material_units", userId: number) {
-  return getSqlite().prepare(`SELECT id, name, sort_order AS sortOrder FROM ${table} WHERE user_id = ? ORDER BY sort_order, name`).all(userId);
+export function listMeta(table: "material_categories" | "material_units", userId: number, includeInactive = false) {
+  const referenceColumn = table === "material_units" ? "unit_id" : "category_id";
+  return getSqlite()
+    .prepare(
+      `SELECT id, definition_key AS definitionKey, custom_name AS customName, active, sort_order AS sortOrder
+       FROM ${table}
+       WHERE user_id = ? ${
+         includeInactive
+           ? ""
+           : `AND (active = 1 OR EXISTS (SELECT 1 FROM materials WHERE materials.${referenceColumn} = ${table}.id))`
+       }
+       ORDER BY active DESC, sort_order, COALESCE(custom_name, definition_key)`
+    )
+    .all(userId);
+}
+
+export function updateMeta(
+  table: "material_categories" | "material_units",
+  userId: number,
+  id: number,
+  input: { name?: string; active?: boolean; sortOrder?: number }
+) {
+  const db = getSqlite();
+  const existing = getMetaItem(table, userId, id);
+  if (!existing) throw new ApiError("not_found", 404, "Metadata value not found.");
+  if (existing.definitionKey && input.name !== undefined) {
+    throw new ApiError("managed_value", 409, "Managed values cannot be renamed.");
+  }
+  try {
+    db.prepare(
+      `UPDATE ${table}
+       SET custom_name = COALESCE(?, custom_name),
+           active = COALESCE(?, active),
+           sort_order = COALESCE(?, sort_order)
+       WHERE id = ? AND user_id = ?`
+    ).run(
+      input.name ?? null,
+      input.active === undefined ? null : input.active ? 1 : 0,
+      input.sortOrder ?? null,
+      id,
+      userId
+    );
+    return getMetaItem(table, userId, id);
+  } catch (error) {
+    if (isSqliteConstraint(error)) throw new ApiError("duplicate_name", 409, "A value with this name already exists.");
+    throw error;
+  }
+}
+
+export function archiveMeta(table: "material_categories" | "material_units", userId: number, id: number) {
+  return updateMeta(table, userId, id, { active: false });
+}
+
+function getMetaItem(table: "material_categories" | "material_units", userId: number, id: number) {
+  return getSqlite()
+    .prepare(
+      `SELECT id, definition_key AS definitionKey, custom_name AS customName, active, sort_order AS sortOrder
+       FROM ${table} WHERE id = ? AND user_id = ?`
+    )
+    .get(id, userId) as
+    | { id: number; definitionKey: string | null; customName: string | null; active: number; sortOrder: number }
+    | undefined;
+}
+
+function validateMetaReference(
+  db: ReturnType<typeof getSqlite>,
+  table: "material_categories" | "material_units",
+  userId: number,
+  id: number,
+  currentId?: number
+) {
+  const row = db.prepare(`SELECT active FROM ${table} WHERE id = ? AND user_id = ?`).get(id, userId) as { active: number } | undefined;
+  if (!row) throw new ApiError("invalid_metadata", 400, "The selected value does not belong to this user.");
+  if (!row.active && id !== currentId) throw new ApiError("inactive_metadata", 409, "The selected value is inactive.");
 }
 
 export function listSources(kind: Exclude<Kind, "projects">, userId: number) {

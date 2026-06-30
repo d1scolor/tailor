@@ -15,10 +15,8 @@ const labelValueSchema = z.string().trim().min(1).max(80);
 
 export const fabricSchema = baseItemSchema.extend({
   quantity: z.coerce.number().int().positive().default(1),
-  lengthTotal: z.coerce.number().positive(),
-  lengthUnit: z.enum(["m", "yd"]).default("m"),
-  width: nullableNumber,
-  widthUnit: z.enum(["cm", "in"]).nullable().optional(),
+  lengthTotalM: z.coerce.number().positive(),
+  widthM: nullableNumber,
   colors: colorsSchema,
   purpose: z.enum(["garment", "craft"]).default("garment"),
   materialType: labelValueSchema.default("other")
@@ -34,15 +32,15 @@ export const patternSchema = baseItemSchema.extend({
 
 export const materialSchema = baseItemSchema.extend({
   categoryId: nullableInt,
-  unitId: nullableInt,
-  quantityTotal: z.coerce.number().positive(),
+  unitId: z.coerce.number().int().positive(),
+  quantityTotalCanonical: z.coerce.number().positive(),
   usageStatus: z.enum(["available", "used"]).default("available"),
   colors: colorsSchema
 });
 
 export const projectLinkFabricSchema = z.object({
   fabricId: z.coerce.number().int().positive(),
-  lengthUsed: z.coerce.number().positive()
+  lengthUsedM: z.coerce.number().positive()
 });
 
 export const projectLinkMaterialSchema = z.object({
@@ -79,5 +77,11 @@ export const tagSchema = z.object({
 
 export const metaSchema = z.object({
   name: z.string().trim().min(1).max(80),
+  sortOrder: z.coerce.number().int().min(0).optional()
+});
+
+export const metaUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  active: z.boolean().optional(),
   sortOrder: z.coerce.number().int().min(0).optional()
 });

@@ -31,6 +31,8 @@
     "saving": "保存中",
     "cancel": "取消",
     "delete": "删除",
+    "hide": "隐藏",
+    "restore": "恢复",
     "edit": "编辑",
     "duplicate": "复制",
     "add": "添加",
@@ -84,6 +86,19 @@
     "nextPassword": "新密码",
     "login": "登录",
     "invalid": "用户名或密码错误"
+  },
+  "errors": {
+    "validation": "请检查输入内容",
+    "invalid_metadata": "所选内容不可用",
+    "inactive_metadata": "所选内容已隐藏",
+    "duplicate_name": "已存在同名内容",
+    "managed_value": "系统管理的内容不能重命名",
+    "negative_remaining": "请先移除作品中的用量，再减少总长度",
+    "invalid_consumption": "使用长度必须大于零",
+    "insufficient_fabric": "布料剩余长度不足",
+    "linked": "该条目已被作品使用",
+    "not_found": "未找到所需条目",
+    "unknown": "出错了"
   },
   "nav": {
     "overview": "概览",
@@ -301,8 +316,8 @@
     "chinese": "中文",
     "password": "修改密码",
     "unitSystem": "单位系统",
-    "metricUnits": "公制（米 / 厘米）",
-    "usUnits": "美制（码 / 英寸）",
+    "metricUnits": "公制（米 / 厘米 / 千克 / 克）",
+    "imperialUnits": "英制（码 / 英寸 / 磅 / 盎司）",
     "manageTags": "管理标签",
     "manageCategories": "管理辅料分类",
     "manageUnits": "管理辅料单位",
@@ -316,6 +331,11 @@
     "heicNote": "如果 HEIC 上传失败，请将 iPhone 相机格式设为“兼容性最佳”，照片会以 JPEG 上传。"
   },
   "meta": {
+    "groups": {
+      "convertible": "可换算单位",
+      "static": "系统固定单位",
+      "custom": "自定义单位"
+    },
     "categories": {
       "thread": "线",
       "button": "纽扣",
@@ -325,21 +345,27 @@
       "ribbon": "织带",
       "lace": "蕾丝",
       "trim": "花边",
-      "bias tape": "包边条",
+      "biasTape": "包边条",
       "snap": "按扣",
-      "hook & eye": "钩眼扣",
+      "hookAndEye": "钩眼扣",
       "velcro": "魔术贴",
       "other": "其他"
     },
     "units": {
       "piece": "个",
-      "m": "米",
-      "cm": "厘米",
+      "metre": "米",
+      "yard": "码",
+      "centimetre": "厘米",
+      "inch": "英寸",
+      "kilogram": "千克",
+      "pound": "磅",
+      "gram": "克",
+      "ounce": "盎司",
       "ball": "团",
       "spool": "轴",
       "pack": "包",
       "roll": "卷",
-      "gram": "克"
+      "unspecified": "未指定单位"
     }
   }
 }

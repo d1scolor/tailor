@@ -1,24 +1,111 @@
-export type UnitSystem = "metric" | "us";
+export type UnitSystem = "metric" | "imperial";
+export type MeasurementDimension = "length" | "mass";
+export type ConvertibleUnitKey = "lengthLong" | "lengthShort" | "massLarge" | "massSmall";
+export type StaticUnitKey = "piece" | "ball" | "spool" | "pack" | "roll" | "unspecified";
+export type ManagedUnitKey = ConvertibleUnitKey | StaticUnitKey;
+
+type DisplayUnit = {
+  symbol: string;
+  labelKey: string;
+  factorToCanonical: number;
+};
+
+type ConvertibleUnitDefinition = {
+  key: ConvertibleUnitKey;
+  behavior: "convertible";
+  dimension: MeasurementDimension;
+  metric: DisplayUnit;
+  imperial: DisplayUnit;
+};
+
+type StaticUnitDefinition = {
+  key: StaticUnitKey;
+  behavior: "static";
+  labelKey: string;
+};
+
+export type ManagedUnitDefinition = ConvertibleUnitDefinition | StaticUnitDefinition;
+
+export const managedUnitDefinitions: Record<ManagedUnitKey, ManagedUnitDefinition> = {
+  lengthLong: {
+    key: "lengthLong",
+    behavior: "convertible",
+    dimension: "length",
+    metric: { symbol: "m", labelKey: "meta.units.metre", factorToCanonical: 1 },
+    imperial: { symbol: "yd", labelKey: "meta.units.yard", factorToCanonical: 0.9144 }
+  },
+  lengthShort: {
+    key: "lengthShort",
+    behavior: "convertible",
+    dimension: "length",
+    metric: { symbol: "cm", labelKey: "meta.units.centimetre", factorToCanonical: 0.01 },
+    imperial: { symbol: "in", labelKey: "meta.units.inch", factorToCanonical: 0.0254 }
+  },
+  massLarge: {
+    key: "massLarge",
+    behavior: "convertible",
+    dimension: "mass",
+    metric: { symbol: "kg", labelKey: "meta.units.kilogram", factorToCanonical: 1 },
+    imperial: { symbol: "lb", labelKey: "meta.units.pound", factorToCanonical: 0.45359237 }
+  },
+  massSmall: {
+    key: "massSmall",
+    behavior: "convertible",
+    dimension: "mass",
+    metric: { symbol: "g", labelKey: "meta.units.gram", factorToCanonical: 0.001 },
+    imperial: { symbol: "oz", labelKey: "meta.units.ounce", factorToCanonical: 0.028349523125 }
+  },
+  piece: { key: "piece", behavior: "static", labelKey: "meta.units.piece" },
+  ball: { key: "ball", behavior: "static", labelKey: "meta.units.ball" },
+  spool: { key: "spool", behavior: "static", labelKey: "meta.units.spool" },
+  pack: { key: "pack", behavior: "static", labelKey: "meta.units.pack" },
+  roll: { key: "roll", behavior: "static", labelKey: "meta.units.roll" },
+  unspecified: { key: "unspecified", behavior: "static", labelKey: "meta.units.unspecified" }
+};
+
+export const defaultManagedUnitKeys: ManagedUnitKey[] = [
+  "piece",
+  "lengthLong",
+  "lengthShort",
+  "ball",
+  "spool",
+  "pack",
+  "roll",
+  "massSmall",
+  "massLarge"
+];
 
 export function normalizeUnitSystem(value: unknown): UnitSystem {
-  return value === "us" ? "us" : "metric";
+  return value === "imperial" || value === "us" ? "imperial" : "metric";
+}
+
+export function isManagedUnitKey(value: unknown): value is ManagedUnitKey {
+  return typeof value === "string" && value in managedUnitDefinitions;
+}
+
+export function displayUnit(definitionKey: ConvertibleUnitKey, unitSystem: UnitSystem) {
+  const definition = managedUnitDefinitions[definitionKey] as ConvertibleUnitDefinition;
+  return definition[unitSystem];
+}
+
+export function toDisplayValue(canonicalValue: number, definitionKey: ConvertibleUnitKey, unitSystem: UnitSystem) {
+  return canonicalValue / displayUnit(definitionKey, unitSystem).factorToCanonical;
+}
+
+export function toCanonicalValue(displayValue: number, definitionKey: ConvertibleUnitKey, unitSystem: UnitSystem) {
+  return displayValue * displayUnit(definitionKey, unitSystem).factorToCanonical;
 }
 
 export function fabricUnits(unitSystem: UnitSystem) {
-  return unitSystem === "us" ? { lengthUnit: "yd", widthUnit: "in", areaUnit: "yd²", widthPerLength: 36 } : { lengthUnit: "m", widthUnit: "cm", areaUnit: "m²", widthPerLength: 100 };
+  const length = displayUnit("lengthLong", unitSystem);
+  const width = displayUnit("lengthShort", unitSystem);
+  return {
+    lengthUnit: length.symbol,
+    widthUnit: width.symbol,
+    areaUnit: unitSystem === "imperial" ? "yd²" : "m²"
+  };
 }
 
-export function convertLength(value: number, fromUnit: string, toUnit: string) {
-  const metres = fromUnit === "yd" ? value * 0.9144 : fromUnit === "cm" ? value / 100 : value;
-  if (toUnit === "yd") return metres / 0.9144;
-  if (toUnit === "cm") return metres * 100;
-  return metres;
-}
-
-export function convertWidth(value: number | null | undefined, fromUnit: string | null | undefined, toUnit: string) {
-  if (value == null) return value;
-  const centimetres = fromUnit === "in" ? value * 2.54 : fromUnit === "m" ? value * 100 : value;
-  if (toUnit === "in") return centimetres / 2.54;
-  if (toUnit === "m") return centimetres / 100;
-  return centimetres;
+export function areaToDisplay(squareMetres: number, unitSystem: UnitSystem) {
+  return unitSystem === "imperial" ? squareMetres / 0.83612736 : squareMetres;
 }

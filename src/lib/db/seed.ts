@@ -1,24 +1,9 @@
 import bcrypt from "bcryptjs";
 import { getSqlite } from "@/lib/db/client";
+import { defaultUnitSystem } from "@/lib/env";
+import { managedCategoryKeys } from "@/lib/meta";
 import { nowIso } from "@/lib/time";
-
-const categories = [
-  "线",
-  "纽扣",
-  "拉链",
-  "松紧带",
-  "衬布",
-  "织带",
-  "蕾丝",
-  "花边",
-  "包边条",
-  "按扣",
-  "钩眼扣",
-  "魔术贴",
-  "其他"
-];
-
-const units = ["个", "米", "厘米", "团", "轴", "包", "卷", "克"];
+import { defaultManagedUnitKeys } from "@/lib/units";
 
 let seeded = false;
 
@@ -37,25 +22,23 @@ export function seedDatabase({ requireBootstrapEnv = false } = {}) {
     const now = nowIso();
     const hash = bcrypt.hashSync(password, 12);
     db.prepare(
-      "INSERT INTO users (username, password_hash, locale, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
-    ).run(username, hash, process.env.DEFAULT_LOCALE === "zh" ? "zh" : "en", now, now);
+      "INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(username, hash, process.env.DEFAULT_LOCALE === "zh" ? "zh" : "en", defaultUnitSystem, now, now);
   }
 
   const users = db.prepare("SELECT id FROM users").all() as Array<{ id: number }>;
   for (const user of users) {
-    seedList("material_categories", categories, user.id);
-    seedList("material_units", units, user.id);
+    seedManagedList("material_categories", managedCategoryKeys, user.id);
+    seedManagedList("material_units", defaultManagedUnitKeys, user.id);
   }
   seeded = true;
 }
 
-function seedList(table: "material_categories" | "material_units", names: string[], userId: number) {
+function seedManagedList(table: "material_categories" | "material_units", keys: readonly string[], userId: number) {
   const db = getSqlite();
-  const existing = db.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE user_id = ?`).get(userId) as {
-    count: number;
-  };
-  if (existing.count > 0) return;
   const now = nowIso();
-  const insert = db.prepare(`INSERT INTO ${table} (user_id, name, sort_order, created_at) VALUES (?, ?, ?, ?)`);
-  names.forEach((name, index) => insert.run(userId, name, index, now));
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO ${table} (user_id, definition_key, active, sort_order, created_at) VALUES (?, ?, 1, ?, ?)`
+  );
+  keys.forEach((key, index) => insert.run(userId, key, index, now));
 }

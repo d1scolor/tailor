@@ -4,19 +4,20 @@ import { nowIso } from "@/lib/time";
 
 type ProjectInput = {
   patternIds?: number[];
-  fabrics?: Array<{ fabricId: number; lengthUsed: number }>;
+  fabrics?: Array<{ fabricId: number; lengthUsedM: number }>;
   materials?: Array<{ materialId: number }>;
 };
 
+const measurementEpsilon = 1e-9;
+
 export function applyProjectLinks(db: Database.Database, projectId: number, userId: number, input: ProjectInput) {
-  const fabricLinks = groupLinks(input.fabrics ?? [], "fabricId", "lengthUsed");
+  const fabricLinks = groupLinks(input.fabrics ?? [], "fabricId", "lengthUsedM");
   for (const link of fabricLinks) {
-    validateFabricUse(db, link.fabricId, userId, link.lengthUsed);
+    validateFabricUse(db, link.fabricId, userId, link.lengthUsedM);
     db.prepare(
-      "INSERT INTO project_fabrics (project_id, fabric_id, length_used, created_at) VALUES (?, ?, ?, ?)"
-    ).run(projectId, link.fabricId, link.lengthUsed, nowIso());
+      "INSERT INTO project_fabrics (project_id, fabric_id, length_used_m, created_at) VALUES (?, ?, ?, ?)"
+    ).run(projectId, link.fabricId, link.lengthUsedM, nowIso());
   }
-  recomputeFabricRemaining(db, fabricLinks.map((link) => link.fabricId));
 
   for (const patternId of input.patternIds ?? []) {
     const pattern = db.prepare("SELECT id FROM patterns WHERE id = ? AND user_id = ?").get(patternId, userId);
@@ -54,38 +55,22 @@ function uniqueIds(ids: number[]) {
 }
 
 export function restoreProjectLinks(db: Database.Database, projectId: number) {
-  const fabrics = db.prepare("SELECT DISTINCT fabric_id AS fabricId FROM project_fabrics WHERE project_id = ?").all(projectId) as Array<{
-    fabricId: number;
-  }>;
-
   db.prepare("DELETE FROM project_fabrics WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_patterns WHERE project_id = ?").run(projectId);
   db.prepare("DELETE FROM project_materials WHERE project_id = ?").run(projectId);
-  recomputeFabricRemaining(db, fabrics.map((link) => link.fabricId));
 }
 
-export function validateFabricUse(db: Database.Database, fabricId: number, userId: number, lengthUsed: number) {
-  if (lengthUsed <= 0) throw new ApiError("invalid_consumption", 409, "Length used must be positive.");
+export function validateFabricUse(db: Database.Database, fabricId: number, userId: number, lengthUsedM: number) {
+  if (lengthUsedM <= 0) throw new ApiError("invalid_consumption", 409, "Length used must be positive.");
   const fabric = db
     .prepare(
-      `SELECT length_total AS lengthTotal,
-        COALESCE((SELECT SUM(length_used) FROM project_fabrics WHERE fabric_id = fabrics.id), 0) AS usedLength
+      `SELECT length_total_m AS lengthTotalM,
+        COALESCE((SELECT SUM(length_used_m) FROM project_fabrics WHERE fabric_id = fabrics.id), 0) AS usedLengthM
        FROM fabrics WHERE id = ? AND user_id = ?`
     )
-    .get(fabricId, userId) as { lengthTotal: number; usedLength: number } | undefined;
+    .get(fabricId, userId) as { lengthTotalM: number; usedLengthM: number } | undefined;
   if (!fabric) throw new ApiError("fabric_not_found", 404, "Fabric not found.");
-  if (lengthUsed > fabric.lengthTotal - fabric.usedLength) {
+  if (lengthUsedM - (fabric.lengthTotalM - fabric.usedLengthM) > measurementEpsilon) {
     throw new ApiError("insufficient_fabric", 409, "The fabric does not have enough length remaining.");
-  }
-}
-
-export function recomputeFabricRemaining(db: Database.Database, fabricIds: number[]) {
-  for (const fabricId of uniqueIds(fabricIds)) {
-    db.prepare(
-      `UPDATE fabrics
-       SET length_remaining = MAX(length_total - COALESCE((SELECT SUM(length_used) FROM project_fabrics WHERE fabric_id = fabrics.id), 0), 0),
-           updated_at = ?
-       WHERE id = ?`
-    ).run(nowIso(), fabricId);
   }
 }

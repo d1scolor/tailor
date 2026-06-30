@@ -40,11 +40,8 @@ export const fabrics = sqliteTable("fabrics", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   quantity: integer("quantity").notNull().default(1),
-  lengthTotal: real("length_total").notNull(),
-  lengthRemaining: real("length_remaining").notNull(),
-  lengthUnit: text("length_unit").notNull().default("m"),
-  width: real("width"),
-  widthUnit: text("width_unit"),
+  lengthTotalM: real("length_total_m").notNull(),
+  widthM: real("width_m"),
   colors: text("colors").notNull().default("[]"),
   purpose: text("purpose").notNull().default("garment"),
   materialType: text("material_type").notNull().default("other"),
@@ -78,11 +75,16 @@ export const materialCategories = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
+    definitionKey: text("definition_key"),
+    customName: text("custom_name"),
+    active: integer("active").notNull().default(1),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull()
   },
-  (table) => ({ uniqueName: uniqueIndex("material_categories_user_name").on(table.userId, table.name) })
+  (table) => ({
+    uniqueDefinition: uniqueIndex("material_categories_user_definition").on(table.userId, table.definitionKey),
+    uniqueCustomName: uniqueIndex("material_categories_user_custom_name").on(table.userId, table.customName)
+  })
 );
 
 export const materialUnits = sqliteTable(
@@ -90,11 +92,16 @@ export const materialUnits = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
+    definitionKey: text("definition_key"),
+    customName: text("custom_name"),
+    active: integer("active").notNull().default(1),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull()
   },
-  (table) => ({ uniqueName: uniqueIndex("material_units_user_name").on(table.userId, table.name) })
+  (table) => ({
+    uniqueDefinition: uniqueIndex("material_units_user_definition").on(table.userId, table.definitionKey),
+    uniqueCustomName: uniqueIndex("material_units_user_custom_name").on(table.userId, table.customName)
+  })
 );
 
 export const materials = sqliteTable("materials", {
@@ -102,9 +109,8 @@ export const materials = sqliteTable("materials", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   categoryId: integer("category_id").references(() => materialCategories.id, { onDelete: "set null" }),
-  unitId: integer("unit_id").references(() => materialUnits.id, { onDelete: "set null" }),
-  quantityTotal: real("quantity_total").notNull(),
-  quantityRemaining: real("quantity_remaining").notNull(),
+  unitId: integer("unit_id").notNull().references(() => materialUnits.id, { onDelete: "restrict" }),
+  quantityTotalCanonical: real("quantity_total_canonical").notNull(),
   usageStatus: text("usage_status").notNull().default("available"),
   colors: text("colors").notNull().default("[]"),
   source: text("source"),
@@ -148,7 +154,7 @@ export const projectFabrics = sqliteTable("project_fabrics", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   fabricId: integer("fabric_id").notNull().references(() => fabrics.id, { onDelete: "restrict" }),
-  lengthUsed: real("length_used").notNull(),
+  lengthUsedM: real("length_used_m").notNull(),
   createdAt: text("created_at").notNull()
 });
 

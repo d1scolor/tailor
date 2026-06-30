@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { money, numberValue } from "@/lib/format";
 import { summary } from "@/lib/repository";
+import { fabricUnits, toDisplayValue } from "@/lib/units";
 
 type Metric = {
   label: string;
@@ -21,11 +22,13 @@ export default async function OverviewPage() {
   if (!user) redirect("/login");
 
   const t = await getTranslations();
+  const locale = await getLocale();
   const fabrics = summary("fabrics", user.id);
   const materials = summary("materials", user.id);
   const patterns = summary("patterns", user.id);
   const tools = summary("tools", user.id);
   const projects = summary("projects", user.id);
+  const units = fabricUnits(user.unitSystem);
 
   const inventoryCount = (fabrics.count ?? 0) + (materials.count ?? 0) + (patterns.count ?? 0) + (tools.count ?? 0);
   const inventorySpend = (fabrics.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0);
@@ -35,8 +38,8 @@ export default async function OverviewPage() {
       cost: fabrics.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: fabrics.count ?? 0 },
-        { label: t("fabrics.usedLength"), value: `${numberValue(fabrics.lengthUsed)} ${fabrics.lengthUnit ?? "m"}` },
-        { label: t("fabrics.remainingLength"), value: `${numberValue(fabrics.lengthRemaining)} ${fabrics.lengthUnit ?? "m"}` }
+        { label: t("fabrics.usedLength"), value: `${numberValue(toDisplayValue(fabrics.lengthUsedM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}` },
+        { label: t("fabrics.remainingLength"), value: `${numberValue(toDisplayValue(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}` }
       ]
     },
     {
@@ -86,7 +89,7 @@ export default async function OverviewPage() {
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
         <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend)} />
         <SummaryCard label={t("overview.inventoryItems")} value={inventoryCount} />
-        <SummaryCard label={t("overview.fabricRemaining")} value={`${numberValue(fabrics.lengthRemaining)} ${fabrics.lengthUnit ?? "m"}`} />
+        <SummaryCard label={t("overview.fabricRemaining")} value={`${numberValue(toDisplayValue(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}`} />
         <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0)} />
       </section>
 

@@ -12,15 +12,12 @@ export function currencySymbol() {
   return runtimeCurrencySymbol();
 }
 
-export function numberValue(value?: number | null) {
+export function numberValue(value?: number | null, locale?: string) {
   if (value == null) return "";
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
-}
-
-export function lengthToMetres(value: number, unit: string) {
-  if (unit === "cm") return value / 100;
-  if (unit === "yd") return value * 0.9144;
-  return value;
+  const resolvedLocale =
+    locale ??
+    (typeof document !== "undefined" ? document.documentElement.lang : undefined);
+  return new Intl.NumberFormat(resolvedLocale, { maximumFractionDigits: 2 }).format(value);
 }
 
 function runtimeCurrencySymbol() {

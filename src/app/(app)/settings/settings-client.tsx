@@ -5,9 +5,17 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import type { UnitSystem } from "@/lib/units";
+import { isManagedUnitKey, managedUnitDefinitions, type UnitSystem } from "@/lib/units";
 
-type Item = { id: number; name: string; color?: string | null; sortOrder?: number };
+type Item = {
+  id: number;
+  name?: string;
+  definitionKey?: string | null;
+  customName?: string | null;
+  active?: number;
+  color?: string | null;
+  sortOrder?: number;
+};
 
 export function SettingsClient({
   locale,
@@ -34,21 +42,31 @@ export function SettingsClient({
   }
 
   async function setLocale(next: "en" | "zh") {
-    await fetch("/api/settings/locale", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locale: next })
-    });
-    window.location.reload();
+    try {
+      const response = await fetch("/api/settings/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: next })
+      });
+      if (!response.ok) return notify(t("common.error"));
+      window.location.reload();
+    } catch {
+      notify(t("common.error"));
+    }
   }
 
   async function setUnitSystem(next: UnitSystem) {
-    await fetch("/api/settings/unit-system", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ unitSystem: next })
-    });
-    window.location.reload();
+    try {
+      const response = await fetch("/api/settings/unit-system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unitSystem: next })
+      });
+      if (!response.ok) return notify(t("common.error"));
+      window.location.reload();
+    } catch {
+      notify(t("common.error"));
+    }
   }
 
   async function logout() {
@@ -97,8 +115,8 @@ export function SettingsClient({
           <Button variant={unitSystem === "metric" ? "primary" : "secondary"} onClick={() => setUnitSystem("metric")}>
             {t("settings.metricUnits")}
           </Button>
-          <Button variant={unitSystem === "us" ? "primary" : "secondary"} onClick={() => setUnitSystem("us")}>
-            {t("settings.usUnits")}
+          <Button variant={unitSystem === "imperial" ? "primary" : "secondary"} onClick={() => setUnitSystem("imperial")}>
+            {t("settings.imperialUnits")}
           </Button>
         </div>
       </Card>
@@ -110,9 +128,9 @@ export function SettingsClient({
           <Button type="submit">{t("common.save")}</Button>
         </form>
       </Card>
-      <Manager title={t("settings.manageTags")} endpoint="/api/tags" items={tagList} setItems={setTagList} />
-      <Manager title={t("settings.manageCategories")} endpoint="/api/meta/categories" items={categoryList} setItems={setCategoryList} />
-      <Manager title={t("settings.manageUnits")} endpoint="/api/meta/units" items={unitList} setItems={setUnitList} />
+      <Manager kind="plain" title={t("settings.manageTags")} endpoint="/api/tags" items={tagList} setItems={setTagList} unitSystem={unitSystem} notify={notify} />
+      <Manager kind="category" title={t("settings.manageCategories")} endpoint="/api/meta/categories" items={categoryList} setItems={setCategoryList} unitSystem={unitSystem} notify={notify} />
+      <Manager kind="unit" title={t("settings.manageUnits")} endpoint="/api/meta/units" items={unitList} setItems={setUnitList} unitSystem={unitSystem} notify={notify} />
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.backup")}</h2>
         <Button asChild>
@@ -138,19 +156,28 @@ function Toast({ message }: { message: string }) {
 }
 
 function Manager({
+  kind,
   title,
   endpoint,
   items,
-  setItems
+  setItems,
+  unitSystem,
+  notify
 }: {
+  kind: "plain" | "category" | "unit";
   title: string;
   endpoint: string;
   items: Item[];
   setItems: (items: Item[]) => void;
+  unitSystem: UnitSystem;
+  notify: (message: string) => void;
 }) {
   const t = useTranslations();
   const [name, setName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
   async function create() {
+    if (!name.trim()) return;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,11 +187,51 @@ function Manager({
       const { item } = await response.json();
       setItems([...items, item]);
       setName("");
+    } else {
+      notify(await settingsErrorMessage(response, t));
     }
   }
   async function remove(id: number) {
-    await fetch(`${endpoint}/${id}`, { method: "DELETE" });
-    setItems(items.filter((item) => item.id !== id));
+    const response = await fetch(`${endpoint}/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      notify(await settingsErrorMessage(response, t));
+      return;
+    }
+    if (kind === "plain") {
+      setItems(items.filter((item) => item.id !== id));
+      return;
+    }
+    const { item } = await response.json();
+    setItems(items.map((current) => (current.id === id ? item : current)));
+  }
+  async function restore(id: number) {
+    const response = await fetch(`${endpoint}/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: true })
+    });
+    if (!response.ok) {
+      notify(await settingsErrorMessage(response, t));
+      return;
+    }
+    const { item } = await response.json();
+    setItems(items.map((current) => (current.id === id ? item : current)));
+  }
+  async function rename(id: number) {
+    if (!editingName.trim()) return;
+    const response = await fetch(`${endpoint}/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editingName.trim() })
+    });
+    if (!response.ok) {
+      notify(await settingsErrorMessage(response, t));
+      return;
+    }
+    const { item } = await response.json();
+    setItems(items.map((current) => (current.id === id ? item : current)));
+    setEditingId(null);
+    setEditingName("");
   }
   return (
     <Card className="space-y-3 p-4">
@@ -177,16 +244,53 @@ function Manager({
       </div>
       <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.id} className="flex items-center justify-between rounded-md border border-border p-2">
-            <span>{item.name}</span>
-            <Button size="sm" variant="ghost" onClick={() => remove(item.id)}>
-              {t("common.delete")}
-            </Button>
+          <div key={item.id} className={`flex items-center justify-between gap-2 rounded-md border border-border p-2 ${item.active === 0 ? "opacity-60" : ""}`}>
+            {editingId === item.id ? (
+              <Input value={editingName} onChange={(event) => setEditingName(event.target.value)} />
+            ) : (
+              <span>{metaLabel(item, kind, unitSystem, t)}</span>
+            )}
+            <div className="flex gap-1">
+              {editingId === item.id ? (
+                <Button size="sm" variant="ghost" onClick={() => rename(item.id)}>{t("common.save")}</Button>
+              ) : item.customName && item.active !== 0 ? (
+                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setEditingName(item.customName ?? ""); }}>{t("common.edit")}</Button>
+              ) : null}
+              {item.active === 0 ? (
+                <Button size="sm" variant="ghost" onClick={() => restore(item.id)}>{t("common.restore")}</Button>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => remove(item.id)}>
+                  {kind === "plain" ? t("common.delete") : t("common.hide")}
+                </Button>
+              )}
+            </div>
           </div>
         ))}
       </div>
     </Card>
   );
+}
+
+async function settingsErrorMessage(response: Response, t: ReturnType<typeof useTranslations>) {
+  const body = await response.json().catch(() => null);
+  const known = new Set(["validation", "duplicate_name", "managed_value", "not_found", "unknown"]);
+  return typeof body?.error === "string" && known.has(body.error)
+    ? t(`errors.${body.error}` as any)
+    : t("common.error");
+}
+
+function metaLabel(item: Item, kind: "plain" | "category" | "unit", unitSystem: UnitSystem, t: ReturnType<typeof useTranslations>) {
+  if (item.name) return item.name;
+  if (item.customName) return item.customName;
+  if (!item.definitionKey) return "";
+  if (kind === "category") return t(`meta.categories.${item.definitionKey}` as any);
+  if (kind === "unit" && isManagedUnitKey(item.definitionKey)) {
+    const definition = managedUnitDefinitions[item.definitionKey];
+    if (definition.behavior === "static") return t(definition.labelKey as any);
+    const display = definition[unitSystem];
+    return `${t(display.labelKey as any)} (${display.symbol})`;
+  }
+  return item.definitionKey;
 }
 
 function RestoreForm() {
