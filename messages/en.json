@@ -18,7 +18,7 @@
     "sortUnitPriceLength": "Unit price (length)",
     "sortUnitPriceSize": "Unit price (size)",
     "sortQuantity": "Quantity",
-    "sortMetersLeft": "Meters left",
+    "sortRemainingLength": "Remaining length",
     "sortDirection": "Sort direction",
     "asc": "Ascending",
     "desc": "Descending",
@@ -48,10 +48,10 @@
     "to": "To",
     "remarks": "Remarks",
     "photos": "Photos",
-    "color": "Color",
-    "colors": "Colors",
-    "selectColor": "Select color",
-    "customColor": "Custom color",
+    "color": "Colour",
+    "colors": "Colours",
+    "selectColor": "Select colour",
+    "customColor": "Custom colour",
     "tags": "Tags",
     "settings": "Settings",
     "confirmDelete": "Delete this item?",
@@ -97,6 +97,7 @@
     "invalid_consumption": "Length used must be positive",
     "insufficient_fabric": "The fabric does not have enough length remaining",
     "linked": "This item is used by a project",
+    "currency_confirmation_required": "Confirm that existing monetary values should be reinterpreted without conversion",
     "not_found": "The requested item was not found",
     "unknown": "Something went wrong"
   },
@@ -145,7 +146,7 @@
     "camel": "Camel",
     "brown": "Brown",
     "chocolate": "Chocolate",
-    "gray": "Gray",
+    "gray": "Grey",
     "silver": "Silver",
     "black": "Black"
   },
@@ -312,8 +313,10 @@
   "settings": {
     "title": "Settings",
     "language": "Language",
-    "english": "English",
-    "chinese": "中文",
+    "currency": "Currency",
+    "currencyReinterpretNote": "Changing currency reinterprets existing amounts without converting them.",
+    "currencyReinterpretConfirm": "Change currency from {from} to {to}? Existing amounts will not be converted.",
+    "currencyZeroDecimalWarning": "{currency} displays whole units, so existing decimal fractions will be hidden.",
     "password": "Change password",
     "unitSystem": "Unit system",
     "metricUnits": "Metric (m / cm / kg / g)",
@@ -339,7 +342,7 @@
     "categories": {
       "thread": "Thread",
       "button": "Button",
-      "zipper": "Zipper",
+      "zipper": "Zip",
       "elastic": "Elastic",
       "interfacing": "Interfacing",
       "ribbon": "Ribbon",
@@ -366,6 +369,14 @@
       "pack": "pack",
       "roll": "roll",
       "unspecified": "unspecified unit"
+    },
+    "unitQuantities": {
+      "piece": "{count, plural, one {# piece} other {# pieces}}",
+      "ball": "{count, plural, one {# ball} other {# balls}}",
+      "spool": "{count, plural, one {# spool} other {# spools}}",
+      "pack": "{count, plural, one {# pack} other {# packs}}",
+      "roll": "{count, plural, one {# roll} other {# rolls}}",
+      "unspecified": "{count, number}"
     }
   }
 }

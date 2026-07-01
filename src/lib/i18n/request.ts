@@ -1,26 +1,21 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 import { defaultLocale } from "@/lib/env";
+import { messageLocaleFor, normalizeLocale, type Locale } from "@/lib/i18n/locales";
 
-export const locales = ["en", "zh"] as const;
-export type Locale = (typeof locales)[number];
+export { locales, normalizeLocale, type Locale } from "@/lib/i18n/locales";
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
   const requested = cookieStore.get("tailor_locale")?.value;
   const headerLocale = parseAcceptLanguage((await headers()).get("accept-language"));
   const locale = normalizeLocale(requested) ?? headerLocale ?? defaultLocale;
+  const messageLocale = messageLocaleFor(locale);
   return {
     locale,
-    messages: (await import(`../../../messages/${locale}.json`)).default
+    messages: (await import(`../../../messages/${messageLocale}.json`)).default
   };
 });
-
-export function normalizeLocale(locale?: string | null): Locale | null {
-  if (locale === "zh" || locale === "zh-CN") return "zh";
-  if (locale === "en") return "en";
-  return null;
-}
 
 function parseAcceptLanguage(value?: string | null): Locale | null {
   if (!value) return null;

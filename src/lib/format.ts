@@ -1,15 +1,26 @@
-export function money(cents?: number | null) {
-  if (cents == null) return "";
-  return `${runtimeCurrencySymbol()}${(cents / 100).toFixed(2)}`;
+import {
+  currencyFractionDigits,
+  currencySymbolFor,
+  formatCurrency,
+  type CurrencyCode
+} from "@/lib/currency";
+
+export function money(storedHundredths: number | null | undefined, locale: string | undefined, code: CurrencyCode) {
+  if (storedHundredths == null) return "";
+  return formatCurrency(storedHundredths, code, resolvedLocale(locale));
 }
 
-export function moneyDecimal(cents?: number | null, fractionDigits = 4) {
-  if (cents == null) return "";
-  return `${runtimeCurrencySymbol()}${(cents / 100).toFixed(fractionDigits)}`;
+export function currencySymbol(locale: string | undefined, code: CurrencyCode) {
+  return currencySymbolFor(code, resolvedLocale(locale));
 }
 
-export function currencySymbol() {
-  return runtimeCurrencySymbol();
+export function currencyInputStep(code: CurrencyCode) {
+  return currencyFractionDigits(code) === 0 ? "1" : "0.01";
+}
+
+export function storedAmountForInput(storedHundredths: number | null | undefined, code: CurrencyCode) {
+  if (storedHundredths == null) return "";
+  return (storedHundredths / 100).toFixed(currencyFractionDigits(code));
 }
 
 export function numberValue(value?: number | null, locale?: string) {
@@ -20,13 +31,16 @@ export function numberValue(value?: number | null, locale?: string) {
   return new Intl.NumberFormat(resolvedLocale, { maximumFractionDigits: 2 }).format(value);
 }
 
-function runtimeCurrencySymbol() {
-  if (typeof window !== "undefined") return window.__TAILOR_CURRENCY_SYMBOL__ ?? process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? "$";
-  return process.env.CURRENCY_SYMBOL ?? process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? "$";
+export function dateValue(value?: string | null, locale?: string) {
+  if (!value) return "";
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00.000Z`) : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(resolvedLocale(locale), {
+    dateStyle: "medium",
+    timeZone: "UTC"
+  }).format(date);
 }
 
-declare global {
-  interface Window {
-    __TAILOR_CURRENCY_SYMBOL__?: string;
-  }
+function resolvedLocale(locale?: string) {
+  return locale ?? (typeof document !== "undefined" ? document.documentElement.lang : undefined);
 }

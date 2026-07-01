@@ -5,6 +5,8 @@ import { seedDatabase } from "@/lib/db/seed";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { handleApiError } from "@/lib/api";
+import { defaultLocale } from "@/lib/env";
+import { normalizeLocale } from "@/lib/i18n/locales";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -19,13 +21,17 @@ export async function POST(request: NextRequest) {
     const input = loginSchema.parse(await request.json());
     const user = getSqlite()
       .prepare("SELECT id, password_hash AS passwordHash, locale FROM users WHERE username = ?")
-      .get(input.username) as { id: number; passwordHash: string; locale: "en" | "zh" } | undefined;
+      .get(input.username) as { id: number; passwordHash: string; locale: string } | undefined;
     if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
     const response = NextResponse.json({ ok: true });
     setSessionCookie(response, createSession(user.id));
-    response.cookies.set("tailor_locale", user.locale, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
+    response.cookies.set("tailor_locale", normalizeLocale(user.locale) ?? defaultLocale, {
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365
+    });
     return response;
   } catch (error) {
     return handleApiError(error);

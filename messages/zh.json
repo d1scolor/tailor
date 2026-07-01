@@ -18,7 +18,7 @@
     "sortUnitPriceLength": "单价（长度）",
     "sortUnitPriceSize": "单价（尺寸）",
     "sortQuantity": "数量",
-    "sortMetersLeft": "剩余米数",
+    "sortRemainingLength": "剩余长度",
     "sortDirection": "排序方向",
     "asc": "升序",
     "desc": "降序",
@@ -97,6 +97,7 @@
     "invalid_consumption": "使用长度必须大于零",
     "insufficient_fabric": "布料剩余长度不足",
     "linked": "该条目已被作品使用",
+    "currency_confirmation_required": "请确认现有金额仅更改货币显示且不进行换算",
     "not_found": "未找到所需条目",
     "unknown": "出错了"
   },
@@ -312,8 +313,10 @@
   "settings": {
     "title": "设置",
     "language": "语言",
-    "english": "English",
-    "chinese": "中文",
+    "currency": "货币",
+    "currencyReinterpretNote": "更改货币只会重新显示现有金额，不会进行汇率换算。",
+    "currencyReinterpretConfirm": "将货币从 {from} 更改为 {to}？现有金额不会进行换算。",
+    "currencyZeroDecimalWarning": "{currency} 仅显示整数，现有小数部分将被隐藏。",
     "password": "修改密码",
     "unitSystem": "单位系统",
     "metricUnits": "公制（米 / 厘米 / 千克 / 克）",
@@ -366,6 +369,14 @@
       "pack": "包",
       "roll": "卷",
       "unspecified": "未指定单位"
+    },
+    "unitQuantities": {
+      "piece": "{count, number} 个",
+      "ball": "{count, number} 球",
+      "spool": "{count, number} 卷",
+      "pack": "{count, number} 包",
+      "roll": "{count, number} 卷",
+      "unspecified": "{count, number}"
     }
   }
 }

@@ -192,12 +192,24 @@ SELECT
 FROM materials
 LEFT JOIN material_units ON material_units.id = materials.unit_id;
 
+CREATE TABLE project_materials_next (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  material_id INTEGER NOT NULL REFERENCES materials_next(id) ON DELETE RESTRICT
+);
+
+INSERT INTO project_materials_next (id, project_id, material_id)
+SELECT id, project_id, material_id
+FROM project_materials;
+
+DROP TABLE project_materials;
 DROP TABLE materials;
 DROP TABLE material_units;
 DROP TABLE material_categories;
 ALTER TABLE material_units_next RENAME TO material_units;
 ALTER TABLE material_categories_next RENAME TO material_categories;
 ALTER TABLE materials_next RENAME TO materials;
+ALTER TABLE project_materials_next RENAME TO project_materials;
 
 CREATE UNIQUE INDEX material_units_user_definition
   ON material_units(user_id, definition_key)
@@ -211,6 +223,9 @@ CREATE UNIQUE INDEX material_categories_user_definition
 CREATE UNIQUE INDEX material_categories_user_custom_name
   ON material_categories(user_id, custom_name)
   WHERE custom_name IS NOT NULL;
+CREATE INDEX project_materials_project_idx ON project_materials(project_id);
+CREATE INDEX project_materials_material_idx ON project_materials(material_id);
+CREATE UNIQUE INDEX project_materials_project_material_idx ON project_materials(project_id, material_id);
 
 CREATE TABLE fabrics_next (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

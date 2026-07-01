@@ -1,0 +1,23 @@
+{
+  "USD": { "fractionDigits": 2 },
+  "AUD": { "fractionDigits": 2 },
+  "GBP": { "fractionDigits": 2 },
+  "EUR": { "fractionDigits": 2 },
+  "CNY": { "fractionDigits": 2 },
+  "JPY": { "fractionDigits": 0 },
+  "KRW": { "fractionDigits": 0 },
+  "HKD": { "fractionDigits": 2 },
+  "TWD": { "fractionDigits": 2 },
+  "CAD": { "fractionDigits": 2 },
+  "NZD": { "fractionDigits": 2 },
+  "SGD": { "fractionDigits": 2 },
+  "CHF": { "fractionDigits": 2 },
+  "PLN": { "fractionDigits": 2 },
+  "SEK": { "fractionDigits": 2 },
+  "NOK": { "fractionDigits": 2 },
+  "DKK": { "fractionDigits": 2 },
+  "BRL": { "fractionDigits": 2 },
+  "MXN": { "fractionDigits": 2 },
+  "INR": { "fractionDigits": 2 },
+  "ZAR": { "fractionDigits": 2 }
+}

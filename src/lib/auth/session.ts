@@ -7,13 +7,17 @@ import { seedDatabase } from "@/lib/db/seed";
 import { restoreState } from "@/lib/restore-state";
 import { addDaysIso, nowIso } from "@/lib/time";
 import { normalizeUnitSystem, type UnitSystem } from "@/lib/units";
+import { defaultLocale } from "@/lib/env";
+import { normalizeLocale, type Locale } from "@/lib/i18n/locales";
+import { normalizeCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
 
 export type AuthUser = {
   id: number;
   username: string;
-  locale: "en" | "zh";
+  locale: Locale;
   unitSystem: UnitSystem;
+  currencyCode: CurrencyCode;
   sessionId: string;
 };
 
@@ -58,13 +62,22 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
   const db = getSqlite();
   const row = db
     .prepare(
-      `SELECT sessions.id AS sessionId, sessions.expires_at AS expiresAt, users.id, users.username, users.locale, users.unit_system AS unitSystem
+      `SELECT sessions.id AS sessionId, sessions.expires_at AS expiresAt, users.id, users.username, users.locale,
+              users.unit_system AS unitSystem, users.currency_code AS currencyCode
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.id = ?`
     )
     .get(sessionId) as
-    | { sessionId: string; expiresAt: string; id: number; username: string; locale: "en" | "zh"; unitSystem?: string }
+    | {
+        sessionId: string;
+        expiresAt: string;
+        id: number;
+        username: string;
+        locale: string;
+        unitSystem?: string;
+        currencyCode?: string | null;
+      }
     | undefined;
   if (!row) return null;
   if (new Date(row.expiresAt).getTime() <= Date.now()) {
@@ -76,7 +89,16 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
     db.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(expires, sessionId);
     db.prepare("DELETE FROM sessions WHERE user_id = ? AND expires_at <= ?").run(row.id, nowIso());
   }
-  return { id: row.id, username: row.username, locale: row.locale, unitSystem: normalizeUnitSystem(row.unitSystem), sessionId: row.sessionId };
+  const currencyCode = normalizeCurrencyCode(row.currencyCode);
+  if (!currencyCode) throw new Error(`Unsupported persisted currency code: ${row.currencyCode ?? "<missing>"}`);
+  return {
+    id: row.id,
+    username: row.username,
+    locale: normalizeLocale(row.locale) ?? defaultLocale,
+    unitSystem: normalizeUnitSystem(row.unitSystem),
+    currencyCode,
+    sessionId: row.sessionId
+  };
 }
 
 export function requireAuthFromRequest(request: NextRequest) {

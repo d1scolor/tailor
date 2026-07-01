@@ -1,4 +1,6 @@
 import path from "node:path";
+import { inferInitialCurrencyCode } from "@/lib/currency";
+import { normalizeLocale } from "@/lib/i18n/locales";
 
 export const dataDir =
   process.env.DATA_DIR ??
@@ -11,7 +13,20 @@ export const originalsDir = path.join(photosDir, "originals");
 export const displayDir = path.join(photosDir, "display");
 export const thumbsDir = path.join(photosDir, "thumbs");
 
-export const defaultLocale = process.env.DEFAULT_LOCALE === "zh" ? "zh" : "en";
-export const defaultUnitSystem = process.env.DEFAULT_UNIT_SYSTEM === "imperial" ? "imperial" : "metric";
-export const currencySymbol = process.env.CURRENCY_SYMBOL ?? "$";
+const configuredLocale = process.env.DEFAULT_LOCALE?.trim();
+const normalizedDefaultLocale = configuredLocale ? normalizeLocale(configuredLocale) : "en-AU";
+if (!normalizedDefaultLocale) throw new Error(`Unsupported DEFAULT_LOCALE: ${process.env.DEFAULT_LOCALE}`);
+export const defaultLocale = normalizedDefaultLocale;
+const configuredUnitSystem = process.env.DEFAULT_UNIT_SYSTEM?.trim().toLowerCase();
+if (configuredUnitSystem && configuredUnitSystem !== "metric" && configuredUnitSystem !== "imperial") {
+  throw new Error(`Unsupported DEFAULT_UNIT_SYSTEM: ${process.env.DEFAULT_UNIT_SYSTEM}`);
+}
+export const defaultUnitSystem = configuredUnitSystem === "imperial" ? "imperial" : "metric";
+export function configuredInitialCurrencyCode(locale: string = defaultLocale) {
+  return inferInitialCurrencyCode({
+    configuredCode: process.env.CURRENCY_CODE,
+    legacySymbol: process.env.CURRENCY_SYMBOL,
+    locale
+  });
+}
 export const maxUploadMb = Number(process.env.MAX_UPLOAD_MB ?? 20);

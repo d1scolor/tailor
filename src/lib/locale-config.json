@@ -1,0 +1,77 @@
+{
+  "en-AU": {
+    "messageLocale": "en",
+    "direction": "ltr",
+    "aliases": ["en"]
+  },
+  "en-GB": {
+    "messageLocale": "en",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "en-US": {
+    "messageLocale": "en",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "zh-CN": {
+    "messageLocale": "zh",
+    "direction": "ltr",
+    "aliases": ["zh", "zh-Hans", "zh-Hans-CN", "zh-SG"]
+  },
+  "zh-TW": {
+    "messageLocale": "zh-TW",
+    "direction": "ltr",
+    "aliases": ["zh-Hant-TW"]
+  },
+  "zh-HK": {
+    "messageLocale": "zh-HK",
+    "direction": "ltr",
+    "aliases": ["zh-Hant-HK"]
+  },
+  "fr": {
+    "messageLocale": "fr",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "de": {
+    "messageLocale": "de",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "ja": {
+    "messageLocale": "ja",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "ko": {
+    "messageLocale": "ko",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "it": {
+    "messageLocale": "it",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "es": {
+    "messageLocale": "es",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "pt-BR": {
+    "messageLocale": "pt-BR",
+    "direction": "ltr",
+    "aliases": ["pt"]
+  },
+  "nl": {
+    "messageLocale": "nl",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "pl": {
+    "messageLocale": "pl",
+    "direction": "ltr",
+    "aliases": []
+  }
+}

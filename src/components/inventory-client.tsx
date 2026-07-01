@@ -2,17 +2,26 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { currencySymbol, money, numberValue } from "@/lib/format";
+import { useCurrencyCode } from "@/components/currency-provider";
+import {
+  currencyInputStep,
+  currencySymbol,
+  dateValue,
+  money,
+  numberValue,
+  storedAmountForInput
+} from "@/lib/format";
 import type { Kind } from "@/lib/repository";
 import {
   areaToDisplay,
   displayUnit,
   fabricUnits,
+  formatMeasurement,
   isManagedUnitKey,
   managedUnitDefinitions,
   toCanonicalValue,
@@ -20,6 +29,8 @@ import {
   type ConvertibleUnitKey,
   type UnitSystem
 } from "@/lib/units";
+import type { CurrencyCode } from "@/lib/currency";
+import { unitPriceHundredths } from "@/lib/pricing";
 
 type AnyItem = Record<string, any>;
 type MetaItem = {
@@ -294,6 +305,8 @@ const colorSwatches: Record<string, string> = {
 
 export function InventoryClient(props: Props) {
   const t = useTranslations();
+  const locale = useLocale();
+  const currencyCode = useCurrencyCode();
   const unitSystem = props.unitSystem ?? "metric";
   const defaultExcludeUsedUp = props.kind === "fabrics" || props.kind === "materials";
   const [items, setItems] = useState(props.items);
@@ -596,7 +609,7 @@ export function InventoryClient(props: Props) {
       </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
-        {summaryCards(props.kind, summary, unitSystem, t).map((card) => (
+        {summaryCards(props.kind, summary, unitSystem, currencyCode, locale, t).map((card) => (
           <Card key={card.label} className="p-3">
             <div className="text-xs text-muted-foreground">{card.label}</div>
             <div className="mt-1 text-lg font-semibold">{card.value}</div>
@@ -790,6 +803,8 @@ function InventoryBrowserView({
   onItemClick: (item: AnyItem) => void;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
+  const currencyCode = useCurrencyCode();
   const units = fabricUnits(unitSystem);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const filterDrawer = filterOpen ? (
@@ -828,13 +843,13 @@ function InventoryBrowserView({
               <option value="price">{t("common.sortPrice")}</option>
               {kind === "fabrics" ? (
                 <>
-                  <option value="unitPriceLength">{unitPriceLabel(units.lengthUnit, t)}</option>
-                  <option value="unitPriceSize">{unitPriceLabel(units.areaUnit, t)}</option>
+                  <option value="unitPriceLength">{unitPriceLabel(units.lengthUnit, currencyCode, locale, t)}</option>
+                  <option value="unitPriceSize">{unitPriceLabel(units.areaUnit, currencyCode, locale, t)}</option>
                 </>
               ) : (
                 <option value="unitPrice">{t("common.sortUnitPrice")}</option>
               )}
-              {kind === "fabrics" ? <option value="remainingMetres">{t("common.sortMetersLeft")}</option> : null}
+              {kind === "fabrics" ? <option value="remainingMetres">{t("common.sortRemainingLength")}</option> : null}
               {kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
             </Select>
           </label>
@@ -895,12 +910,14 @@ function ItemCard({
   onClick?: () => void;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
+  const currencyCode = useCurrencyCode();
   const photoItems = item.photos ?? [];
   const photos = photoItems.map((photo: AnyItem) => photo.id);
   const coverIndex = Math.max(0, photoItems.findIndex((photo: AnyItem) => photo.isCover));
   const photo = photos[coverIndex];
-  const stat = primaryStat(kind, item, unitSystem, t);
-  const unitPrice = unitPriceStat(kind, item, unitSystem, t, activeSort);
+  const stat = primaryStat(kind, item, unitSystem, currencyCode, locale, t);
+  const unitPrice = unitPriceStat(kind, item, unitSystem, currencyCode, locale, t, activeSort);
   return (
     <Card
       role={onClick ? "button" : undefined}
@@ -944,6 +961,7 @@ function ItemCard({
 
 function Fields(props: FieldsProps) {
   const t = useTranslations();
+  const currencyCode = useCurrencyCode();
   const [newTag, setNewTag] = useState("");
   const [materialUnitId, setMaterialUnitId] = useState<number | null>(
     props.item.unitId ?? props.units.find((item) => item.active !== 0)?.id ?? null
@@ -1048,8 +1066,8 @@ function Fields(props: FieldsProps) {
         {props.kind === "tools" ? <Field name="model" label={t("tools.model")} defaultValue={props.item.model} /> : null}
         {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "good"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
-        {props.kind !== "projects" ? <Field name="priceCents" label={t("common.price")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.priceCents)} /> : null}
-        {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step="0.01" defaultValue={dollarsFromCents(props.item.valueCents)} /> : null}
+        {props.kind !== "projects" ? <Field name="priceCents" label={t("common.price")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.priceCents, currencyCode)} /> : null}
+        {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.valueCents, currencyCode)} /> : null}
         {props.kind !== "projects" ? <TextChoiceField name="source" label={t("common.source")} value={props.item.source ?? ""} options={props.sourceOptions} /> : null}
         {props.kind !== "projects" ? <Field name="purchasedAt" label={t("common.date")} type="date" defaultValue={props.item.purchasedAt} /> : null}
       </div>
@@ -2144,6 +2162,8 @@ function Detail({
   onUploaded
 }: DetailProps) {
   const t = useTranslations();
+  const locale = useLocale();
+  const currencyCode = useCurrencyCode();
   return (
     <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="max-h-[92dvh] w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
@@ -2151,7 +2171,7 @@ function Detail({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="break-words text-lg font-semibold">{item.name}</h2>
-            <p className="text-sm text-muted-foreground">{primaryStat(kind, item, unitSystem, t)}</p>
+            <p className="text-sm text-muted-foreground">{primaryStat(kind, item, unitSystem, currencyCode, locale, t)}</p>
           </div>
           <div className="flex gap-1">
             <Button size="icon" variant="secondary" aria-label={t("common.edit")} onClick={onEdit}>
@@ -2183,7 +2203,7 @@ function Detail({
           />
         ) : null}
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-          {detailRows(kind, item, unitSystem, t).map((row) => (
+          {detailRows(kind, item, unitSystem, currencyCode, locale, t).map((row) => (
             <div key={row.label} className="min-w-0 rounded-md bg-muted p-2">
               <dt className="text-xs text-muted-foreground">{row.label}</dt>
               <dd className="break-words">{row.value}</dd>
@@ -2211,6 +2231,7 @@ function ProjectLinkedDetails({
   onOpenPhoto: (photos: string[], index: number) => void;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const patterns = selectedOptionItems(patternOptions, item.patternIds ?? []);
   const fabricLinks = (item.fabrics ?? []) as Array<{ fabricId: number; lengthUsedM: number }>;
   const fabrics = selectedOptionItems(fabricOptions, fabricLinks.map((link) => link.fabricId));
@@ -2226,7 +2247,7 @@ function ProjectLinkedDetails({
         unitSystem={unitSystem}
         details={(linkedItem) => {
           const link = fabricLinks.find((itemLink) => itemLink.fabricId === linkedItem.id);
-          return link ? `${t("projects.lengthUsed")} ${numberValue(toDisplayValue(link.lengthUsedM, "lengthLong", unitSystem))} ${fabricUnits(unitSystem).lengthUnit}` : "";
+          return link ? `${t("projects.lengthUsed")} ${formatMeasurement(link.lengthUsedM, "lengthLong", unitSystem, locale)}` : "";
         }}
         onOpenPhoto={onOpenPhoto}
       />
@@ -2704,20 +2725,26 @@ function collectColors(groups: AnyItem[][]) {
   ].sort();
 }
 
-function summaryCards(kind: Kind, summary: Record<string, any>, unitSystem: UnitSystem, t: ReturnType<typeof useTranslations>) {
+function summaryCards(
+  kind: Kind,
+  summary: Record<string, any>,
+  unitSystem: UnitSystem,
+  currencyCode: CurrencyCode,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
   if (kind === "fabrics") {
-    const units = fabricUnits(unitSystem);
     return [
       { label: t("fabrics.total"), value: summary.count ?? 0 },
-      { label: t("fabrics.cost"), value: money(summary.totalCost) },
-      { label: t("fabrics.usedLength"), value: `${numberValue(toDisplayValue(summary.lengthUsedM ?? 0, "lengthLong", unitSystem))} ${units.lengthUnit}` },
-      { label: t("fabrics.remainingLength"), value: `${numberValue(toDisplayValue(summary.lengthRemainingM ?? 0, "lengthLong", unitSystem))} ${units.lengthUnit}` }
+      { label: t("fabrics.cost"), value: money(summary.totalCost, locale, currencyCode) },
+      { label: t("fabrics.usedLength"), value: formatMeasurement(summary.lengthUsedM ?? 0, "lengthLong", unitSystem, locale) },
+      { label: t("fabrics.remainingLength"), value: formatMeasurement(summary.lengthRemainingM ?? 0, "lengthLong", unitSystem, locale) }
     ];
   }
   if (kind === "projects") {
     return [
       { label: t("projects.total"), value: summary.count ?? 0 },
-      { label: t("projects.value"), value: money(summary.totalValue) },
+      { label: t("projects.value"), value: money(summary.totalValue, locale, currencyCode) },
       { label: t("projects.produced"), value: summary.totalProduced ?? 0 }
     ];
   }
@@ -2725,92 +2752,130 @@ function summaryCards(kind: Kind, summary: Record<string, any>, unitSystem: Unit
     return [
       { label: t("tools.total"), value: summary.count ?? 0 },
       { label: t("tools.totalQuantity"), value: summary.totalQuantity ?? 0 },
-      { label: t("tools.cost"), value: money(summary.totalCost) },
+      { label: t("tools.cost"), value: money(summary.totalCost, locale, currencyCode) },
       { label: t("tools.needsAttention"), value: summary.needsAttention ?? 0 }
     ];
   }
   const prefix = kind === "patterns" ? "patterns" : "materials";
   return [
     { label: t(`${prefix}.total`), value: summary.count ?? 0 },
-    { label: t(`${prefix}.cost`), value: money(summary.totalCost) },
+    { label: t(`${prefix}.cost`), value: money(summary.totalCost, locale, currencyCode) },
     { label: t(`${prefix}.usedCount`), value: summary.used ?? 0 },
     { label: t(`${prefix}.unusedCount`), value: summary.unused ?? 0 }
   ];
 }
 
-function primaryStat(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: ReturnType<typeof useTranslations>) {
+function primaryStat(
+  kind: Kind,
+  item: AnyItem,
+  unitSystem: UnitSystem,
+  currencyCode: CurrencyCode,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
   if (kind === "fabrics") {
-    const unit = fabricUnits(unitSystem).lengthUnit;
-    return `${t("common.total")} ${numberValue(toDisplayValue(item.lengthTotalM, "lengthLong", unitSystem))} ${unit} / ${t("common.remaining")} ${numberValue(toDisplayValue(item.lengthRemainingM, "lengthLong", unitSystem))} ${unit}`;
+    return `${t("common.total")} ${formatMeasurement(item.lengthTotalM, "lengthLong", unitSystem, locale)} / ${t("common.remaining")} ${formatMeasurement(item.lengthRemainingM, "lengthLong", unitSystem, locale)}`;
   }
   if (kind === "patterns") {
     const patternFor = item.patternFor ? patternForLabel(item.patternFor, t) : "";
     return [patternFor, item.size].filter(Boolean).join(" · ") || t("common.details");
   }
   if (kind === "materials") {
-    const quantity = materialDisplayQuantity(item, unitSystem);
-    const unit = materialUnitLabel(item, unitSystem, t);
-    return `${t(`materialUsageStatus.${item.usageStatus ?? "available"}`)} · ${t("common.total")} ${numberValue(quantity)} ${unit}`;
+    return `${t(`materialUsageStatus.${item.usageStatus ?? "available"}`)} · ${t("common.total")} ${materialQuantityText(item, unitSystem, locale, t)}`;
   }
   if (kind === "tools") return `${item.category ? toolCategoryLabel(item.category, t) : t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
-  return [t("projects.produced"), numberValue(item.quantity), item.valueCents ? money(item.valueCents) : ""].filter(Boolean).join(" · ");
+  return [
+    t("projects.produced"),
+    numberValue(item.quantity),
+    item.valueCents != null ? money(item.valueCents, locale, currencyCode) : ""
+  ].filter(Boolean).join(" · ");
 }
 
-function unitPriceStat(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: ReturnType<typeof useTranslations>, activeSort?: string) {
-  if (kind === "fabrics" && item.priceCents && item.lengthTotalM > 0) {
-    const value = activeSort === "unitPriceSize" || activeSort === "unitPrice" ? fabricUnitPriceAreaValue(item, unitSystem) : fabricUnitPriceLengthValue(item, unitSystem);
+function unitPriceStat(
+  kind: Kind,
+  item: AnyItem,
+  unitSystem: UnitSystem,
+  currencyCode: CurrencyCode,
+  locale: string,
+  t: ReturnType<typeof useTranslations>,
+  activeSort?: string
+) {
+  if (kind === "fabrics" && item.priceCents != null && item.lengthTotalM > 0) {
+    const value =
+      activeSort === "unitPriceSize" || activeSort === "unitPrice"
+        ? fabricUnitPriceAreaValue(item, unitSystem, currencyCode, locale)
+        : fabricUnitPriceLengthValue(item, unitSystem, currencyCode, locale);
     if (value) return `${t("common.unitPrice")} ${value}`;
   }
-  if (kind === "materials" && item.priceCents && item.quantityTotalCanonical > 0) {
+  if (kind === "materials" && item.quantityTotalCanonical > 0) {
     const displayQuantity = materialDisplayQuantity(item, unitSystem);
-    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / displayQuantity))}/${materialUnitLabel(item, unitSystem, t)}`;
+    const unitPrice = unitPriceHundredths(item.priceCents, displayQuantity);
+    if (unitPrice != null) {
+      return `${t("common.unitPrice")} ${money(unitPrice, locale, currencyCode)}/${materialUnitLabel(item, unitSystem, t)}`;
+    }
   }
-  if (kind === "patterns" && item.priceCents) {
+  if (kind === "patterns") {
     const divisor = item.pieces && item.pieces > 0 ? item.pieces : 1;
-    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / divisor))}/${t("common.piece")}`;
+    const unitPrice = unitPriceHundredths(item.priceCents, divisor);
+    if (unitPrice != null) {
+      return `${t("common.unitPrice")} ${money(unitPrice, locale, currencyCode)}/${t("common.piece")}`;
+    }
   }
-  if (kind === "projects" && item.valueCents && item.quantity > 0) {
-    return `${t("common.unitPrice")} ${money(Math.round(item.valueCents / item.quantity))}/${t("common.piece")}`;
+  if (kind === "projects") {
+    const unitPrice = unitPriceHundredths(item.valueCents, item.quantity);
+    if (unitPrice != null) {
+      return `${t("common.unitPrice")} ${money(unitPrice, locale, currencyCode)}/${t("common.piece")}`;
+    }
   }
-  if (kind === "tools" && item.priceCents && item.quantity > 0) {
-    return `${t("common.unitPrice")} ${money(Math.round(item.priceCents / item.quantity))}/${t("common.piece")}`;
+  if (kind === "tools") {
+    const unitPrice = unitPriceHundredths(item.priceCents, item.quantity);
+    if (unitPrice != null) {
+      return `${t("common.unitPrice")} ${money(unitPrice, locale, currencyCode)}/${t("common.piece")}`;
+    }
   }
   return "";
 }
 
-function fabricUnitPriceLengthValue(item: AnyItem, unitSystem: UnitSystem) {
-  const amount = fabricUnitPriceLengthAmount(item, unitSystem);
+function fabricUnitPriceLengthValue(item: AnyItem, unitSystem: UnitSystem, currencyCode: CurrencyCode, locale: string) {
+  const amount = fabricUnitPriceLengthAmount(item, unitSystem, currencyCode, locale);
   if (!amount) return "";
   return `${amount}/${fabricUnits(unitSystem).lengthUnit}`;
 }
 
-function fabricUnitPriceAreaValue(item: AnyItem, unitSystem: UnitSystem) {
-  const amount = fabricUnitPriceAreaAmount(item, unitSystem);
+function fabricUnitPriceAreaValue(item: AnyItem, unitSystem: UnitSystem, currencyCode: CurrencyCode, locale: string) {
+  const amount = fabricUnitPriceAreaAmount(item, unitSystem, currencyCode, locale);
   if (!amount) return "";
   return `${amount}/${fabricUnits(unitSystem).areaUnit}`;
 }
 
-function fabricUnitPriceLengthAmount(item: AnyItem, unitSystem: UnitSystem) {
+function fabricUnitPriceLengthAmount(item: AnyItem, unitSystem: UnitSystem, currencyCode: CurrencyCode, locale: string) {
   if (item.priceCents == null) return "";
   const length = toDisplayValue(Number(item.lengthTotalM), "lengthLong", unitSystem);
-  return length > 0 ? money(Math.round(Number(item.priceCents) / length)) : "";
+  return length > 0 ? money(Math.round(Number(item.priceCents) / length), locale, currencyCode) : "";
 }
 
-function fabricUnitPriceAreaAmount(item: AnyItem, unitSystem: UnitSystem) {
+function fabricUnitPriceAreaAmount(item: AnyItem, unitSystem: UnitSystem, currencyCode: CurrencyCode, locale: string) {
   if (item.priceCents == null) return "";
   const area = areaToDisplay(Number(item.lengthTotalM) * Number(item.widthM), unitSystem);
-  return area > 0 ? money(Math.round(Number(item.priceCents) / area)) : "";
+  return area > 0 ? money(Math.round(Number(item.priceCents) / area), locale, currencyCode) : "";
 }
 
-function unitPriceUnit(unit: string) {
-  return `${currencySymbol()}/${unit}`;
+function unitPriceUnit(unit: string, currencyCode: CurrencyCode, locale: string) {
+  return `${currencySymbol(locale, currencyCode)}/${unit}`;
 }
 
-function unitPriceLabel(unit: string, t: ReturnType<typeof useTranslations>) {
-  return t("common.unitPriceWithUnit", { unit: unitPriceUnit(unit) });
+function unitPriceLabel(unit: string, currencyCode: CurrencyCode, locale: string, t: ReturnType<typeof useTranslations>) {
+  return t("common.unitPriceWithUnit", { unit: unitPriceUnit(unit, currencyCode, locale) });
 }
 
-function detailRows(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: ReturnType<typeof useTranslations>) {
+function detailRows(
+  kind: Kind,
+  item: AnyItem,
+  unitSystem: UnitSystem,
+  currencyCode: CurrencyCode,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
   const rows: Array<{ label: string; value: string }> = [];
   const add = (label: string, value?: unknown, formatter?: (value: any) => string) => {
     if (value === null || value === undefined || value === "") return;
@@ -2822,14 +2887,14 @@ function detailRows(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: Return
     add(t("fabrics.quantity"), item.quantity);
     add(t("fabrics.purpose"), item.purpose, (value) => t(`fabricPurpose.${value}`));
     add(t("fabrics.materialType"), item.materialType, (value) => fabricMaterialTypeLabel(value, t));
-    add(t("fabrics.lengthTotal"), item.lengthTotalM, (value) => `${numberValue(toDisplayValue(value, "lengthLong", unitSystem))} ${units.lengthUnit}`);
-    add(t("fabrics.lengthRemaining"), item.lengthRemainingM, (value) => `${numberValue(toDisplayValue(value, "lengthLong", unitSystem))} ${units.lengthUnit}`);
-    add(t("fabrics.width"), item.widthM, (value) => `${numberValue(toDisplayValue(value, "lengthShort", unitSystem))} ${units.widthUnit}`);
+    add(t("fabrics.lengthTotal"), item.lengthTotalM, (value) => formatMeasurement(value, "lengthLong", unitSystem, locale));
+    add(t("fabrics.lengthRemaining"), item.lengthRemainingM, (value) => formatMeasurement(value, "lengthLong", unitSystem, locale));
+    add(t("fabrics.width"), item.widthM, (value) => formatMeasurement(value, "lengthShort", unitSystem, locale));
     add(t("common.source"), item.source);
-    add(t("common.price"), item.priceCents, money);
-    add(unitPriceLabel(units.lengthUnit, t), fabricUnitPriceLengthAmount(item, unitSystem));
-    add(unitPriceLabel(units.areaUnit, t), fabricUnitPriceAreaAmount(item, unitSystem));
-    add(t("common.date"), item.purchasedAt);
+    add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
+    add(unitPriceLabel(units.lengthUnit, currencyCode, locale, t), fabricUnitPriceLengthAmount(item, unitSystem, currencyCode, locale));
+    add(unitPriceLabel(units.areaUnit, currencyCode, locale, t), fabricUnitPriceAreaAmount(item, unitSystem, currencyCode, locale));
+    add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else if (kind === "patterns") {
     add(t("patterns.patternType"), item.patternType, (value) => patternTypeLabel(value, t));
     add(t("patterns.difficulty"), item.difficulty, (value) => t(`patternDifficulty.${value}`));
@@ -2837,8 +2902,8 @@ function detailRows(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: Return
     add(t("patterns.size"), item.size);
     add(t("patterns.pieces"), item.pieces);
     add(t("common.source"), item.source);
-    add(t("common.price"), item.priceCents, money);
-    add(t("common.date"), item.purchasedAt);
+    add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
+    add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else if (kind === "materials") {
     add(t("materials.usageStatus"), item.usageStatus ?? "available", (value) => t(`materialUsageStatus.${value}`));
     add(t("materials.category"), materialCategoryLabel(item, t));
@@ -2846,8 +2911,8 @@ function detailRows(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: Return
     add(t("materials.quantityTotal"), materialDisplayQuantity(item, unitSystem), numberValue);
     add(t("materials.quantityRemaining"), materialDisplayRemaining(item, unitSystem), numberValue);
     add(t("common.source"), item.source);
-    add(t("common.price"), item.priceCents, money);
-    add(t("common.date"), item.purchasedAt);
+    add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
+    add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else if (kind === "tools") {
     add(t("tools.category"), item.category, (value) => toolCategoryLabel(value, t));
     add(t("tools.quantity"), item.quantity);
@@ -2855,12 +2920,12 @@ function detailRows(kind: Kind, item: AnyItem, unitSystem: UnitSystem, t: Return
     add(t("tools.model"), item.model);
     add(t("tools.condition"), item.condition, (value) => t(`toolCondition.${value}`));
     add(t("common.source"), item.source);
-    add(t("common.price"), item.priceCents, money);
-    add(t("common.date"), item.purchasedAt);
+    add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
+    add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else {
     add(t("projects.quantity"), item.quantity);
-    add(t("projects.value"), item.valueCents, money);
-    add(t("projects.fabricCost"), item.cost?.fabricCost, money);
+    add(t("projects.value"), item.valueCents, (value) => money(value, locale, currencyCode));
+    add(t("projects.fabricCost"), item.cost?.fabricCost, (value) => money(value, locale, currencyCode));
   }
 
   add(t("common.remarks"), item.remarks);
@@ -2910,6 +2975,24 @@ function materialDisplayRemaining(item: AnyItem, unitSystem: UnitSystem) {
   return definition.behavior === "convertible" ? toDisplayValue(canonical, definition.key, unitSystem) : canonical;
 }
 
+function materialQuantityText(
+  item: AnyItem,
+  unitSystem: UnitSystem,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (isManagedUnitKey(item.unitDefinitionKey)) {
+    const definition = managedUnitDefinitions[item.unitDefinitionKey];
+    if (definition.behavior === "convertible") {
+      return formatMeasurement(Number(item.quantityTotalCanonical ?? 0), definition.key, unitSystem, locale);
+    }
+    return t(`meta.unitQuantities.${definition.key}` as any, {
+      count: materialDisplayQuantity(item, unitSystem)
+    });
+  }
+  return `${numberValue(materialDisplayQuantity(item, unitSystem), locale)} ${materialUnitLabel(item, unitSystem, t)}`;
+}
+
 function compatibleMaterialUnits(current: MetaItem, next: MetaItem) {
   const currentDefinition =
     current.definitionKey && isManagedUnitKey(current.definitionKey) ? managedUnitDefinitions[current.definitionKey] : null;
@@ -2944,7 +3027,7 @@ function formToBody(kind: Kind, form: FormData) {
     tagIds: form.getAll("tagIds").map(Number)
   };
   if (kind !== "projects") {
-    base.priceCents = centsFromDollars(form.get("priceCents"));
+    base.priceCents = storedHundredthsFromInput(form.get("priceCents"));
     base.source = stringOrNull(form.get("source"));
     base.purchasedAt = stringOrNull(form.get("purchasedAt"));
   }
@@ -2995,7 +3078,7 @@ function formToBody(kind: Kind, form: FormData) {
   return {
     ...base,
     quantity: Number(form.get("quantity") || 1),
-    valueCents: centsFromDollars(form.get("valueCents")),
+    valueCents: storedHundredthsFromInput(form.get("valueCents")),
     patternIds: [...new Set(form.getAll("patternIds").map(Number).filter(Boolean))],
     fabrics: fabricIds
       .map((id, index) => ({ fabricId: Number(id), lengthUsedM: Number(fabricAmounts[index]) }))
@@ -3039,12 +3122,7 @@ function numberOrNull(value: FormDataEntryValue | null) {
   return text ? Number(text) : null;
 }
 
-function dollarsFromCents(cents?: number | null) {
-  if (cents == null) return "";
-  return (cents / 100).toFixed(2);
-}
-
-function centsFromDollars(value: FormDataEntryValue | null) {
+function storedHundredthsFromInput(value: FormDataEntryValue | null) {
   const text = value?.toString().trim() ?? "";
   return text ? Math.round(Number(text) * 100) : null;
 }
