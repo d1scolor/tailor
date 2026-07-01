@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { createTranslator } from "next-intl";
 import { managedCategoryKeys } from "./meta";
 import { managedUnitDefinitions } from "./units";
 import {
-  localeDefinitions,
   messageLocales,
   type MessageLocale
 } from "./i18n/locales";
@@ -24,17 +24,61 @@ function flatten(value: Messages, prefix = "", result = new Set<string>()) {
   return result;
 }
 
+function flattenValues(value: Messages, prefix = "", result = new Map<string, string>()) {
+  for (const [key, child] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (child && typeof child === "object" && !Array.isArray(child)) {
+      flattenValues(child as Messages, path, result);
+    } else {
+      assert.equal(typeof child, "string", `${path} must be a string`);
+      assert.notEqual((child as string).trim(), "", `${path} must not be empty`);
+      result.set(path, child as string);
+    }
+  }
+  return result;
+}
+
+function argumentsIn(message: string) {
+  return [...message.matchAll(/{([A-Za-z][A-Za-z0-9_]*)\s*(?:,|})/g)]
+    .map((match) => match[1])
+    .filter((argument, index, arguments_) => arguments_.indexOf(argument) === index)
+    .sort();
+}
+
 test("all message catalogs have matching keys", () => {
   const reference = [...flatten(load(messageLocales[0]))].sort();
   for (const locale of messageLocales.slice(1)) assert.deepEqual([...flatten(load(locale))].sort(), reference);
 });
 
+test("all translations preserve interpolation arguments", () => {
+  const reference = flattenValues(load(messageLocales[0]));
+  for (const locale of messageLocales.slice(1)) {
+    const translated = flattenValues(load(locale));
+    for (const [key, message] of reference) {
+      assert.deepEqual(argumentsIn(translated.get(key)!), argumentsIn(message), `${locale}/${key}`);
+    }
+  }
+});
+
+test("all messages compile and format through next-intl", () => {
+  for (const locale of messageLocales) {
+    const messages = load(locale);
+    const translate = createTranslator({
+      locale,
+      messages,
+      onError(error) {
+        throw error;
+      }
+    });
+    for (const key of flattenValues(messages).keys()) {
+      translate(key, { count: 2, unit: "m", from: "USD", to: "AUD", currency: "JPY" });
+    }
+  }
+});
+
 test("every managed metadata definition has translations", () => {
   for (const messageLocale of messageLocales) {
     const keys = flatten(load(messageLocale));
-    for (const definition of Object.values(localeDefinitions)) {
-      assert.ok(keys.has(definition.labelKey), `${messageLocale}/${definition.labelKey}`);
-    }
     for (const category of managedCategoryKeys) {
       assert.ok(keys.has(`meta.categories.${category}`), `${messageLocale}/${category}`);
     }

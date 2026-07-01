@@ -14,10 +14,12 @@ The app uses SQLite under `./data/db/tailor.db` and stores photos under `./data/
 Before the first start, set `INITIAL_USERNAME`, `INITIAL_PASSWORD`, `DEFAULT_LOCALE`,
 `DEFAULT_UNIT_SYSTEM`, and `CURRENCY_CODE` in `.env`.
 
-Supported initial locales are `en-AU`, `en-GB`, `en-US`, and `zh-CN`. The legacy
-values `en` and `zh` resolve to `en-AU` and `zh-CN`. English uses one Australian
-English message catalog while retaining regional date, number, and currency
-formatting.
+Supported locales are `en-AU`, `en-GB`, `en-US`, `zh-CN`, `zh-TW`, `zh-HK`,
+`fr`, `de`, `ja`, `ko`, `it`, `es`, `pt-BR`, `nl`, and `pl`. The legacy values
+`en` and `zh` resolve to `en-AU` and `zh-CN`. English uses one Australian English
+message catalog while retaining regional date, number, and currency formatting.
+Traditional Chinese has separate Taiwan and Hong Kong catalogs so terminology
+can differ without changing stored data.
 
 Supported unit systems are `metric` and `imperial`. Supported currencies are
 `USD`, `AUD`, `GBP`, `EUR`, `CNY`, `JPY`, `KRW`, `HKD`, `TWD`, `CAD`, `NZD`,

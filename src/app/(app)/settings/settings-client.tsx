@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { isManagedUnitKey, managedUnitDefinitions, type UnitSystem } from "@/lib/units";
-import { localeDefinitions, locales, type Locale } from "@/lib/i18n/locales";
+import type { Locale } from "@/lib/i18n/locales";
 import { currencyCodes, currencyFractionDigits, type CurrencyCode } from "@/lib/currency";
 
 type Item = {
@@ -21,6 +21,7 @@ type Item = {
 
 export function SettingsClient({
   locale,
+  localeOptions,
   currencyCode,
   currencyHasData,
   unitSystem,
@@ -29,6 +30,7 @@ export function SettingsClient({
   units
 }: {
   locale: Locale;
+  localeOptions: { value: Locale; label: string }[];
   currencyCode: CurrencyCode;
   currencyHasData: boolean;
   unitSystem: UnitSystem;
@@ -132,17 +134,17 @@ export function SettingsClient({
       <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.language")}</h2>
-        <div className="flex flex-wrap gap-2">
-          {locales.map((supportedLocale) => (
-            <Button
-              key={supportedLocale}
-              variant={locale === supportedLocale ? "primary" : "secondary"}
-              onClick={() => setLocale(supportedLocale)}
-            >
-              {t(localeDefinitions[supportedLocale].labelKey)}
-            </Button>
+        <Select
+          className="max-w-xs"
+          value={locale}
+          onChange={(event) => setLocale(event.target.value as Locale)}
+        >
+          {localeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
-        </div>
+        </Select>
       </Card>
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.currency")}</h2>

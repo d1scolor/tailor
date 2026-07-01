@@ -15,11 +15,22 @@ export function normalizeLocale(value?: string | null): Locale | null {
       return locale;
     }
   }
+  const language = tag.split("-")[0];
+  const baseLocale = locales.find((locale) => !locale.includes("-") && locale.toLowerCase() === language);
+  if (baseLocale) return baseLocale;
   return null;
 }
 
 export function localeDirection(locale: Locale) {
   return localeDefinitions[locale].direction;
+}
+
+export function localeLabel(locale: Locale) {
+  try {
+    return new Intl.DisplayNames([locale], { type: "language" }).of(locale) ?? locale;
+  } catch {
+    return locale;
+  }
 }
 
 export function messageLocaleFor(locale: Locale) {

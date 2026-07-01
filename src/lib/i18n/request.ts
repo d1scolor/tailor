@@ -10,9 +10,10 @@ export default getRequestConfig(async () => {
   const requested = cookieStore.get("tailor_locale")?.value;
   const headerLocale = parseAcceptLanguage((await headers()).get("accept-language"));
   const locale = normalizeLocale(requested) ?? headerLocale ?? defaultLocale;
+  const messageLocale = messageLocaleFor(locale);
   return {
     locale,
-    messages: (await import(`../../../messages/${messageLocaleFor(locale)}.json`)).default
+    messages: (await import(`../../../messages/${messageLocale}.json`)).default
   };
 });
 

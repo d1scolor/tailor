@@ -17,11 +17,15 @@ for (const definition of Object.values(localeConfig)) {
   }
 }
 const requestedLocale = (process.env.DEFAULT_LOCALE ?? "en-AU").trim().replaceAll("_", "-").toLowerCase();
-const defaultLocale = Object.entries(localeConfig).find(
+const exactLocale = Object.entries(localeConfig).find(
   ([locale, definition]) =>
     locale.toLowerCase() === requestedLocale ||
     definition.aliases.some((alias) => alias.toLowerCase() === requestedLocale)
 )?.[0];
+const baseLocale = Object.keys(localeConfig).find(
+  (locale) => !locale.includes("-") && locale.toLowerCase() === requestedLocale.split("-")[0]
+);
+const defaultLocale = exactLocale ?? baseLocale;
 if (!defaultLocale) throw new Error(`Unsupported DEFAULT_LOCALE: ${process.env.DEFAULT_LOCALE}`);
 const requestedUnitSystem = (process.env.DEFAULT_UNIT_SYSTEM ?? "metric").trim().toLowerCase();
 if (requestedUnitSystem !== "metric" && requestedUnitSystem !== "imperial") {
