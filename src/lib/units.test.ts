@@ -4,6 +4,7 @@ import {
   areaToDisplay,
   defaultManagedUnitKeys,
   displayUnit,
+  formatMeasurement,
   managedUnitDefinitions,
   normalizeUnitSystem,
   toCanonicalValue,
@@ -44,6 +45,12 @@ test("legacy US preference normalizes to imperial", () => {
 test("area conversion uses square-yard scaling", () => {
   assert.equal(areaToDisplay(0.83612736, "imperial"), 1);
   assert.equal(areaToDisplay(2, "metric"), 2);
+});
+
+test("measurement formatting delegates locale-specific unit spacing", () => {
+  assert.equal(formatMeasurement(1, "lengthLong", "metric", "en"), "1 m");
+  assert.equal(formatMeasurement(1, "lengthLong", "metric", "zh"), "1米");
+  assert.match(formatMeasurement(0.9144, "lengthLong", "imperial", "fr"), /^1.+yd$/);
 });
 
 test("default managed keys are unique, valid, and exclude unspecified", () => {

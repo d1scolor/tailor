@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
-import { money, numberValue } from "@/lib/format";
+import { money } from "@/lib/format";
 import { summary } from "@/lib/repository";
-import { fabricUnits, toDisplayValue } from "@/lib/units";
+import { formatMeasurement } from "@/lib/units";
 
 type Metric = {
   label: string;
@@ -23,13 +23,12 @@ export default async function OverviewPage() {
 
   const t = await getTranslations();
   const locale = await getLocale();
+  const currencyCode = user.currencyCode;
   const fabrics = summary("fabrics", user.id);
   const materials = summary("materials", user.id);
   const patterns = summary("patterns", user.id);
   const tools = summary("tools", user.id);
   const projects = summary("projects", user.id);
-  const units = fabricUnits(user.unitSystem);
-
   const inventoryCount = (fabrics.count ?? 0) + (materials.count ?? 0) + (patterns.count ?? 0) + (tools.count ?? 0);
   const inventorySpend = (fabrics.totalCost ?? 0) + (materials.totalCost ?? 0) + (patterns.totalCost ?? 0) + (tools.totalCost ?? 0);
   const categories: Category[] = [
@@ -38,8 +37,8 @@ export default async function OverviewPage() {
       cost: fabrics.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: fabrics.count ?? 0 },
-        { label: t("fabrics.usedLength"), value: `${numberValue(toDisplayValue(fabrics.lengthUsedM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}` },
-        { label: t("fabrics.remainingLength"), value: `${numberValue(toDisplayValue(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}` }
+        { label: t("fabrics.usedLength"), value: formatMeasurement(fabrics.lengthUsedM ?? 0, "lengthLong", user.unitSystem, locale) },
+        { label: t("fabrics.remainingLength"), value: formatMeasurement(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem, locale) }
       ]
     },
     {
@@ -73,7 +72,7 @@ export default async function OverviewPage() {
       metrics: [
         { label: t("overview.count"), value: projects.count ?? 0 },
         { label: t("overview.produced"), value: projects.totalProduced ?? 0 },
-        { label: t("projects.value"), value: money(projects.totalValue ?? 0) }
+        { label: t("projects.value"), value: money(projects.totalValue ?? 0, locale, currencyCode) }
       ]
     }
   ];
@@ -87,10 +86,10 @@ export default async function OverviewPage() {
       </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
-        <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend)} />
+        <SummaryCard label={t("overview.inventorySpend")} value={money(inventorySpend, locale, currencyCode)} />
         <SummaryCard label={t("overview.inventoryItems")} value={inventoryCount} />
-        <SummaryCard label={t("overview.fabricRemaining")} value={`${numberValue(toDisplayValue(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem), locale)} ${units.lengthUnit}`} />
-        <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0)} />
+        <SummaryCard label={t("overview.fabricRemaining")} value={formatMeasurement(fabrics.lengthRemainingM ?? 0, "lengthLong", user.unitSystem, locale)} />
+        <SummaryCard label={t("overview.projectValue")} value={money(projects.totalValue ?? 0, locale, currencyCode)} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -101,7 +100,7 @@ export default async function OverviewPage() {
               <div key={category.key} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="font-medium">{t(`nav.${category.key}`)}</span>
-                  <span className="text-muted-foreground">{money(category.cost)}</span>
+                  <span className="text-muted-foreground">{money(category.cost, locale, currencyCode)}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(((category.cost ?? 0) / maxCategorySpend) * 100, category.cost ? 4 : 0)}%` }} />
@@ -118,7 +117,7 @@ export default async function OverviewPage() {
               <div key={category.key} className="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr]">
                 <div>
                   <div className="font-medium">{t(`nav.${category.key}`)}</div>
-                  {category.cost !== undefined ? <div className="text-sm text-muted-foreground">{money(category.cost)}</div> : null}
+                  {category.cost !== undefined ? <div className="text-sm text-muted-foreground">{money(category.cost, locale, currencyCode)}</div> : null}
                 </div>
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {category.metrics.map((metric) => (

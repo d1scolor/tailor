@@ -1,9 +1,10 @@
 import bcrypt from "bcryptjs";
 import { getSqlite } from "@/lib/db/client";
-import { defaultUnitSystem } from "@/lib/env";
+import { defaultLocale, defaultUnitSystem } from "@/lib/env";
 import { managedCategoryKeys } from "@/lib/meta";
 import { nowIso } from "@/lib/time";
 import { defaultManagedUnitKeys } from "@/lib/units";
+import { initializeUserCurrencies } from "@/lib/user-settings";
 
 let seeded = false;
 
@@ -23,7 +24,7 @@ export function seedDatabase({ requireBootstrapEnv = false } = {}) {
     const hash = bcrypt.hashSync(password, 12);
     db.prepare(
       "INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(username, hash, process.env.DEFAULT_LOCALE === "zh" ? "zh" : "en", defaultUnitSystem, now, now);
+    ).run(username, hash, defaultLocale, defaultUnitSystem, now, now);
   }
 
   const users = db.prepare("SELECT id FROM users").all() as Array<{ id: number }>;
@@ -31,6 +32,7 @@ export function seedDatabase({ requireBootstrapEnv = false } = {}) {
     seedManagedList("material_categories", managedCategoryKeys, user.id);
     seedManagedList("material_units", defaultManagedUnitKeys, user.id);
   }
+  initializeUserCurrencies(db);
   seeded = true;
 }
 

@@ -4,8 +4,9 @@ import { handleApiError } from "@/lib/api";
 import { requireAuthFromRequest } from "@/lib/auth/session";
 import { getSqlite } from "@/lib/db/client";
 import { nowIso } from "@/lib/time";
+import { locales } from "@/lib/i18n/locales";
 
-const schema = z.object({ locale: z.enum(["en", "zh"]) });
+const schema = z.object({ locale: z.enum(locales) });
 
 export const runtime = "nodejs";
 

@@ -1,0 +1,26 @@
+{
+  "en-AU": {
+    "messageLocale": "en",
+    "labelKey": "settings.englishAustralian",
+    "direction": "ltr",
+    "aliases": ["en"]
+  },
+  "en-GB": {
+    "messageLocale": "en",
+    "labelKey": "settings.englishBritish",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "en-US": {
+    "messageLocale": "en",
+    "labelKey": "settings.englishAmerican",
+    "direction": "ltr",
+    "aliases": []
+  },
+  "zh-CN": {
+    "messageLocale": "zh",
+    "labelKey": "settings.chineseSimplified",
+    "direction": "ltr",
+    "aliases": ["zh", "zh-Hans", "zh-Hans-CN", "zh-SG"]
+  }
+}

@@ -1047,6 +1047,25 @@ export function listPatternTypes(userId: number) {
   ).map((row) => row.patternType);
 }
 
+export function hasMonetaryData(userId: number) {
+  const row = getSqlite()
+    .prepare(
+      `SELECT EXISTS (
+         SELECT 1 FROM fabrics WHERE user_id = ? AND price_cents IS NOT NULL
+         UNION ALL
+         SELECT 1 FROM patterns WHERE user_id = ? AND price_cents IS NOT NULL
+         UNION ALL
+         SELECT 1 FROM materials WHERE user_id = ? AND price_cents IS NOT NULL
+         UNION ALL
+         SELECT 1 FROM tools WHERE user_id = ? AND price_cents IS NOT NULL
+         UNION ALL
+         SELECT 1 FROM projects WHERE user_id = ? AND (price_cents IS NOT NULL OR value_cents IS NOT NULL)
+       ) AS hasData`
+    )
+    .get(userId, userId, userId, userId, userId) as { hasData: number };
+  return row.hasData === 1;
+}
+
 export function parseIds(value: string | null) {
   if (!value) return [];
   return value

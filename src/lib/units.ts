@@ -7,6 +7,7 @@ export type ManagedUnitKey = ConvertibleUnitKey | StaticUnitKey;
 type DisplayUnit = {
   symbol: string;
   labelKey: string;
+  intlUnit: string;
   factorToCanonical: number;
 };
 
@@ -31,29 +32,29 @@ export const managedUnitDefinitions: Record<ManagedUnitKey, ManagedUnitDefinitio
     key: "lengthLong",
     behavior: "convertible",
     dimension: "length",
-    metric: { symbol: "m", labelKey: "meta.units.metre", factorToCanonical: 1 },
-    imperial: { symbol: "yd", labelKey: "meta.units.yard", factorToCanonical: 0.9144 }
+    metric: { symbol: "m", labelKey: "meta.units.metre", intlUnit: "meter", factorToCanonical: 1 },
+    imperial: { symbol: "yd", labelKey: "meta.units.yard", intlUnit: "yard", factorToCanonical: 0.9144 }
   },
   lengthShort: {
     key: "lengthShort",
     behavior: "convertible",
     dimension: "length",
-    metric: { symbol: "cm", labelKey: "meta.units.centimetre", factorToCanonical: 0.01 },
-    imperial: { symbol: "in", labelKey: "meta.units.inch", factorToCanonical: 0.0254 }
+    metric: { symbol: "cm", labelKey: "meta.units.centimetre", intlUnit: "centimeter", factorToCanonical: 0.01 },
+    imperial: { symbol: "in", labelKey: "meta.units.inch", intlUnit: "inch", factorToCanonical: 0.0254 }
   },
   massLarge: {
     key: "massLarge",
     behavior: "convertible",
     dimension: "mass",
-    metric: { symbol: "kg", labelKey: "meta.units.kilogram", factorToCanonical: 1 },
-    imperial: { symbol: "lb", labelKey: "meta.units.pound", factorToCanonical: 0.45359237 }
+    metric: { symbol: "kg", labelKey: "meta.units.kilogram", intlUnit: "kilogram", factorToCanonical: 1 },
+    imperial: { symbol: "lb", labelKey: "meta.units.pound", intlUnit: "pound", factorToCanonical: 0.45359237 }
   },
   massSmall: {
     key: "massSmall",
     behavior: "convertible",
     dimension: "mass",
-    metric: { symbol: "g", labelKey: "meta.units.gram", factorToCanonical: 0.001 },
-    imperial: { symbol: "oz", labelKey: "meta.units.ounce", factorToCanonical: 0.028349523125 }
+    metric: { symbol: "g", labelKey: "meta.units.gram", intlUnit: "gram", factorToCanonical: 0.001 },
+    imperial: { symbol: "oz", labelKey: "meta.units.ounce", intlUnit: "ounce", factorToCanonical: 0.028349523125 }
   },
   piece: { key: "piece", behavior: "static", labelKey: "meta.units.piece" },
   ball: { key: "ball", behavior: "static", labelKey: "meta.units.ball" },
@@ -94,6 +95,21 @@ export function toDisplayValue(canonicalValue: number, definitionKey: Convertibl
 
 export function toCanonicalValue(displayValue: number, definitionKey: ConvertibleUnitKey, unitSystem: UnitSystem) {
   return displayValue * displayUnit(definitionKey, unitSystem).factorToCanonical;
+}
+
+export function formatMeasurement(
+  canonicalValue: number,
+  definitionKey: ConvertibleUnitKey,
+  unitSystem: UnitSystem,
+  locale?: string
+) {
+  const unit = displayUnit(definitionKey, unitSystem);
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: unit.intlUnit,
+    unitDisplay: "short",
+    maximumFractionDigits: 2
+  }).format(canonicalValue / unit.factorToCanonical);
 }
 
 export function fabricUnits(unitSystem: UnitSystem) {

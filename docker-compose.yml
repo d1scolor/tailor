@@ -8,12 +8,12 @@ services:
     volumes:
       - ./data:/data
     environment:
-      INITIAL_USERNAME: "changeme"
-      INITIAL_PASSWORD: "changeme"
-      BASE_URL: "https://tailor.example.com"
-      DEFAULT_LOCALE: "zh"
-      DEFAULT_UNIT_SYSTEM: "metric"
-      CURRENCY_SYMBOL: "¥"
-      NEXT_PUBLIC_CURRENCY_SYMBOL: "¥"
-      MAX_UPLOAD_MB: "20"
+      INITIAL_USERNAME: "${INITIAL_USERNAME:-changeme}"
+      INITIAL_PASSWORD: "${INITIAL_PASSWORD:-changeme}"
+      BASE_URL: "${BASE_URL:-https://tailor.example.com}"
+      DEFAULT_LOCALE: "${DEFAULT_LOCALE:-en-AU}"
+      DEFAULT_UNIT_SYSTEM: "${DEFAULT_UNIT_SYSTEM:-metric}"
+      CURRENCY_CODE: "${CURRENCY_CODE:-}"
+      CURRENCY_SYMBOL: "${CURRENCY_SYMBOL:-}"
+      MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-20}"
       NODE_ENV: "production"

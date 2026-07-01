@@ -4,8 +4,10 @@ import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { isManagedUnitKey, managedUnitDefinitions, type UnitSystem } from "@/lib/units";
+import { localeDefinitions, locales, type Locale } from "@/lib/i18n/locales";
+import { currencyCodes, currencyFractionDigits, type CurrencyCode } from "@/lib/currency";
 
 type Item = {
   id: number;
@@ -19,12 +21,16 @@ type Item = {
 
 export function SettingsClient({
   locale,
+  currencyCode,
+  currencyHasData,
   unitSystem,
   tags,
   categories,
   units
 }: {
-  locale: "en" | "zh";
+  locale: Locale;
+  currencyCode: CurrencyCode;
+  currencyHasData: boolean;
   unitSystem: UnitSystem;
   tags: Item[];
   categories: Item[];
@@ -33,7 +39,7 @@ export function SettingsClient({
   const t = useTranslations();
   const [tagList, setTagList] = useState(tags);
   const [categoryList, setCategoryList] = useState(categories);
-  const [unitList, setUnitList] = useState(units);
+  const [unitList, setUnitList] = useState(units.filter((item) => item.definitionKey !== "unspecified"));
   const [toast, setToast] = useState<string | null>(null);
 
   function notify(message: string) {
@@ -41,7 +47,7 @@ export function SettingsClient({
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
   }
 
-  async function setLocale(next: "en" | "zh") {
+  async function setLocale(next: Locale) {
     try {
       const response = await fetch("/api/settings/locale", {
         method: "POST",
@@ -63,6 +69,32 @@ export function SettingsClient({
         body: JSON.stringify({ unitSystem: next })
       });
       if (!response.ok) return notify(t("common.error"));
+      window.location.reload();
+    } catch {
+      notify(t("common.error"));
+    }
+  }
+
+  async function setCurrency(next: CurrencyCode) {
+    if (next === currencyCode) return;
+    let confirmReinterpret = false;
+    if (currencyHasData) {
+      const precisionWarning =
+        currencyFractionDigits(next) === 0
+          ? ` ${t("settings.currencyZeroDecimalWarning", { currency: next })}`
+          : "";
+      confirmReinterpret = window.confirm(
+        `${t("settings.currencyReinterpretConfirm", { from: currencyCode, to: next })}${precisionWarning}`
+      );
+      if (!confirmReinterpret) return;
+    }
+    try {
+      const response = await fetch("/api/settings/currency", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currencyCode: next, confirmReinterpret })
+      });
+      if (!response.ok) return notify(await settingsErrorMessage(response, t));
       window.location.reload();
     } catch {
       notify(t("common.error"));
@@ -100,14 +132,32 @@ export function SettingsClient({
       <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.language")}</h2>
-        <div className="flex gap-2">
-          <Button variant={locale === "en" ? "primary" : "secondary"} onClick={() => setLocale("en")}>
-            {t("settings.english")}
-          </Button>
-          <Button variant={locale === "zh" ? "primary" : "secondary"} onClick={() => setLocale("zh")}>
-            {t("settings.chinese")}
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {locales.map((supportedLocale) => (
+            <Button
+              key={supportedLocale}
+              variant={locale === supportedLocale ? "primary" : "secondary"}
+              onClick={() => setLocale(supportedLocale)}
+            >
+              {t(localeDefinitions[supportedLocale].labelKey)}
+            </Button>
+          ))}
         </div>
+      </Card>
+      <Card className="space-y-3 p-4">
+        <h2 className="font-semibold">{t("settings.currency")}</h2>
+        <Select
+          className="max-w-xs"
+          value={currencyCode}
+          onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
+        >
+          {currencyCodes.map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
+        </Select>
+        {currencyHasData ? <p className="text-sm text-muted-foreground">{t("settings.currencyReinterpretNote")}</p> : null}
       </Card>
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.unitSystem")}</h2>
@@ -273,7 +323,14 @@ function Manager({
 
 async function settingsErrorMessage(response: Response, t: ReturnType<typeof useTranslations>) {
   const body = await response.json().catch(() => null);
-  const known = new Set(["validation", "duplicate_name", "managed_value", "not_found", "unknown"]);
+  const known = new Set([
+    "validation",
+    "duplicate_name",
+    "managed_value",
+    "currency_confirmation_required",
+    "not_found",
+    "unknown"
+  ]);
   return typeof body?.error === "string" && known.has(body.error)
     ? t(`errors.${body.error}` as any)
     : t("common.error");
