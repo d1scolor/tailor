@@ -1,27 +1,24 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
+import { sessionCookie } from "@/lib/auth/cookie";
+import { getUserBySession } from "@/lib/auth/session";
 import { defaultLocale } from "@/lib/env";
-import { messageLocaleFor, normalizeLocale, type Locale } from "@/lib/i18n/locales";
+import { messageLocaleFor, resolveRequestLocale } from "@/lib/i18n/locales";
 
 export { locales, normalizeLocale, type Locale } from "@/lib/i18n/locales";
 
 export default getRequestConfig(async () => {
   const cookieStore = await cookies();
-  const requested = cookieStore.get("tailor_locale")?.value;
-  const headerLocale = parseAcceptLanguage((await headers()).get("accept-language"));
-  const locale = normalizeLocale(requested) ?? headerLocale ?? defaultLocale;
+  const user = getUserBySession(cookieStore.get(sessionCookie)?.value);
+  const locale = resolveRequestLocale({
+    persistedLocale: user?.locale,
+    cookieLocale: cookieStore.get("tailor_locale")?.value,
+    acceptLanguage: (await headers()).get("accept-language"),
+    fallbackLocale: defaultLocale
+  });
   const messageLocale = messageLocaleFor(locale);
   return {
     locale,
     messages: (await import(`../../../messages/${messageLocale}.json`)).default
   };
 });
-
-function parseAcceptLanguage(value?: string | null): Locale | null {
-  if (!value) return null;
-  for (const part of value.split(",")) {
-    const locale = normalizeLocale(part.trim().split(";")[0]);
-    if (locale) return locale;
-  }
-  return null;
-}

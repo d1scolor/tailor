@@ -56,9 +56,9 @@ export function clearSessionCookie(response: NextResponse) {
 }
 
 export function getUserBySession(sessionId?: string | null): AuthUser | null {
+  if (!isSessionCookieValue(sessionId)) return null;
   if (restoreState.readsBlocked) return null;
   if (!restoreState.writesBlocked) seedDatabase();
-  if (!isSessionCookieValue(sessionId)) return null;
   const db = getSqlite();
   const row = db
     .prepare(

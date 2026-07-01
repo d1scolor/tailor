@@ -33,6 +33,34 @@ export function localeLabel(locale: Locale) {
   }
 }
 
+export function resolveRequestLocale({
+  persistedLocale,
+  cookieLocale,
+  acceptLanguage,
+  fallbackLocale
+}: {
+  persistedLocale?: string | null;
+  cookieLocale?: string | null;
+  acceptLanguage?: string | null;
+  fallbackLocale: Locale;
+}) {
+  return (
+    normalizeLocale(persistedLocale) ??
+    normalizeLocale(cookieLocale) ??
+    parseAcceptLanguage(acceptLanguage) ??
+    fallbackLocale
+  );
+}
+
 export function messageLocaleFor(locale: Locale) {
   return localeDefinitions[locale].messageLocale;
+}
+
+function parseAcceptLanguage(value?: string | null): Locale | null {
+  if (!value) return null;
+  for (const part of value.split(",")) {
+    const locale = normalizeLocale(part.trim().split(";")[0]);
+    if (locale) return locale;
+  }
+  return null;
 }

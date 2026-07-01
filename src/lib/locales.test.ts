@@ -6,7 +6,8 @@ import {
   locales,
   messageLocaleFor,
   messageLocales,
-  normalizeLocale
+  normalizeLocale,
+  resolveRequestLocale
 } from "./i18n/locales";
 
 test("locale aliases and regional browser locales normalize predictably", () => {
@@ -64,6 +65,33 @@ test("regional English shares a catalog while Chinese variants remain distinct",
   assert.equal(messageLocaleFor("zh-CN"), "zh");
   assert.equal(messageLocaleFor("zh-TW"), "zh-TW");
   assert.equal(messageLocaleFor("zh-HK"), "zh-HK");
+});
+
+test("persisted user locale overrides stale client and browser preferences", () => {
+  assert.equal(
+    resolveRequestLocale({
+      persistedLocale: "fr",
+      cookieLocale: "ja",
+      acceptLanguage: "de-DE,de;q=0.9",
+      fallbackLocale: "en-AU"
+    }),
+    "fr"
+  );
+  assert.equal(
+    resolveRequestLocale({
+      cookieLocale: "ja",
+      acceptLanguage: "de-DE,de;q=0.9",
+      fallbackLocale: "en-AU"
+    }),
+    "ja"
+  );
+  assert.equal(
+    resolveRequestLocale({
+      acceptLanguage: "de-DE,de;q=0.9",
+      fallbackLocale: "en-AU"
+    }),
+    "de"
+  );
 });
 
 test("supported locales declare text direction", () => {
