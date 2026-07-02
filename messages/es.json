@@ -53,12 +53,20 @@
     "selectColor": "Seleccionar color",
     "customColor": "Color personalizado",
     "tags": "Etiquetas",
+    "clear": "Limpiar",
+    "searchTags": "Buscar etiquetas",
+    "untagged": "Sin etiquetas",
+    "tagMatch": "Coincidencia de etiquetas",
+    "matchAny": "Cualquier etiqueta seleccionada",
+    "matchAll": "Todas las etiquetas seleccionadas",
     "settings": "Ajustes",
     "confirmDelete": "¿Eliminar este elemento?",
     "error": "Se produjo un error",
     "used": "Usado",
     "unused": "Nunca usado",
-    "excludeUsedUp": "Excluir artículos agotados",
+    "usage": "Uso",
+    "partial": "Usado parcialmente",
+    "usedUp": "Agotado",
     "outOfStock": "Agotado",
     "cover": "Portada",
     "setCover": "Establecer como portada",
@@ -224,7 +232,8 @@
     "other": "Otro"
   },
   "materialUsageStatus": {
-    "available": "Disponible",
+    "available": "Sin usar",
+    "partial": "Usado parcialmente",
     "used": "Agotado"
   },
   "fabrics": {

@@ -49,7 +49,7 @@ const sortColumns: Record<Kind, Record<string, string>> = {
     purchased: "purchased_at",
     price: "price_cents",
     unitPrice: "CASE WHEN quantity_total_canonical > 0 THEN price_cents / quantity_total_canonical ELSE NULL END",
-    remaining: "CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END"
+    remaining: "CASE WHEN usage_status = 'used' THEN 0 WHEN usage_status = 'partial' THEN NULL ELSE quantity_total_canonical END"
   },
   projects: {
     name: "name",
@@ -120,13 +120,33 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     args.push(params.get("condition"));
   }
   const tags = parseIds(params.get("tags"));
+  const tagClauses: string[] = [];
+  const tagArgs: unknown[] = [];
   if (tags.length) {
-    clauses.push(
-      `EXISTS (SELECT 1 FROM entity_tags et WHERE et.entity_type = ? AND et.entity_id = ${kind}.id AND et.tag_id IN (${tags
-        .map(() => "?")
-        .join(",")}))`
+    const placeholders = tags.map(() => "?").join(",");
+    if (params.get("tagMatch") === "all" && tags.length > 1) {
+      tagClauses.push(
+        `(SELECT COUNT(DISTINCT et.tag_id) FROM entity_tags et
+          WHERE et.entity_type = ? AND et.entity_id = ${kind}.id AND et.tag_id IN (${placeholders})) = ?`
+      );
+      tagArgs.push(entityType, ...tags, tags.length);
+    } else {
+      tagClauses.push(
+        `EXISTS (SELECT 1 FROM entity_tags et
+          WHERE et.entity_type = ? AND et.entity_id = ${kind}.id AND et.tag_id IN (${placeholders}))`
+      );
+      tagArgs.push(entityType, ...tags);
+    }
+  }
+  if (params.get("untagged") === "true") {
+    tagClauses.push(
+      `NOT EXISTS (SELECT 1 FROM entity_tags et WHERE et.entity_type = ? AND et.entity_id = ${kind}.id)`
     );
-    args.push(entityType, ...tags);
+    tagArgs.push(entityType);
+  }
+  if (tagClauses.length) {
+    clauses.push(`(${tagClauses.join(" OR ")})`);
+    args.push(...tagArgs);
   }
   if (params.get("from")) {
     clauses.push(`${kind}.purchased_at >= ?`);
@@ -148,10 +168,32 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     );
   }
   if (kind === "materials" && params.get("used")) {
-    clauses.push(params.get("used") === "true" ? "usage_status = 'used'" : "usage_status = 'available'");
+    clauses.push(params.get("used") === "true" ? "usage_status != 'available'" : "usage_status = 'available'");
   }
   if (kind === "materials" && params.get("excludeUsedUp") === "true") {
     clauses.push("usage_status != 'used' AND quantity_total_canonical > 0");
+  }
+  if ((kind === "fabrics" || kind === "materials") && params.has("usageStatuses")) {
+    const statuses = new Set(
+      (params.get("usageStatuses") ?? "")
+        .split(",")
+        .filter((status) => status === "unused" || status === "partial" || status === "usedUp")
+    );
+    const usageClauses: string[] = [];
+    if (kind === "fabrics") {
+      if (statuses.has("unused")) {
+        usageClauses.push(`(${fabricUsedMetres} <= ${measurementEpsilon} AND ${fabricRemainingMetresSort} > ${measurementEpsilon})`);
+      }
+      if (statuses.has("partial")) {
+        usageClauses.push(`(${fabricUsedMetres} > ${measurementEpsilon} AND ${fabricRemainingMetresSort} > ${measurementEpsilon})`);
+      }
+      if (statuses.has("usedUp")) usageClauses.push(`${fabricRemainingMetresSort} <= ${measurementEpsilon}`);
+    } else {
+      if (statuses.has("unused")) usageClauses.push("usage_status = 'available'");
+      if (statuses.has("partial")) usageClauses.push("usage_status = 'partial'");
+      if (statuses.has("usedUp")) usageClauses.push("usage_status = 'used'");
+    }
+    clauses.push(usageClauses.length ? `(${usageClauses.join(" OR ")})` : "0");
   }
   if (kind === "materials" && params.get("categoryId")) {
     clauses.push("category_id = ?");
@@ -180,7 +222,7 @@ export function listItems(kind: Kind, userId: number, params: URLSearchParams) {
     kind === "fabrics"
       ? `fabrics.*, ${fabricRemainingMetresSort} AS length_remaining_m`
       : kind === "materials"
-        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END AS quantity_remaining_canonical"
+        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 WHEN usage_status = 'partial' THEN NULL ELSE quantity_total_canonical END AS quantity_remaining_canonical"
         : `${kind}.*`;
   const rows = db.prepare(`SELECT ${projection} FROM ${kind} WHERE ${clauses.join(" AND ")} ORDER BY ${sort} ${dir}`).all(...args) as Array<
     Record<string, unknown>
@@ -194,7 +236,7 @@ export function getItem(kind: Kind, userId: number, id: number) {
     kind === "fabrics"
       ? `fabrics.*, ${fabricRemainingMetresSort} AS length_remaining_m`
       : kind === "materials"
-        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 ELSE quantity_total_canonical END AS quantity_remaining_canonical"
+        ? "materials.*, CASE WHEN usage_status = 'used' THEN 0 WHEN usage_status = 'partial' THEN NULL ELSE quantity_total_canonical END AS quantity_remaining_canonical"
         : `${kind}.*`;
   const row = db.prepare(`SELECT ${projection} FROM ${kind} WHERE user_id = ? AND id = ?`).get(userId, id) as
     | Record<string, unknown>
@@ -256,7 +298,7 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
         );
       id = Number(result.lastInsertRowid);
     } else if (kind === "materials") {
-      const usageStatus = input.usageStatus === "used" ? "used" : "available";
+      const usageStatus = input.usageStatus === "used" || input.usageStatus === "partial" ? input.usageStatus : "available";
       validateMetaReference(db, "material_units", userId, Number(input.unitId));
       if (input.categoryId) validateMetaReference(db, "material_categories", userId, Number(input.categoryId));
       const result = db
@@ -374,7 +416,7 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
         id
       );
     } else if (kind === "materials") {
-      const usageStatus = input.usageStatus === "used" ? "used" : "available";
+      const usageStatus = input.usageStatus === "used" || input.usageStatus === "partial" ? input.usageStatus : "available";
       validateMetaReference(db, "material_units", userId, Number(input.unitId), Number(existing.unit_id));
       if (input.categoryId) validateMetaReference(db, "material_categories", userId, Number(input.categoryId), Number(existing.category_id));
       db.prepare(
@@ -639,8 +681,8 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
     return {
       count: rows.length,
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      used: rows.filter((row) => row.usageStatus === "used").length,
-      unused: rows.filter((row) => row.usageStatus !== "used").length
+      used: rows.filter((row) => row.usageStatus !== "available").length,
+      unused: rows.filter((row) => row.usageStatus === "available").length
     };
   }
   if (kind === "tools") {

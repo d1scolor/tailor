@@ -53,12 +53,20 @@
     "selectColor": "Farbe auswählen",
     "customColor": "Eigene Farbe",
     "tags": "Tags",
+    "clear": "Auswahl löschen",
+    "searchTags": "Tags durchsuchen",
+    "untagged": "Ohne Tags",
+    "tagMatch": "Tag-Verknüpfung",
+    "matchAny": "Beliebiger ausgewählter Tag",
+    "matchAll": "Alle ausgewählten Tags",
     "settings": "Einstellungen",
     "confirmDelete": "Diesen Eintrag löschen?",
     "error": "Etwas ist schiefgelaufen",
     "used": "Verwendet",
     "unused": "Nie verwendet",
-    "excludeUsedUp": "Aufgebrauchte Einträge ausblenden",
+    "usage": "Nutzung",
+    "partial": "Teilweise verwendet",
+    "usedUp": "Aufgebraucht",
     "outOfStock": "Nicht vorrätig",
     "cover": "Titelbild",
     "setCover": "Als Titelbild festlegen",
@@ -224,7 +232,8 @@
     "other": "Sonstiges"
   },
   "materialUsageStatus": {
-    "available": "Verfügbar",
+    "available": "Noch nicht verwendet",
+    "partial": "Teilweise verwendet",
     "used": "Aufgebraucht"
   },
   "fabrics": {

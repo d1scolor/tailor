@@ -53,12 +53,20 @@
     "selectColor": "Kleur kiezen",
     "customColor": "Aangepaste kleur",
     "tags": "Labels",
+    "clear": "Wissen",
+    "searchTags": "Labels zoeken",
+    "untagged": "Zonder labels",
+    "tagMatch": "Labelovereenkomst",
+    "matchAny": "Een geselecteerd label",
+    "matchAll": "Alle geselecteerde labels",
     "settings": "Instellingen",
     "confirmDelete": "Dit item verwijderen?",
     "error": "Er ging iets mis",
     "used": "Gebruikt",
     "unused": "Nooit gebruikt",
-    "excludeUsedUp": "Opgebruikte items uitsluiten",
+    "usage": "Gebruik",
+    "partial": "Gedeeltelijk gebruikt",
+    "usedUp": "Opgebruikt",
     "outOfStock": "Niet op voorraad",
     "cover": "Omslag",
     "setCover": "Als omslag instellen",
@@ -224,7 +232,8 @@
     "other": "Overig"
   },
   "materialUsageStatus": {
-    "available": "Beschikbaar",
+    "available": "Nog niet gebruikt",
+    "partial": "Gedeeltelijk gebruikt",
     "used": "Opgebruikt"
   },
   "fabrics": {

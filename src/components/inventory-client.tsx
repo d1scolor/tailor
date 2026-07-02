@@ -42,11 +42,15 @@ type MetaItem = {
   sortOrder?: number;
 };
 type PickerKind = Extract<Kind, "fabrics" | "patterns" | "materials">;
+type InventoryUsageStatus = "unused" | "partial" | "usedUp";
+type TagMatch = "any" | "all";
 type CreateMetaHandler = {
   (name: string): Promise<MetaItem | null>;
 };
 type Filters = {
   tagIds: number[];
+  tagMatch: TagMatch;
+  includeUntagged: boolean;
   source: string;
   purpose: string;
   materialType: string;
@@ -55,7 +59,7 @@ type Filters = {
   from: string;
   to: string;
   used: string;
-  excludeUsedUp: boolean;
+  usageStatuses: InventoryUsageStatus[];
   color: string;
   categoryId: string;
   unitId: string;
@@ -64,7 +68,6 @@ type Filters = {
   materialId: string;
   category: string;
   condition: string;
-  usageStatus: string;
 };
 type LightboxState = { photos: string[]; index: number };
 type StagedPhoto = { id: string; file: File; isCover: boolean };
@@ -153,8 +156,10 @@ type PhotoStripProps = {
   item: AnyItem;
   kind: Kind;
   readOnly?: boolean;
+  removedPhotoIds?: string[];
   onUploaded?: PhotoUploadedHandler;
   onOpenPhoto?: (photos: string[], index: number) => void;
+  onRemovePhoto?: (photoId: string) => void;
   onError?: (message: string) => void;
 };
 
@@ -174,7 +179,8 @@ const entityByKind = {
 const fabricPurposeOptions = ["garment", "craft"];
 const patternTypeDefaults = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
-const materialUsageStatusOptions = ["available", "used"];
+const materialUsageStatusOptions = ["available", "partial", "used"];
+const inventoryUsageStatusOptions: InventoryUsageStatus[] = ["unused", "partial", "usedUp"];
 const patternForOptions = [
   "headwear",
   "scarves",
@@ -308,14 +314,13 @@ export function InventoryClient(props: Props) {
   const locale = useLocale();
   const currencyCode = useCurrencyCode();
   const unitSystem = props.unitSystem ?? "metric";
-  const defaultExcludeUsedUp = props.kind === "fabrics" || props.kind === "materials";
   const [items, setItems] = useState(props.items);
   const [summary, setSummary] = useState(props.summary);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("created");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [filters, setFilters] = useState<Filters>(() => emptyFilters(defaultExcludeUsedUp));
+  const [filters, setFilters] = useState<Filters>(() => emptyFilters());
   const [filterOpen, setFilterOpen] = useState(false);
   const [editing, setEditing] = useState<AnyItem | null>(null);
   const [selected, setSelected] = useState<AnyItem | null>(null);
@@ -324,6 +329,7 @@ export function InventoryClient(props: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
   const [stagedPhotoFiles, setStagedPhotoFiles] = useState<StagedPhoto[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [tagList, setTagList] = useState(props.tags);
   const [categoryList, setCategoryList] = useState(props.categories ?? []);
   const [unitList, setUnitList] = useState(props.units ?? []);
@@ -356,6 +362,7 @@ export function InventoryClient(props: Props) {
       else if (filterOpen) setFilterOpen(false);
       else if (editing) {
         setStagedPhotoFiles([]);
+        setRemovedPhotoIds([]);
         setEditing(null);
       }
       else if (selected) setSelected(null);
@@ -446,11 +453,16 @@ export function InventoryClient(props: Props) {
       rememberMaterialType(body.materialType);
       rememberPatternType(body.patternType);
       rememberToolCategory(body.category);
+      if (!(await deleteStagedPhotos(removedPhotoIds))) {
+        notify(t("common.error"));
+        return;
+      }
       await uploadStagedPhotos(stagedPhotoFiles, props.kind, item.id);
       setStagedPhotoFiles([]);
+      setRemovedPhotoIds([]);
       setEditing(null);
       setSelected((current) => (current?.id === item.id ? item : current));
-      await refresh();
+      await refreshOpenItem(item.id);
     } catch (error) {
       notify(`${t("common.uploadFailed")}: ${error instanceof Error ? error.message : t("common.error")}`);
     } finally {
@@ -461,11 +473,13 @@ export function InventoryClient(props: Props) {
 
   function openCreate() {
     setStagedPhotoFiles([]);
+    setRemovedPhotoIds([]);
     setEditing(defaultItem(props.kind));
   }
 
   function openEdit(item: AnyItem) {
     setStagedPhotoFiles([]);
+    setRemovedPhotoIds([]);
     setEditing(item);
   }
 
@@ -485,6 +499,7 @@ export function InventoryClient(props: Props) {
 
   function closeEditor() {
     setStagedPhotoFiles([]);
+    setRemovedPhotoIds([]);
     setEditing(null);
   }
 
@@ -628,7 +643,6 @@ export function InventoryClient(props: Props) {
         filterOpen={filterOpen}
         resources={browserResources}
         unitSystem={unitSystem}
-        defaultExcludeUsedUp={defaultExcludeUsedUp}
         onQueryChange={(nextQuery) => {
           setQuery(nextQuery);
           debounceRefresh(nextQuery, sort, filters, dir);
@@ -664,7 +678,17 @@ export function InventoryClient(props: Props) {
                   <section className="space-y-2">
                     <h3 className="text-sm font-medium">{t("common.photos")}</h3>
                     {editing.id ? (
-                      <PhotoStrip item={editing} kind={props.kind} onUploaded={() => refreshOpenItem(editing.id)} onOpenPhoto={openLightbox} onError={notify} />
+                      <PhotoStrip
+                        item={editing}
+                        kind={props.kind}
+                        removedPhotoIds={removedPhotoIds}
+                        onUploaded={() => refreshOpenItem(editing.id)}
+                        onOpenPhoto={openLightbox}
+                        onRemovePhoto={(photoId) =>
+                          setRemovedPhotoIds((current) => (current.includes(photoId) ? current : [...current, photoId]))
+                        }
+                        onError={notify}
+                      />
                     ) : (
                       <StagedPhotoStrip photos={stagedPhotoFiles} setPhotos={setStagedPhotoFiles} onAdd={appendStagedPhotos} />
                     )}
@@ -769,7 +793,6 @@ function InventoryBrowserView({
   filterPortal = true,
   resources,
   unitSystem,
-  defaultExcludeUsedUp,
   selectedIds = [],
   onQueryChange,
   onSortChange,
@@ -791,7 +814,6 @@ function InventoryBrowserView({
   filterPortal?: boolean;
   resources: BrowserResources;
   unitSystem: UnitSystem;
-  defaultExcludeUsedUp: boolean;
   selectedIds?: number[];
   onQueryChange: (query: string) => void;
   onSortChange: (sort: string) => void;
@@ -822,7 +844,6 @@ function InventoryBrowserView({
       materialTypeOptions={resources.materialTypeOptions}
       patternTypeOptions={resources.patternTypeOptions}
       toolCategoryOptions={resources.toolCategoryOptions}
-      defaultExcludeUsedUp={defaultExcludeUsedUp}
       onApply={onApplyFilters}
       onClose={onFilterClose}
     />
@@ -1388,7 +1409,6 @@ function ResourcePicker({
             filterPortal={false}
             resources={browserResources}
             unitSystem={unitSystem}
-            defaultExcludeUsedUp={false}
             selectedIds={selectedIds}
             onQueryChange={(nextQuery) => {
               setQuery(nextQuery);
@@ -1715,7 +1735,6 @@ function FilterDrawer({
   materialTypeOptions,
   patternTypeOptions,
   toolCategoryOptions,
-  defaultExcludeUsedUp,
   onApply,
   onClose
 }: {
@@ -1732,13 +1751,11 @@ function FilterDrawer({
   materialTypeOptions: string[];
   patternTypeOptions: string[];
   toolCategoryOptions: string[];
-  defaultExcludeUsedUp: boolean;
   onApply: (filters: Filters) => void;
   onClose: () => void;
 }) {
   const t = useTranslations();
   const [draft, setDraft] = useState(filters);
-  const sourceListId = useId();
 
   useEffect(() => {
     setDraft(filters);
@@ -1750,33 +1767,16 @@ function FilterDrawer({
     onApply(next);
   }
 
-  function updateExcludeUsedUp(excludeUsedUp: boolean) {
+  function toggleUsageStatus(status: InventoryUsageStatus) {
     const next = {
       ...draft,
-      excludeUsedUp,
-      usageStatus: excludeUsedUp && draft.usageStatus === "used" ? "" : draft.usageStatus
+      usageStatuses: draft.usageStatuses.includes(status)
+        ? draft.usageStatuses.filter((current) => current !== status)
+        : inventoryUsageStatusOptions.filter((current) => [...draft.usageStatuses, status].includes(current))
     };
     setDraft(next);
     onApply(next);
   }
-
-  function updateMaterialUsageStatus(usageStatus: string) {
-    const next = {
-      ...draft,
-      usageStatus,
-      excludeUsedUp: usageStatus === "used" ? false : draft.excludeUsedUp
-    };
-    setDraft(next);
-    onApply(next);
-  }
-
-  const toggleTag = (tagId: number) => {
-    const next = {
-      ...draft,
-      tagIds: draft.tagIds.includes(tagId) ? draft.tagIds.filter((id) => id !== tagId) : [...draft.tagIds, tagId]
-    };
-    onApply(next);
-  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
@@ -1789,35 +1789,30 @@ function FilterDrawer({
           </Button>
         </div>
         <div className="mt-4 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain">
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">{t("common.tags")}</legend>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <label key={tag.id} className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
-                  <input type="checkbox" checked={draft.tagIds.includes(tag.id)} onChange={() => toggleTag(tag.id)} />
-                  <span>{tag.name}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <TagFilter
+            tags={tags}
+            selectedIds={draft.tagIds}
+            match={draft.tagMatch}
+            includeUntagged={draft.includeUntagged}
+            onChange={(update) => {
+              const next = { ...draft, ...update };
+              setDraft(next);
+              onApply(next);
+            }}
+          />
 
           {kind !== "projects" ? (
             <div className="grid gap-3">
               <label className="block space-y-1">
                 <span className="text-sm font-medium">{t("common.source")}</span>
-                <Input
-                  list={sourceOptions.length ? sourceListId : undefined}
-                  value={draft.source}
-                  placeholder={t("common.all")}
-                  onChange={(event) => update("source", event.target.value)}
-                />
-                {sourceOptions.length ? (
-                  <datalist id={sourceListId}>
-                    {sourceOptions.map((source) => (
-                      <option key={source} value={source} />
-                    ))}
-                  </datalist>
-                ) : null}
+                <Select value={draft.source} onChange={(event) => update("source", event.target.value)}>
+                  <option value="">{t("common.all")}</option>
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </Select>
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="block space-y-1">
@@ -1833,10 +1828,21 @@ function FilterDrawer({
           ) : null}
 
           {kind === "fabrics" || kind === "materials" ? (
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={draft.excludeUsedUp} onChange={(event) => updateExcludeUsedUp(event.target.checked)} />
-              <span>{t("common.excludeUsedUp")}</span>
-            </label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">{t("common.usage")}</legend>
+              <div className="flex flex-wrap gap-2">
+                {inventoryUsageStatusOptions.map((status) => (
+                  <label key={status} className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={draft.usageStatuses.includes(status)}
+                      onChange={() => toggleUsageStatus(status)}
+                    />
+                    <span>{t(`common.${status}`)}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           ) : null}
 
           {kind === "fabrics" ? (
@@ -1933,7 +1939,7 @@ function FilterDrawer({
             </label>
           ) : null}
 
-          {kind !== "projects" && kind !== "tools" && kind !== "materials" ? (
+          {kind === "patterns" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.used")}</span>
               <Select value={draft.used} onChange={(event) => update("used", event.target.value)}>
@@ -1946,17 +1952,6 @@ function FilterDrawer({
 
           {kind === "materials" ? (
             <div className="grid gap-3">
-              <label className="block space-y-1">
-                <span className="text-sm font-medium">{t("materials.usageStatus")}</span>
-                <Select value={draft.usageStatus} onChange={(event) => updateMaterialUsageStatus(event.target.value)}>
-                  <option value="">{t("common.all")}</option>
-                  {materialUsageStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {t(`materialUsageStatus.${status}`)}
-                    </option>
-                  ))}
-                </Select>
-              </label>
               <OptionFilter label={t("materials.category")} value={draft.categoryId} options={categories} onChange={(value) => update("categoryId", value)} />
               <OptionFilter label={t("materials.unit")} value={draft.unitId} options={units} onChange={(value) => update("unitId", value)} />
             </div>
@@ -1975,7 +1970,7 @@ function FilterDrawer({
             type="button"
             variant="secondary"
             onClick={() => {
-              const next = emptyFilters(defaultExcludeUsedUp);
+              const next = emptyFilters();
               setDraft(next);
               onApply(next);
             }}
@@ -1985,6 +1980,112 @@ function FilterDrawer({
         </div>
       </Card>
     </div>
+  );
+}
+
+function TagFilter({
+  tags,
+  selectedIds,
+  match,
+  includeUntagged,
+  onChange
+}: {
+  tags: MetaItem[];
+  selectedIds: number[];
+  match: TagMatch;
+  includeUntagged: boolean;
+  onChange: (update: Pick<Filters, "tagIds" | "tagMatch" | "includeUntagged">) => void;
+}) {
+  const t = useTranslations();
+  const [search, setSearch] = useState("");
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const selectedSet = new Set(selectedIds);
+  const selectedTags = tags.filter((tag) => selectedSet.has(tag.id));
+  const availableTags = tags.filter(
+    (tag) => !selectedSet.has(tag.id) && (!normalizedSearch || tag.name?.toLocaleLowerCase().includes(normalizedSearch))
+  );
+
+  function toggleTag(tagId: number) {
+    onChange({
+      tagIds: selectedSet.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId],
+      tagMatch: match,
+      includeUntagged
+    });
+  }
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="sr-only">{t("common.tags")}</legend>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium">{t("common.tags")}</span>
+        {selectedIds.length || includeUntagged ? (
+          <button
+            type="button"
+            className="min-h-9 rounded-md px-2 text-sm text-primary"
+            onClick={() => onChange({ tagIds: [], tagMatch: "any", includeUntagged: false })}
+          >
+            {t("common.clear")}
+          </button>
+        ) : null}
+      </div>
+
+      {selectedTags.length ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedTags.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border border-primary bg-primary/5 px-2 text-sm"
+              onClick={() => toggleTag(tag.id)}
+            >
+              <span className="truncate">{tag.name}</span>
+              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {selectedIds.length > 1 ? (
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">{t("common.tagMatch")}</span>
+          <Select
+            value={match}
+            onChange={(event) =>
+              onChange({ tagIds: selectedIds, tagMatch: event.target.value as TagMatch, includeUntagged })
+            }
+          >
+            <option value="any">{t("common.matchAny")}</option>
+            <option value="all">{t("common.matchAll")}</option>
+          </Select>
+        </label>
+      ) : null}
+
+      <label className="flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-sm">
+        <input
+          type="checkbox"
+          checked={includeUntagged}
+          onChange={(event) => onChange({ tagIds: selectedIds, tagMatch: match, includeUntagged: event.target.checked })}
+        />
+        <span>{t("common.untagged")}</span>
+      </label>
+
+      {tags.length ? (
+        <>
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("common.searchTags")} />
+          <div className="max-h-48 space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1">
+            {availableTags.map((tag) => (
+              <label key={tag.id} className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
+                <input type="checkbox" checked={false} onChange={() => toggleTag(tag.id)} />
+                <span className="min-w-0 truncate">{tag.name}</span>
+              </label>
+            ))}
+            {!availableTags.length && normalizedSearch ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">{t("common.empty")}</p>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </fieldset>
   );
 }
 
@@ -2291,12 +2392,14 @@ function PhotoStrip({
   item,
   kind,
   readOnly = false,
+  removedPhotoIds = [],
   onUploaded,
   onOpenPhoto,
+  onRemovePhoto,
   onError
 }: PhotoStripProps) {
   const t = useTranslations();
-  const photos = item.photos ?? [];
+  const photos = (item.photos ?? []).filter((photo: AnyItem) => !removedPhotoIds.includes(photo.id));
   const photoIds = photos.map((photo: AnyItem) => photo.id);
 
   async function upload(files: FileList | null) {
@@ -2316,15 +2419,6 @@ function PhotoStrip({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
-    if (!response.ok) {
-      onError?.(t("common.error"));
-      return;
-    }
-    if (onUploaded) await onUploaded();
-  }
-
-  async function deletePhoto(photoId: string) {
-    const response = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
     if (!response.ok) {
       onError?.(t("common.error"));
       return;
@@ -2393,7 +2487,7 @@ function PhotoStrip({
                   type="button"
                   className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white"
                   aria-label={t("common.delete")}
-                  onClick={() => deletePhoto(photo.id)}
+                  onClick={() => onRemovePhoto?.(photo.id)}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </button>
@@ -2620,9 +2714,11 @@ function StagedPhotoPreview({
   );
 }
 
-function emptyFilters(excludeUsedUp = false): Filters {
+function emptyFilters(): Filters {
   return {
     tagIds: [],
+    tagMatch: "any",
+    includeUntagged: false,
     source: "",
     purpose: "",
     materialType: "",
@@ -2631,7 +2727,7 @@ function emptyFilters(excludeUsedUp = false): Filters {
     from: "",
     to: "",
     used: "",
-    excludeUsedUp,
+    usageStatuses: [...inventoryUsageStatusOptions],
     color: "",
     categoryId: "",
     unitId: "",
@@ -2639,15 +2735,16 @@ function emptyFilters(excludeUsedUp = false): Filters {
     fabricId: "",
     materialId: "",
     category: "",
-    condition: "",
-    usageStatus: ""
+    condition: ""
   };
 }
 
 function hasFilters(filters: Filters) {
   return (
     filters.tagIds.length > 0 ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.usageStatus || filters.from || filters.to || filters.used || filters.excludeUsedUp || filters.color) ||
+    filters.includeUntagged ||
+    filters.usageStatuses.length !== inventoryUsageStatusOptions.length ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.fabricId || filters.materialId)
   );
 }
@@ -2658,6 +2755,8 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   params.set("sort", sort);
   params.set("dir", dir);
   if (filters.tagIds.length) params.set("tags", filters.tagIds.join(","));
+  if (filters.tagIds.length > 1 && filters.tagMatch === "all") params.set("tagMatch", "all");
+  if (filters.includeUntagged) params.set("untagged", "true");
   if (filters.source) params.set("source", filters.source);
   if (filters.purpose) params.set("purpose", filters.purpose);
   if (filters.materialType) params.set("materialType", filters.materialType);
@@ -2666,7 +2765,9 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.used) params.set("used", filters.used);
-  if (filters.excludeUsedUp) params.set("excludeUsedUp", "true");
+  if (filters.usageStatuses.length !== inventoryUsageStatusOptions.length) {
+    params.set("usageStatuses", filters.usageStatuses.join(","));
+  }
   if (filters.color) params.set("color", filters.color);
   if (filters.categoryId) params.set("categoryId", filters.categoryId);
   if (filters.unitId) params.set("unitId", filters.unitId);
@@ -2675,7 +2776,6 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.materialId) params.set("materialId", filters.materialId);
   if (filters.category) params.set("category", filters.category);
   if (filters.condition) params.set("condition", filters.condition);
-  if (filters.usageStatus) params.set("used", filters.usageStatus === "used" ? "true" : "false");
   return params;
 }
 
@@ -2969,7 +3069,8 @@ function materialDisplayQuantity(item: AnyItem, unitSystem: UnitSystem) {
 }
 
 function materialDisplayRemaining(item: AnyItem, unitSystem: UnitSystem) {
-  const canonical = Number(item.quantityRemainingCanonical ?? 0);
+  if (item.quantityRemainingCanonical == null) return null;
+  const canonical = Number(item.quantityRemainingCanonical);
   if (!isManagedUnitKey(item.unitDefinitionKey)) return canonical;
   const definition = managedUnitDefinitions[item.unitDefinitionKey];
   return definition.behavior === "convertible" ? toDisplayValue(canonical, definition.key, unitSystem) : canonical;
@@ -3150,5 +3251,17 @@ async function uploadStagedPhotos(values: StagedPhoto[], kind: Kind, entityId: n
       const body = await response.json().catch(() => null);
       throw new Error(body?.error ?? `${response.status}`);
     }
+  }
+}
+
+async function deleteStagedPhotos(photoIds: string[]) {
+  try {
+    for (const photoId of photoIds) {
+      const response = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
+      if (!response.ok) return false;
+    }
+    return true;
+  } catch {
+    return false;
   }
 }

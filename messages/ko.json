@@ -53,12 +53,20 @@
     "selectColor": "색상 선택",
     "customColor": "사용자 지정 색상",
     "tags": "태그",
+    "clear": "초기화",
+    "searchTags": "태그 검색",
+    "untagged": "태그 없음",
+    "tagMatch": "태그 일치 방식",
+    "matchAny": "선택한 태그 중 하나",
+    "matchAll": "선택한 태그 모두",
     "settings": "설정",
     "confirmDelete": "이 항목을 삭제할까요?",
     "error": "오류가 발생했습니다",
     "used": "사용됨",
     "unused": "사용 안 함",
-    "excludeUsedUp": "소진된 항목 제외",
+    "usage": "사용 상태",
+    "partial": "일부 사용",
+    "usedUp": "소진됨",
     "outOfStock": "재고 없음",
     "cover": "표지",
     "setCover": "표지로 설정",
@@ -224,7 +232,8 @@
     "other": "기타"
   },
   "materialUsageStatus": {
-    "available": "사용 가능",
+    "available": "전혀 사용하지 않음",
+    "partial": "일부 사용",
     "used": "소진"
   },
   "fabrics": {

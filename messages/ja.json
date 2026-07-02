@@ -53,12 +53,20 @@
     "selectColor": "色を選択",
     "customColor": "カスタム色",
     "tags": "タグ",
+    "clear": "クリア",
+    "searchTags": "タグを検索",
+    "untagged": "タグなし",
+    "tagMatch": "タグの一致条件",
+    "matchAny": "選択したタグのいずれか",
+    "matchAll": "選択したタグすべて",
     "settings": "設定",
     "confirmDelete": "この項目を削除しますか？",
     "error": "エラーが発生しました",
     "used": "使用済み",
     "unused": "未使用",
-    "excludeUsedUp": "使い切った項目を除外",
+    "usage": "使用状況",
+    "partial": "一部使用済み",
+    "usedUp": "使い切り",
     "outOfStock": "在庫切れ",
     "cover": "カバー",
     "setCover": "カバーに設定",
@@ -224,7 +232,8 @@
     "other": "その他"
   },
   "materialUsageStatus": {
-    "available": "在庫あり",
+    "available": "未使用",
+    "partial": "一部使用済み",
     "used": "使い切り"
   },
   "fabrics": {

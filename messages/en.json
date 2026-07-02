@@ -53,12 +53,20 @@
     "selectColor": "Select colour",
     "customColor": "Custom colour",
     "tags": "Tags",
+    "clear": "Clear",
+    "searchTags": "Search tags",
+    "untagged": "Untagged",
+    "tagMatch": "Tag matching",
+    "matchAny": "Any selected tag",
+    "matchAll": "All selected tags",
     "settings": "Settings",
     "confirmDelete": "Delete this item?",
     "error": "Something went wrong",
     "used": "Used",
     "unused": "Never used",
-    "excludeUsedUp": "Exclude used up items",
+    "usage": "Usage",
+    "partial": "Partially used",
+    "usedUp": "Used up",
     "outOfStock": "Out of stock",
     "cover": "Cover",
     "setCover": "Set cover",
@@ -224,7 +232,8 @@
     "other": "Other"
   },
   "materialUsageStatus": {
-    "available": "Available",
+    "available": "Not used at all",
+    "partial": "Partially used",
     "used": "Used up"
   },
   "fabrics": {
