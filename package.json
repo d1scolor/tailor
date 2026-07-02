@@ -33,7 +33,7 @@
     "better-sqlite3": "^12.11.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.23.0",
     "nanoid": "^5.0.9",
     "next": "^15.5.20",
     "next-intl": "^4.13.1",
