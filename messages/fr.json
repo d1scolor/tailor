@@ -339,7 +339,7 @@
     "restoreConfirm": "Saisissez RESTORE pour remplacer les données",
     "passwordChanged": "Mot de passe mis à jour",
     "passwordInvalid": "Mot de passe actuel incorrect",
-    "passwordTooShort": "Le nouveau mot de passe doit contenir au moins 8 caractères",
+    "passwordTooShort": "Le nouveau mot de passe doit contenir au moins 12 caractères",
     "heicNote": "Si l’envoi HEIC échoue, réglez Formats de l’appareil photo de l’iPhone sur Le plus compatible pour envoyer les photos en JPEG."
   },
   "meta": {

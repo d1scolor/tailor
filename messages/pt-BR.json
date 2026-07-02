@@ -339,7 +339,7 @@
     "restoreConfirm": "Digite RESTORE para substituir os dados",
     "passwordChanged": "Senha atualizada",
     "passwordInvalid": "A senha atual está incorreta",
-    "passwordTooShort": "A nova senha deve ter pelo menos 8 caracteres",
+    "passwordTooShort": "A nova senha deve ter pelo menos 12 caracteres",
     "heicNote": "Se o envio HEIC falhar, defina Formatos da Câmera do iPhone como Mais Compatível para enviar fotos em JPEG."
   },
   "meta": {

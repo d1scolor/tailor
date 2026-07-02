@@ -26,7 +26,8 @@ export async function GET(
   return new NextResponse(body, {
     headers: {
       "Content-Type": variant === "original" ? contentType(photo.originalExt) : "image/webp",
-      "Cache-Control": "private, max-age=31536000, immutable"
+      "Cache-Control": "private, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff"
     }
   });
 }

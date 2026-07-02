@@ -339,7 +339,7 @@
     "restoreConfirm": "RESTORE と入力してデータを置き換える",
     "passwordChanged": "パスワードを更新しました",
     "passwordInvalid": "現在のパスワードが正しくありません",
-    "passwordTooShort": "新しいパスワードは8文字以上にしてください",
+    "passwordTooShort": "新しいパスワードは12文字以上にしてください",
     "heicNote": "HEICのアップロードに失敗する場合は、iPhoneのカメラフォーマットを「互換性優先」に設定し、JPEGでアップロードしてください。"
   },
   "meta": {

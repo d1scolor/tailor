@@ -11,6 +11,7 @@ import { defaultLocale } from "@/lib/env";
 import { normalizeLocale, type Locale } from "@/lib/i18n/locales";
 import { normalizeCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
+import { isCrossOriginMutation } from "./origin";
 
 export type AuthUser = {
   id: number;
@@ -41,7 +42,8 @@ export function setSessionCookie(response: NextResponse, sessionId: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: sessionMaxAgeSeconds
+    maxAge: sessionMaxAgeSeconds,
+    priority: "high"
   });
 }
 
@@ -51,7 +53,8 @@ export function clearSessionCookie(response: NextResponse) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 0
+    maxAge: 0,
+    priority: "high"
   });
 }
 
@@ -102,6 +105,9 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
 }
 
 export function requireAuthFromRequest(request: NextRequest) {
+  if (isCrossOriginMutation(request)) {
+    return { user: null, response: jsonError("cross_origin_request", 403) };
+  }
   if (restoreState.readsBlocked) {
     return { user: null, response: jsonError("restore_in_progress", 503, "Restore is in progress.") };
   }

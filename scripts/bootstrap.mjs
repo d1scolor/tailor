@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { Buffer } from "node:buffer";
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 
@@ -34,10 +35,11 @@ if (requestedUnitSystem !== "metric" && requestedUnitSystem !== "imperial") {
 
 fs.mkdirSync(dbDir, { recursive: true, mode: 0o700 });
 for (const dir of ["originals", "display", "thumbs"]) {
-  fs.mkdirSync(path.join(photosDir, dir), { recursive: true, mode: 0o755 });
+  fs.mkdirSync(path.join(photosDir, dir), { recursive: true, mode: 0o700 });
 }
 
 const db = new Database(dbPath);
+fs.chmodSync(dbPath, 0o600);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)");
@@ -58,10 +60,18 @@ if (count === 0) {
     console.error("INITIAL_USERNAME and INITIAL_PASSWORD are required for first boot");
     process.exit(1);
   }
+  const username = process.env.INITIAL_USERNAME.trim();
+  const password = process.env.INITIAL_PASSWORD;
+  if (!username || username.length > 200) {
+    throw new Error("INITIAL_USERNAME must contain between 1 and 200 characters");
+  }
+  if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72 || password.toLocaleLowerCase() === username.toLocaleLowerCase()) {
+    throw new Error("INITIAL_PASSWORD must contain 12 to 72 UTF-8 bytes and must not match INITIAL_USERNAME");
+  }
   const timestamp = now();
   db.prepare("INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(
-    process.env.INITIAL_USERNAME,
-    bcrypt.hashSync(process.env.INITIAL_PASSWORD, 12),
+    username,
+    bcrypt.hashSync(password, 12),
     defaultLocale,
     requestedUnitSystem,
     timestamp,

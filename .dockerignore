@@ -1,6 +1,14 @@
 .git
+.github
 .next
+.dev-server
 node_modules
 data
+coverage
 *.log
+*.tsbuildinfo
 .env
+.env.*
+.DS_Store
+AGENTS.md
+README.md

@@ -339,7 +339,7 @@
     "restoreConfirm": "데이터를 교체하려면 RESTORE 입력",
     "passwordChanged": "비밀번호가 변경되었습니다",
     "passwordInvalid": "현재 비밀번호가 올바르지 않습니다",
-    "passwordTooShort": "새 비밀번호는 8자 이상이어야 합니다",
+    "passwordTooShort": "새 비밀번호는 12자 이상이어야 합니다",
     "heicNote": "HEIC 업로드가 실패하면 iPhone 카메라 포맷을 '높은 호환성'으로 설정해 JPEG로 업로드하세요."
   },
   "meta": {

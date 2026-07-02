@@ -7,8 +7,11 @@ import { handleApiError, ok } from "@/lib/api";
 import { nowIso } from "@/lib/time";
 
 const schema = z.object({
-  current: z.string().min(1),
-  next: z.string().min(8)
+  current: z.string().min(1).max(1024),
+  next: z
+    .string()
+    .min(12)
+    .refine((value) => Buffer.byteLength(value, "utf8") <= 72)
 });
 
 export const runtime = "nodejs";
