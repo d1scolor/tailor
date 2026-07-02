@@ -40,7 +40,7 @@ Projects are special: they link to fabrics, patterns, and materials, consume rem
 ## Database And Migrations
 
 - Migrations live in `src/lib/db/migrations` and are applied lexicographically.
-- `src/lib/db/client.ts` has fallback column/table creation for robustness in older local DBs.
+- `src/lib/db/schema-requirements.json` defines the minimum supported schema and rejects incomplete legacy databases.
 - `scripts/bootstrap.mjs` also runs migrations during container boot.
 - New enum-like fields should store stable ASCII keys in SQLite and use i18n for display labels.
 - Existing data must be migrated forward with a new migration; do not require destructive DB resets for normal feature work.

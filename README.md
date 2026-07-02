@@ -126,6 +126,8 @@ Restore validates archive paths, entry types, size, SQLite integrity, required
 tables, and migrations before replacing live data. The previous data directory
 is retained under `/data/restore-backup-*` for emergency rollback; remove old
 restore backups from the Docker host after verifying a successful restore.
+Backups from pre-public development builds are not supported by the public
+schema baseline.
 
 For large installations, also take host-level snapshots of the entire `/data`
 volume while the container is stopped.
