@@ -27,6 +27,7 @@ COPY --from=build /app/LICENSE /app/COPYRIGHT ./
 COPY --from=build /app/src/lib/currency-config.json ./src/lib/currency-config.json
 COPY --from=build /app/src/lib/locale-config.json ./src/lib/locale-config.json
 COPY --from=build /app/src/lib/db/migrations ./src/lib/db/migrations
+COPY --from=build /app/src/lib/db/schema-requirements.json ./src/lib/db/schema-requirements.json
 COPY --from=build /app/scripts/bootstrap.mjs ./scripts/bootstrap.mjs
 COPY --from=build /app/scripts/entrypoint.sh ./scripts/entrypoint.sh
 RUN chmod +x /app/scripts/entrypoint.sh \

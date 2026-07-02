@@ -1,4 +1,5 @@
-import { runMigrations } from "../src/lib/db/client";
+import { closeDb, getSqlite } from "../src/lib/db/client";
 
-runMigrations();
+getSqlite();
+closeDb();
 console.log("Migrations applied.");
