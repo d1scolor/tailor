@@ -9,6 +9,9 @@ const dbDir = path.join(dataDir, "db");
 const photosDir = path.join(dataDir, "photos");
 const dbPath = process.env.DATABASE_URL ?? path.join(dbDir, "tailor.db");
 const now = () => new Date().toISOString();
+const schemaRequirements = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "src/lib/db/schema-requirements.json"), "utf8")
+);
 const localeConfig = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "src/lib/locale-config.json"), "utf8")
 );
@@ -53,6 +56,16 @@ for (const migration of fs.readdirSync(migrationsDir).filter((name) => name.ends
     console.log(`Applied migration ${migration}`);
   }
 }
+assertCurrentSchema(db);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS _schema_version (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    version INTEGER NOT NULL
+  );
+  INSERT INTO _schema_version (id, version)
+  VALUES (1, ${schemaRequirements.version})
+  ON CONFLICT(id) DO UPDATE SET version = excluded.version;
+`);
 
 const count = db.prepare("SELECT COUNT(*) AS count FROM users").get().count;
 if (count === 0) {
@@ -123,3 +136,20 @@ if (invalidCurrency) {
 }
 
 db.close();
+
+function assertCurrentSchema(sqlite) {
+  const missing = [];
+  for (const [table, requiredColumns] of Object.entries(schemaRequirements.tables)) {
+    const columns = new Set(sqlite.prepare(`PRAGMA table_info("${table}")`).all().map((column) => column.name));
+    if (!columns.size) {
+      missing.push(table);
+      continue;
+    }
+    for (const column of requiredColumns) {
+      if (!columns.has(column)) missing.push(`${table}.${column}`);
+    }
+  }
+  if (missing.length) {
+    throw new Error(`Unsupported database schema; missing: ${missing.join(", ")}`);
+  }
+}
