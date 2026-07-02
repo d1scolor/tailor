@@ -339,7 +339,7 @@
     "restoreConfirm": "输入 RESTORE 以替换当前数据",
     "passwordChanged": "密码已更新",
     "passwordInvalid": "当前密码不正确",
-    "passwordTooShort": "新密码至少需要 8 个字符",
+    "passwordTooShort": "新密码至少需要 12 个字符",
     "heicNote": "如果 HEIC 上传失败，请将 iPhone 相机格式设为“兼容性最佳”，照片会以 JPEG 上传。"
   },
   "meta": {

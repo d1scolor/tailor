@@ -20,11 +20,22 @@ export function seedDatabase({ requireBootstrapEnv = false } = {}) {
       seeded = true;
       return;
     }
+    const normalizedUsername = username.trim();
+    if (!normalizedUsername || normalizedUsername.length > 200) {
+      throw new Error("INITIAL_USERNAME must contain between 1 and 200 characters");
+    }
+    if (
+      password.length < 12 ||
+      Buffer.byteLength(password, "utf8") > 72 ||
+      password.toLocaleLowerCase() === normalizedUsername.toLocaleLowerCase()
+    ) {
+      throw new Error("INITIAL_PASSWORD must contain 12 to 72 UTF-8 bytes and must not match INITIAL_USERNAME");
+    }
     const now = nowIso();
     const hash = bcrypt.hashSync(password, 12);
     db.prepare(
       "INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(username, hash, defaultLocale, defaultUnitSystem, now, now);
+    ).run(normalizedUsername, hash, defaultLocale, defaultUnitSystem, now, now);
   }
 
   const users = db.prepare("SELECT id FROM users").all() as Array<{ id: number }>;

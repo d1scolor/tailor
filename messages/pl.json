@@ -339,7 +339,7 @@
     "restoreConfirm": "Wpisz RESTORE, aby zastąpić dane",
     "passwordChanged": "Hasło zaktualizowane",
     "passwordInvalid": "Aktualne hasło jest nieprawidłowe",
-    "passwordTooShort": "Nowe hasło musi mieć co najmniej 8 znaków",
+    "passwordTooShort": "Nowe hasło musi mieć co najmniej 12 znaków",
     "heicNote": "Jeśli przesyłanie HEIC nie działa, ustaw format aparatu iPhone’a na Najbardziej zgodny, aby przesyłać zdjęcia jako JPEG."
   },
   "meta": {

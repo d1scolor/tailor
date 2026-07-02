@@ -29,4 +29,11 @@ export function configuredInitialCurrencyCode(locale: string = defaultLocale) {
     locale
   });
 }
-export const maxUploadMb = Number(process.env.MAX_UPLOAD_MB ?? 20);
+export const maxUploadMb = positiveNumberEnv("MAX_UPLOAD_MB", 20);
+export const maxBackupMb = positiveNumberEnv("MAX_BACKUP_MB", 4096);
+
+function positiveNumberEnv(name: string, fallback: number) {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a positive number`);
+  return value;
+}

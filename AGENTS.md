@@ -17,7 +17,7 @@ When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run
 
 - Framework: Next.js App Router with TypeScript.
 - UI: Tailwind classes, local primitives in `src/components/ui`, Lucide icons.
-- i18n: `next-intl` with message files in `messages/en.json` and `messages/zh.json`.
+- i18n: `next-intl` with locale catalogs under `messages/`.
 - Data: SQLite through `better-sqlite3`; main access layer is `src/lib/repository.ts`.
 - Schema validation: Zod schemas in `src/lib/schemas`.
 - Auth: HttpOnly session cookie; middleware performs cheap cookie-shape gating, API/layout code validates sessions.
@@ -62,7 +62,7 @@ Projects are special: they link to fabrics, patterns, and materials, consume rem
 
 ## i18n Rules
 
-- User-facing text must go through `messages/en.json` and `messages/zh.json`.
+- User-facing text must be added to every locale catalog under `messages/`.
 - The lint script checks hardcoded JSX text.
 - Stored DB values for app-controlled option sets should be language-neutral keys, not translated labels.
 - Free-text user fields can remain exactly as typed.
