@@ -1,9 +1,9 @@
-FROM node:24-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json* ./
@@ -11,7 +11,7 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
