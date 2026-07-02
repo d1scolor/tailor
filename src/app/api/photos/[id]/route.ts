@@ -57,8 +57,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     db.prepare("DELETE FROM photos WHERE id = ? AND user_id = ?").run(id, user.id);
     if (photo.isCover) {
       const next = db
-        .prepare("SELECT id FROM photos WHERE entity_type = ? AND entity_id = ? ORDER BY sort_order, created_at LIMIT 1")
-        .get(photo.entityType, photo.entityId) as { id: string } | undefined;
+        .prepare(
+          "SELECT id FROM photos WHERE entity_type = ? AND entity_id = ? AND user_id = ? ORDER BY sort_order, created_at LIMIT 1"
+        )
+        .get(photo.entityType, photo.entityId, user.id) as { id: string } | undefined;
       if (next) db.prepare("UPDATE photos SET is_cover = 1 WHERE id = ?").run(next.id);
     }
   })();

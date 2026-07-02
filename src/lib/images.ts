@@ -18,10 +18,14 @@ export function extensionForMime(mime: string) {
 
 export async function writePhotoFiles(id: string, ext: string, buffer: Buffer) {
   const originalPath = path.join(originalsDir, `${id}.${ext}`);
-  await fs.writeFile(originalPath, buffer);
+  await fs.writeFile(originalPath, buffer, { mode: 0o600 });
   try {
     await sharp(buffer).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join(displayDir, `${id}.webp`));
     await sharp(buffer).rotate().resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true }).webp({ quality: 75 }).toFile(path.join(thumbsDir, `${id}.webp`));
+    await Promise.all([
+      fs.chmod(path.join(displayDir, `${id}.webp`), 0o600),
+      fs.chmod(path.join(thumbsDir, `${id}.webp`), 0o600)
+    ]);
   } catch (error) {
     await deletePhotoFiles(id, ext);
     throw error;

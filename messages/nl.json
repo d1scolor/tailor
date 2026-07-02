@@ -339,7 +339,7 @@
     "restoreConfirm": "Typ RESTORE om gegevens te vervangen",
     "passwordChanged": "Wachtwoord bijgewerkt",
     "passwordInvalid": "Huidig wachtwoord is onjuist",
-    "passwordTooShort": "Nieuw wachtwoord moet minstens 8 tekens bevatten",
+    "passwordTooShort": "Nieuw wachtwoord moet minstens 12 tekens bevatten",
     "heicNote": "Als HEIC-upload mislukt, stel iPhone-cameraformaten in op Meest compatibel zodat foto’s als JPEG worden geüpload."
   },
   "meta": {

@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-git diff --quiet
-git checkout main
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Working tree must be clean before publishing" >&2
+  exit 1
+fi
+if [[ "$(git branch --show-current)" != "main" ]]; then
+  echo "Publish from the main branch" >&2
+  exit 1
+fi
 git fetch origin
 git pull --ff-only origin main
 
