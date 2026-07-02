@@ -1,19 +1,26 @@
 services:
   tailor:
-    image: ghcr.io/d1scolor/tailor:latest
-    container_name: tailor
+    image: "${TAILOR_IMAGE:-tailor:local}"
+    build:
+      context: .
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
-      - ./data:/data
+      - tailor-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
-      INITIAL_USERNAME: "${INITIAL_USERNAME:-changeme}"
-      INITIAL_PASSWORD: "${INITIAL_PASSWORD:-changeme}"
-      BASE_URL: "${BASE_URL:-https://tailor.example.com}"
+      INITIAL_USERNAME: "${INITIAL_USERNAME:?Set INITIAL_USERNAME in .env}"
+      INITIAL_PASSWORD: "${INITIAL_PASSWORD:?Set INITIAL_PASSWORD in .env}"
+      BASE_URL: "${BASE_URL:?Set BASE_URL in .env}"
       DEFAULT_LOCALE: "${DEFAULT_LOCALE:-en-AU}"
       DEFAULT_UNIT_SYSTEM: "${DEFAULT_UNIT_SYSTEM:-metric}"
-      CURRENCY_CODE: "${CURRENCY_CODE:-}"
-      CURRENCY_SYMBOL: "${CURRENCY_SYMBOL:-}"
+      CURRENCY_CODE: "${CURRENCY_CODE:-USD}"
       MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-20}"
-      NODE_ENV: "production"
+      MAX_BACKUP_MB: "${MAX_BACKUP_MB:-4096}"
+
+volumes:
+  tailor-data:

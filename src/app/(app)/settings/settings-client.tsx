@@ -176,7 +176,7 @@ export function SettingsClient({
         <form className="grid gap-3 md:grid-cols-3" onSubmit={changePassword}>
           <h2 className="font-semibold md:col-span-3">{t("settings.password")}</h2>
           <Input name="current" type="password" placeholder={t("auth.currentPassword")} required />
-          <Input name="next" type="password" placeholder={t("auth.nextPassword")} required />
+          <Input name="next" type="password" placeholder={t("auth.nextPassword")} minLength={12} maxLength={72} required />
           <Button type="submit">{t("common.save")}</Button>
         </form>
       </Card>
@@ -357,13 +357,23 @@ function RestoreForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await fetch("/api/backup/restore", { method: "POST", body: form });
+    const file = form.get("file");
+    if (!(file instanceof File) || form.get("confirm") !== "RESTORE") return;
+    const response = await fetch("/api/backup/restore", {
+      method: "POST",
+      headers: {
+        "Content-Type": file.type || "application/gzip",
+        "X-Tailor-Restore-Confirm": "RESTORE"
+      },
+      body: file
+    });
+    if (response.ok) window.location.assign("/login");
   }
   return (
     <form className="space-y-2" onSubmit={submit}>
       <h3 className="text-sm font-medium">{t("settings.restore")}</h3>
-      <Input type="file" name="file" accept=".tar.gz,application/gzip" />
-      <Input name="confirm" placeholder={t("settings.restoreConfirm")} />
+      <Input type="file" name="file" accept=".tar.gz,application/gzip" required />
+      <Input name="confirm" placeholder={t("settings.restoreConfirm")} required />
       <Button type="submit" variant="secondary">
         {t("settings.restore")}
       </Button>

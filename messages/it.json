@@ -339,7 +339,7 @@
     "restoreConfirm": "Digita RESTORE per sostituire i dati",
     "passwordChanged": "Password aggiornata",
     "passwordInvalid": "Password attuale errata",
-    "passwordTooShort": "La nuova password deve avere almeno 8 caratteri",
+    "passwordTooShort": "La nuova password deve avere almeno 12 caratteri",
     "heicNote": "Se il caricamento HEIC non riesce, imposta Formati fotocamera di iPhone su Più compatibile per caricare le foto come JPEG."
   },
   "meta": {
