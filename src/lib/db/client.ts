@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { dbDir, dbPath, displayDir, originalsDir, photosDir, thumbsDir } from "@/lib/env";
 import * as schema from "./schema";
+import { assertCurrentSchema, recordSchemaVersion } from "./schema-compat";
 
 type Sqlite = Database.Database;
 
@@ -43,7 +44,7 @@ export function closeDb() {
   initialized = false;
 }
 
-export function runMigrations(db = getSqlite()) {
+export function runMigrations(db: Sqlite) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
       name TEXT PRIMARY KEY,
@@ -65,60 +66,6 @@ export function runMigrations(db = getSqlite()) {
       db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(name, new Date().toISOString());
     })();
   }
-  ensureAddedColumns(db);
-}
-
-function ensureAddedColumns(db: Sqlite) {
-  if (!columnExists(db, "users", "unit_system")) {
-    db.exec("ALTER TABLE users ADD COLUMN unit_system TEXT NOT NULL DEFAULT 'metric'");
-  }
-  if (!columnExists(db, "users", "currency_code")) {
-    db.exec("ALTER TABLE users ADD COLUMN currency_code TEXT");
-  }
-  if (!columnExists(db, "fabrics", "colors")) {
-    db.exec("ALTER TABLE fabrics ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
-  }
-  if (!columnExists(db, "materials", "colors")) {
-    db.exec("ALTER TABLE materials ADD COLUMN colors TEXT NOT NULL DEFAULT '[]'");
-  }
-  if (!columnExists(db, "materials", "usage_status")) {
-    db.exec("ALTER TABLE materials ADD COLUMN usage_status TEXT NOT NULL DEFAULT 'available'");
-  }
-  if (!columnExists(db, "fabrics", "purpose")) {
-    db.exec("ALTER TABLE fabrics ADD COLUMN purpose TEXT NOT NULL DEFAULT 'garment'");
-  }
-  if (!columnExists(db, "fabrics", "material_type")) {
-    db.exec("ALTER TABLE fabrics ADD COLUMN material_type TEXT NOT NULL DEFAULT 'other'");
-  }
-  if (!columnExists(db, "patterns", "pattern_type")) {
-    db.exec("ALTER TABLE patterns ADD COLUMN pattern_type TEXT NOT NULL DEFAULT 'paper'");
-  }
-  if (!columnExists(db, "patterns", "difficulty")) {
-    db.exec("ALTER TABLE patterns ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'");
-  }
-  if (!columnExists(db, "patterns", "pattern_for")) {
-    db.exec("ALTER TABLE patterns ADD COLUMN pattern_for TEXT");
-  }
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS tools (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'other',
-      quantity INTEGER NOT NULL DEFAULT 1,
-      brand TEXT,
-      model TEXT,
-      source TEXT,
-      price_cents INTEGER,
-      purchased_at TEXT,
-      condition TEXT NOT NULL DEFAULT 'good',
-      remarks TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `);
-}
-
-function columnExists(db: Sqlite, table: string, column: string) {
-  return db.prepare(`PRAGMA table_info(${table})`).all().some((row) => (row as { name: string }).name === column);
+  assertCurrentSchema(db);
+  recordSchemaVersion(db);
 }

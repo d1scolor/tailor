@@ -1,45 +1,34 @@
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   locale TEXT NOT NULL DEFAULT 'en',
+  unit_system TEXT NOT NULL DEFAULT 'metric',
+  currency_code TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+CREATE INDEX sessions_user_idx ON sessions(user_id);
 
-CREATE TABLE IF NOT EXISTS photos (
-  id TEXT PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project','tool')),
-  entity_id INTEGER NOT NULL,
-  original_ext TEXT NOT NULL,
-  is_cover INTEGER NOT NULL DEFAULT 0,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS photos_entity_idx ON photos(entity_type, entity_id);
-
-CREATE TABLE IF NOT EXISTS cloths (
+CREATE TABLE fabrics (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
-  length_total REAL NOT NULL,
-  length_remaining REAL NOT NULL,
-  length_unit TEXT NOT NULL DEFAULT 'm',
-  width REAL,
-  width_unit TEXT,
+  length_total_m REAL NOT NULL,
+  width_m REAL,
   colors TEXT NOT NULL DEFAULT '[]',
+  purpose TEXT NOT NULL DEFAULT 'garment',
+  material_type TEXT NOT NULL DEFAULT 'other',
   source TEXT,
   price_cents INTEGER,
   purchased_at TEXT,
@@ -48,10 +37,13 @@ CREATE TABLE IF NOT EXISTS cloths (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS patterns (
+CREATE TABLE patterns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  pattern_type TEXT NOT NULL DEFAULT 'paper',
+  difficulty TEXT NOT NULL DEFAULT 'medium',
+  pattern_for TEXT,
   size TEXT,
   pieces INTEGER,
   source TEXT,
@@ -62,32 +54,54 @@ CREATE TABLE IF NOT EXISTS patterns (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS material_categories (
+CREATE TABLE material_categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
+  definition_key TEXT,
+  custom_name TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
-  UNIQUE(user_id, name)
+  CHECK (
+    (definition_key IS NOT NULL AND custom_name IS NULL) OR
+    (definition_key IS NULL AND custom_name IS NOT NULL)
+  )
 );
+CREATE UNIQUE INDEX material_categories_user_definition
+  ON material_categories(user_id, definition_key)
+  WHERE definition_key IS NOT NULL;
+CREATE UNIQUE INDEX material_categories_user_custom_name
+  ON material_categories(user_id, custom_name)
+  WHERE custom_name IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS material_units (
+CREATE TABLE material_units (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
+  definition_key TEXT,
+  custom_name TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
-  UNIQUE(user_id, name)
+  CHECK (
+    (definition_key IS NOT NULL AND custom_name IS NULL) OR
+    (definition_key IS NULL AND custom_name IS NOT NULL)
+  )
 );
+CREATE UNIQUE INDEX material_units_user_definition
+  ON material_units(user_id, definition_key)
+  WHERE definition_key IS NOT NULL;
+CREATE UNIQUE INDEX material_units_user_custom_name
+  ON material_units(user_id, custom_name)
+  WHERE custom_name IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS materials (
+CREATE TABLE materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   category_id INTEGER REFERENCES material_categories(id) ON DELETE SET NULL,
-  unit_id INTEGER REFERENCES material_units(id) ON DELETE SET NULL,
-  quantity_total REAL NOT NULL,
-  quantity_remaining REAL NOT NULL,
+  unit_id INTEGER NOT NULL REFERENCES material_units(id) ON DELETE RESTRICT,
+  quantity_total_canonical REAL NOT NULL,
+  usage_status TEXT NOT NULL DEFAULT 'available',
   colors TEXT NOT NULL DEFAULT '[]',
   source TEXT,
   price_cents INTEGER,
@@ -97,7 +111,7 @@ CREATE TABLE IF NOT EXISTS materials (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS projects (
+CREATE TABLE projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -109,7 +123,7 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tools (
+CREATE TABLE tools (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -126,32 +140,45 @@ CREATE TABLE IF NOT EXISTS tools (
   updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS project_cloths (
+CREATE TABLE project_fabrics (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  cloth_id INTEGER NOT NULL REFERENCES cloths(id) ON DELETE RESTRICT,
-  length_used REAL NOT NULL,
+  fabric_id INTEGER NOT NULL REFERENCES fabrics(id) ON DELETE RESTRICT,
+  length_used_m REAL NOT NULL,
   created_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS project_cloths_project_idx ON project_cloths(project_id);
-CREATE INDEX IF NOT EXISTS project_cloths_cloth_idx ON project_cloths(cloth_id);
+CREATE INDEX project_fabrics_project_idx ON project_fabrics(project_id);
+CREATE INDEX project_fabrics_fabric_idx ON project_fabrics(fabric_id);
 
-CREATE TABLE IF NOT EXISTS project_patterns (
+CREATE TABLE project_patterns (
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   pattern_id INTEGER NOT NULL REFERENCES patterns(id) ON DELETE RESTRICT,
   PRIMARY KEY(project_id, pattern_id)
 );
 
-CREATE TABLE IF NOT EXISTS project_materials (
+CREATE TABLE project_materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE RESTRICT,
-  quantity_used REAL NOT NULL
+  material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE RESTRICT
 );
-CREATE INDEX IF NOT EXISTS project_materials_project_idx ON project_materials(project_id);
-CREATE INDEX IF NOT EXISTS project_materials_material_idx ON project_materials(material_id);
+CREATE INDEX project_materials_project_idx ON project_materials(project_id);
+CREATE INDEX project_materials_material_idx ON project_materials(material_id);
+CREATE UNIQUE INDEX project_materials_project_material_idx
+  ON project_materials(project_id, material_id);
 
-CREATE TABLE IF NOT EXISTS tags (
+CREATE TABLE photos (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('fabric','pattern','material','project','tool')),
+  entity_id INTEGER NOT NULL,
+  original_ext TEXT NOT NULL,
+  is_cover INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX photos_entity_idx ON photos(entity_type, entity_id);
+
+CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -161,10 +188,10 @@ CREATE TABLE IF NOT EXISTS tags (
   UNIQUE(user_id, name)
 );
 
-CREATE TABLE IF NOT EXISTS entity_tags (
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('cloth','pattern','material','project','tool')),
+CREATE TABLE entity_tags (
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('fabric','pattern','material','project','tool')),
   entity_id INTEGER NOT NULL,
   tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY(entity_type, entity_id, tag_id)
 );
-CREATE INDEX IF NOT EXISTS entity_tags_tag_idx ON entity_tags(tag_id);
+CREATE INDEX entity_tags_tag_idx ON entity_tags(tag_id);
