@@ -35,7 +35,7 @@
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^0.468.0",
     "nanoid": "^5.0.9",
-    "next": "^15.5.20",
+    "next": "^16.2.10",
     "next-intl": "^4.13.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
