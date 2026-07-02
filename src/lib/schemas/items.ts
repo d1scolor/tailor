@@ -34,7 +34,7 @@ export const materialSchema = baseItemSchema.extend({
   categoryId: nullableInt,
   unitId: z.coerce.number().int().positive(),
   quantityTotalCanonical: z.coerce.number().positive(),
-  usageStatus: z.enum(["available", "used"]).default("available"),
+  usageStatus: z.enum(["available", "partial", "used"]).default("available"),
   colors: colorsSchema
 });
 

@@ -53,12 +53,20 @@
     "selectColor": "选择颜色",
     "customColor": "自定义颜色",
     "tags": "标签",
+    "clear": "清除",
+    "searchTags": "搜索标签",
+    "untagged": "无标签",
+    "tagMatch": "标签匹配方式",
+    "matchAny": "任一所选标签",
+    "matchAll": "所有所选标签",
     "settings": "设置",
     "confirmDelete": "确定删除吗？",
     "error": "出错了",
     "used": "已使用",
     "unused": "未使用",
-    "excludeUsedUp": "排除已用完项目",
+    "usage": "使用情况",
+    "partial": "部分使用",
+    "usedUp": "已用完",
     "outOfStock": "无库存",
     "cover": "封面",
     "setCover": "设为封面",
@@ -224,7 +232,8 @@
     "other": "其他"
   },
   "materialUsageStatus": {
-    "available": "可用",
+    "available": "完全未使用",
+    "partial": "部分使用",
     "used": "已用完"
   },
   "fabrics": {

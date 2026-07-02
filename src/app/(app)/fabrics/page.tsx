@@ -6,7 +6,7 @@ import { listFabricMaterialTypes, listItems, listSources, listTags, summary } fr
 export default async function FabricsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const params = new URLSearchParams({ excludeUsedUp: "true" });
+  const params = new URLSearchParams();
   return (
     <InventoryClient
       kind="fabrics"

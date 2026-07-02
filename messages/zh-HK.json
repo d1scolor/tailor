@@ -53,12 +53,20 @@
     "selectColor": "選擇顏色",
     "customColor": "自訂顏色",
     "tags": "標籤",
+    "clear": "清除",
+    "searchTags": "搜尋標籤",
+    "untagged": "無標籤",
+    "tagMatch": "標籤符合方式",
+    "matchAny": "任一已選標籤",
+    "matchAll": "所有已選標籤",
     "settings": "設定",
     "confirmDelete": "要刪除此項目嗎？",
     "error": "發生錯誤",
     "used": "已使用",
     "unused": "從未使用",
-    "excludeUsedUp": "不顯示已用完項目",
+    "usage": "使用情況",
+    "partial": "部分使用",
+    "usedUp": "已用完",
     "outOfStock": "缺貨",
     "cover": "封面",
     "setCover": "設為封面",
@@ -224,7 +232,8 @@
     "other": "其他"
   },
   "materialUsageStatus": {
-    "available": "可用",
+    "available": "完全未使用",
+    "partial": "部分使用",
     "used": "已用完"
   },
   "fabrics": {
