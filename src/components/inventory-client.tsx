@@ -1998,12 +1998,27 @@ function TagFilter({
 }) {
   const t = useTranslations();
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const selectedSet = new Set(selectedIds);
-  const selectedTags = tags.filter((tag) => selectedSet.has(tag.id));
-  const availableTags = tags.filter(
-    (tag) => !selectedSet.has(tag.id) && (!normalizedSearch || tag.name?.toLocaleLowerCase().includes(normalizedSearch))
+  const visibleTags = tags.filter(
+    (tag) => !normalizedSearch || tag.name?.toLocaleLowerCase().includes(normalizedSearch)
   );
+  const selectedLabels = tags.filter((tag) => selectedSet.has(tag.id)).map((tag) => tag.name);
+  const summary = [...selectedLabels, ...(includeUntagged ? [t("common.untagged")] : [])].filter(Boolean).join(", ");
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [open]);
 
   function toggleTag(tagId: number) {
     onChange({
@@ -2015,76 +2030,83 @@ function TagFilter({
 
   return (
     <fieldset className="space-y-2">
-      <legend className="sr-only">{t("common.tags")}</legend>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">{t("common.tags")}</span>
-        {selectedIds.length || includeUntagged ? (
-          <button
-            type="button"
-            className="min-h-9 rounded-md px-2 text-sm text-primary"
-            onClick={() => onChange({ tagIds: [], tagMatch: "any", includeUntagged: false })}
-          >
-            {t("common.clear")}
-          </button>
-        ) : null}
-      </div>
+      <legend className="text-sm font-medium">{t("common.tags")}</legend>
+      <div ref={menuRef} className="relative">
+        <button
+          type="button"
+          className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-sm"
+          aria-expanded={open}
+          onClick={() => {
+            if (open) setSearch("");
+            setOpen((current) => !current);
+          }}
+        >
+          <span className={`min-w-0 flex-1 truncate ${summary ? "" : "text-muted-foreground"}`}>
+            {summary || t("common.all")}
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+        </button>
 
-      {selectedTags.length ? (
-        <div className="flex flex-wrap gap-2">
-          {selectedTags.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-md border border-primary bg-primary/5 px-2 text-sm"
-              onClick={() => toggleTag(tag.id)}
-            >
-              <span className="truncate">{tag.name}</span>
-              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            </button>
-          ))}
-        </div>
-      ) : null}
+        {open ? (
+          <div className="absolute inset-x-0 top-full z-20 mt-1 space-y-2 rounded-md border border-border bg-white p-2 shadow-xl">
+            <div className="flex min-w-0 gap-2">
+              <Input
+                className="min-w-0"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("common.searchTags")}
+              />
+              {selectedIds.length || includeUntagged ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0 px-3"
+                  onClick={() => onChange({ tagIds: [], tagMatch: "any", includeUntagged: false })}
+                >
+                  {t("common.clear")}
+                </Button>
+              ) : null}
+            </div>
 
-      {selectedIds.length > 1 ? (
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">{t("common.tagMatch")}</span>
-          <Select
-            value={match}
-            onChange={(event) =>
-              onChange({ tagIds: selectedIds, tagMatch: event.target.value as TagMatch, includeUntagged })
-            }
-          >
-            <option value="any">{t("common.matchAny")}</option>
-            <option value="all">{t("common.matchAll")}</option>
-          </Select>
-        </label>
-      ) : null}
-
-      <label className="flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-sm">
-        <input
-          type="checkbox"
-          checked={includeUntagged}
-          onChange={(event) => onChange({ tagIds: selectedIds, tagMatch: match, includeUntagged: event.target.checked })}
-        />
-        <span>{t("common.untagged")}</span>
-      </label>
-
-      {tags.length ? (
-        <>
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("common.searchTags")} />
-          <div className="max-h-48 space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1">
-            {availableTags.map((tag) => (
-              <label key={tag.id} className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
-                <input type="checkbox" checked={false} onChange={() => toggleTag(tag.id)} />
-                <span className="min-w-0 truncate">{tag.name}</span>
+            <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain">
+              <label className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
+                <input
+                  type="checkbox"
+                  checked={includeUntagged}
+                  onChange={(event) =>
+                    onChange({ tagIds: selectedIds, tagMatch: match, includeUntagged: event.target.checked })
+                  }
+                />
+                <span>{t("common.untagged")}</span>
               </label>
-            ))}
-            {!availableTags.length && normalizedSearch ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">{t("common.empty")}</p>
+              {visibleTags.map((tag) => (
+                <label key={tag.id} className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
+                  <input type="checkbox" checked={selectedSet.has(tag.id)} onChange={() => toggleTag(tag.id)} />
+                  <span className="min-w-0 truncate">{tag.name}</span>
+                </label>
+              ))}
+              {!visibleTags.length && normalizedSearch ? (
+                <p className="px-2 py-3 text-sm text-muted-foreground">{t("common.empty")}</p>
+              ) : null}
+            </div>
+
+            {selectedIds.length > 1 ? (
+              <label className="block space-y-1 border-t border-border pt-2">
+                <span className="text-sm font-medium">{t("common.tagMatch")}</span>
+                <Select
+                  value={match}
+                  onChange={(event) =>
+                    onChange({ tagIds: selectedIds, tagMatch: event.target.value as TagMatch, includeUntagged })
+                  }
+                >
+                  <option value="any">{t("common.matchAny")}</option>
+                  <option value="all">{t("common.matchAll")}</option>
+                </Select>
+              </label>
             ) : null}
           </div>
-        </>
-      ) : null}
+        ) : null}
+      </div>
     </fieldset>
   );
 }

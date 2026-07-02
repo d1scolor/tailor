@@ -232,7 +232,7 @@
     "other": "其他"
   },
   "materialUsageStatus": {
-    "available": "完全未使用",
+    "available": "未使用",
     "partial": "部分使用",
     "used": "已用完"
   },

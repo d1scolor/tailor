@@ -63,7 +63,7 @@
     "confirmDelete": "要刪除此項目嗎？",
     "error": "發生錯誤",
     "used": "已使用",
-    "unused": "從未使用",
+    "unused": "未使用",
     "usage": "使用情況",
     "partial": "部分使用",
     "usedUp": "已用完",
@@ -232,7 +232,7 @@
     "other": "其他"
   },
   "materialUsageStatus": {
-    "available": "完全未使用",
+    "available": "未使用",
     "partial": "部分使用",
     "used": "已用完"
   },

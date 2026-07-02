@@ -63,7 +63,7 @@
     "confirmDelete": "Diesen Eintrag löschen?",
     "error": "Etwas ist schiefgelaufen",
     "used": "Verwendet",
-    "unused": "Nie verwendet",
+    "unused": "Unbenutzt",
     "usage": "Nutzung",
     "partial": "Teilweise verwendet",
     "usedUp": "Aufgebraucht",
@@ -232,7 +232,7 @@
     "other": "Sonstiges"
   },
   "materialUsageStatus": {
-    "available": "Noch nicht verwendet",
+    "available": "Unbenutzt",
     "partial": "Teilweise verwendet",
     "used": "Aufgebraucht"
   },
