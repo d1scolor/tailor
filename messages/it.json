@@ -63,7 +63,7 @@
     "confirmDelete": "Eliminare questo elemento?",
     "error": "Si è verificato un errore",
     "used": "Usato",
-    "unused": "Mai usato",
+    "unused": "Inutilizzato",
     "usage": "Utilizzo",
     "partial": "Utilizzato parzialmente",
     "usedUp": "Esaurito",
@@ -232,7 +232,7 @@
     "other": "Altro"
   },
   "materialUsageStatus": {
-    "available": "Mai utilizzato",
+    "available": "Inutilizzato",
     "partial": "Utilizzato parzialmente",
     "used": "Esaurito"
   },

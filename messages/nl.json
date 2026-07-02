@@ -63,7 +63,7 @@
     "confirmDelete": "Dit item verwijderen?",
     "error": "Er ging iets mis",
     "used": "Gebruikt",
-    "unused": "Nooit gebruikt",
+    "unused": "Ongebruikt",
     "usage": "Gebruik",
     "partial": "Gedeeltelijk gebruikt",
     "usedUp": "Opgebruikt",
@@ -232,7 +232,7 @@
     "other": "Overig"
   },
   "materialUsageStatus": {
-    "available": "Nog niet gebruikt",
+    "available": "Ongebruikt",
     "partial": "Gedeeltelijk gebruikt",
     "used": "Opgebruikt"
   },

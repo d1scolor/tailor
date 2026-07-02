@@ -63,7 +63,7 @@
     "confirmDelete": "Delete this item?",
     "error": "Something went wrong",
     "used": "Used",
-    "unused": "Never used",
+    "unused": "Unused",
     "usage": "Usage",
     "partial": "Partially used",
     "usedUp": "Used up",
@@ -232,7 +232,7 @@
     "other": "Other"
   },
   "materialUsageStatus": {
-    "available": "Not used at all",
+    "available": "Unused",
     "partial": "Partially used",
     "used": "Used up"
   },

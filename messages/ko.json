@@ -63,7 +63,7 @@
     "confirmDelete": "이 항목을 삭제할까요?",
     "error": "오류가 발생했습니다",
     "used": "사용됨",
-    "unused": "사용 안 함",
+    "unused": "미사용",
     "usage": "사용 상태",
     "partial": "일부 사용",
     "usedUp": "소진됨",
@@ -232,7 +232,7 @@
     "other": "기타"
   },
   "materialUsageStatus": {
-    "available": "전혀 사용하지 않음",
+    "available": "미사용",
     "partial": "일부 사용",
     "used": "소진"
   },
