@@ -129,6 +129,9 @@ export const projects = sqliteTable("projects", {
   quantity: integer("quantity").notNull().default(1),
   priceCents: integer("price_cents"),
   valueCents: integer("value_cents"),
+  materialCostCents: integer("material_cost_cents"),
+  laborMinutes: integer("labor_minutes"),
+  laborCostCents: integer("labor_cost_cents"),
   remarks: text("remarks"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()

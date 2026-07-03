@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
-import { money } from "@/lib/format";
+import { money, numberValue } from "@/lib/format";
 import { summary } from "@/lib/repository";
 import { formatMeasurement } from "@/lib/units";
 
@@ -64,14 +64,16 @@ export default async function OverviewPage() {
       cost: tools.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: tools.count ?? 0 },
-        { label: t("overview.totalQuantity"), value: tools.totalQuantity ?? 0 }
+        { label: t("overview.totalQuantity"), value: tools.totalQuantity ?? 0 },
+        { label: t("tools.needsAttention"), value: tools.needsAttention ?? 0 }
       ]
     },
     {
       key: "projects",
+      cost: projects.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: projects.count ?? 0 },
-        { label: t("overview.produced"), value: projects.totalProduced ?? 0 },
+        { label: t("projects.totalLaborHours"), value: numberValue((projects.totalLaborMinutes ?? 0) / 60, locale) },
         { label: t("projects.value"), value: money(projects.totalValue ?? 0, locale, currencyCode) }
       ]
     }

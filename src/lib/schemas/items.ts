@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseItemSchema, nullableInt, nullableNumber, nullableString } from "./common";
+import { baseItemSchema, nullableInt, nullableNonnegativeInt, nullableNumber, nullableString } from "./common";
 
 export const entityTypeSchema = z.enum(["fabric", "pattern", "material", "project", "tool"]);
 export type EntityType = z.infer<typeof entityTypeSchema>;
@@ -51,6 +51,9 @@ export const projectSchema = z.object({
   name: z.string().trim().min(1).max(200),
   quantity: z.coerce.number().int().positive().default(1),
   valueCents: nullableInt,
+  materialCostCents: nullableNonnegativeInt,
+  laborMinutes: nullableNonnegativeInt,
+  laborCostCents: nullableNonnegativeInt,
   remarks: z.string().trim().nullable().optional(),
   tagIds: z.array(z.coerce.number().int().positive()).default([]).optional(),
   patternIds: z.array(z.coerce.number().int().positive()).default([]).optional(),

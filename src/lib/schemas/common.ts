@@ -19,6 +19,12 @@ const nullableInt = z
   .pipe(z.number().int().nullable())
   .optional();
 
+const nullableNonnegativeInt = z
+  .union([z.number(), z.string(), z.null()])
+  .transform((value) => (value === "" || value === null ? null : Number(value)))
+  .pipe(z.number().int().nonnegative().nullable())
+  .optional();
+
 export const idParamSchema = z.object({
   id: z.coerce.number().int().positive()
 });
@@ -43,4 +49,4 @@ export const listQuerySchema = z.object({
   to: z.string().optional()
 });
 
-export { nullableString, nullableNumber, nullableInt };
+export { nullableString, nullableNumber, nullableInt, nullableNonnegativeInt };

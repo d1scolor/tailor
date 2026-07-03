@@ -350,10 +350,21 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO projects
-          (user_id, name, quantity, value_cents, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, quantity, value_cents, material_cost_cents, labor_minutes, labor_cost_cents, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(userId, input.name, input.quantity, input.valueCents, input.remarks, now, now);
+        .run(
+          userId,
+          input.name,
+          input.quantity,
+          input.valueCents,
+          input.materialCostCents,
+          input.laborMinutes,
+          input.laborCostCents,
+          input.remarks,
+          now,
+          now
+        );
       id = Number(result.lastInsertRowid);
       applyProjectLinks(db, id, userId, input as Parameters<typeof applyProjectLinks>[3]);
     }
@@ -457,8 +468,19 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
     } else {
       restoreProjectLinks(db, id);
       db.prepare(
-        `UPDATE projects SET name = ?, quantity = ?, value_cents = ?, remarks = ?, updated_at = ? WHERE id = ?`
-      ).run(input.name, input.quantity, input.valueCents, input.remarks, now, id);
+        `UPDATE projects SET name = ?, quantity = ?, value_cents = ?, material_cost_cents = ?, labor_minutes = ?,
+         labor_cost_cents = ?, remarks = ?, updated_at = ? WHERE id = ?`
+      ).run(
+        input.name,
+        input.quantity,
+        input.valueCents,
+        input.materialCostCents,
+        input.laborMinutes,
+        input.laborCostCents,
+        input.remarks,
+        now,
+        id
+      );
       applyProjectLinks(db, id, userId, input as Parameters<typeof applyProjectLinks>[3]);
     }
     setTags(entityByKind[kind], id, input.tagIds as number[] | undefined);
@@ -676,13 +698,14 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
   if (kind === "materials") {
     const rows = (filteredRows ??
       db
-        .prepare("SELECT price_cents AS priceCents, usage_status AS usageStatus FROM materials WHERE user_id = ?")
-        .all(userId)) as Array<{ priceCents: number | null; usageStatus: string }>;
+        .prepare("SELECT id, price_cents AS priceCents FROM materials WHERE user_id = ?")
+        .all(userId)) as Array<{ id: number; priceCents: number | null }>;
+    const linkedIds = linkedMaterialIds(db, rows.map((row) => row.id));
     return {
       count: rows.length,
       totalCost: rows.reduce((sum, row) => sum + (row.priceCents ?? 0), 0),
-      used: rows.filter((row) => row.usageStatus !== "available").length,
-      unused: rows.filter((row) => row.usageStatus === "available").length
+      used: rows.filter((row) => linkedIds.has(row.id)).length,
+      unused: rows.filter((row) => !linkedIds.has(row.id)).length
     };
   }
   if (kind === "tools") {
@@ -698,13 +721,29 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
     };
   }
   const rows = (filteredRows ??
-    db.prepare("SELECT id, quantity, value_cents AS valueCents FROM projects WHERE user_id = ?").all(userId)) as Array<{
+    db
+      .prepare(
+        `SELECT id, quantity, value_cents AS valueCents, material_cost_cents AS materialCostCents,
+         labor_minutes AS laborMinutes, labor_cost_cents AS laborCostCents
+         FROM projects WHERE user_id = ?`
+      )
+      .all(userId)) as Array<{
     id: number;
     quantity: number;
     valueCents: number | null;
+    materialCostCents: number | null;
+    laborMinutes: number | null;
+    laborCostCents: number | null;
   }>;
+  const fabricCosts = projectFabricCosts(db, rows.map((row) => row.id));
   return {
     count: rows.length,
+    totalCost: rows.reduce(
+      (sum, row) =>
+        sum + (fabricCosts.get(row.id) ?? 0) + (row.materialCostCents ?? 0) + (row.laborCostCents ?? 0),
+      0
+    ),
+    totalLaborMinutes: rows.reduce((sum, row) => sum + (row.laborMinutes ?? 0), 0),
     totalValue: rows.reduce((sum, row) => sum + (row.valueCents ?? 0), 0),
     totalProduced: rows.reduce((sum, row) => sum + row.quantity, 0)
   };
@@ -715,19 +754,52 @@ function isPatternUsed(patternId: number) {
   return Boolean(row);
 }
 
+function linkedMaterialIds(db: ReturnType<typeof getSqlite>, materialIds: number[]) {
+  const linkedIds = new Set<number>();
+  if (!materialIds.length) return linkedIds;
+  const placeholders = materialIds.map(() => "?").join(",");
+  const rows = db
+    .prepare(`SELECT DISTINCT material_id AS materialId FROM project_materials WHERE material_id IN (${placeholders})`)
+    .all(...materialIds) as Array<{ materialId: number }>;
+  for (const row of rows) linkedIds.add(row.materialId);
+  return linkedIds;
+}
+
 export function calculateProjectCost(projectId: number) {
   const db = getSqlite();
-  const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
+  const project = db
+    .prepare(
+      `SELECT id, material_cost_cents AS materialCostCents, labor_cost_cents AS laborCostCents
+       FROM projects WHERE id = ?`
+    )
+    .get(projectId) as { id: number; materialCostCents: number | null; laborCostCents: number | null } | undefined;
   if (!project) throw new ApiError("not_found", 404, "Project not found.");
-  const fabricCost = (
-    db
-      .prepare(
-        `SELECT pc.length_used_m AS used, c.length_total_m AS total, c.price_cents AS price
-         FROM project_fabrics pc JOIN fabrics c ON c.id = pc.fabric_id WHERE pc.project_id = ?`
-      )
-      .all(projectId) as Array<{ used: number; total: number; price: number | null }>
-  ).reduce((sum, row) => sum + (row.total > 0 ? Math.round((row.used / row.total) * (row.price ?? 0)) : 0), 0);
-  return { fabricCost, totalCost: fabricCost };
+  const fabricCost = projectFabricCosts(db, [projectId]).get(projectId) ?? 0;
+  const materialCost = project.materialCostCents ?? 0;
+  const laborCost = project.laborCostCents ?? 0;
+  return { fabricCost, materialCost, laborCost, totalCost: fabricCost + materialCost + laborCost };
+}
+
+function projectFabricCosts(db: ReturnType<typeof getSqlite>, projectIds: number[]) {
+  const costs = new Map<number, number>();
+  if (!projectIds.length) return costs;
+  const placeholders = projectIds.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `SELECT pf.project_id AS projectId,
+       COALESCE(SUM(CASE
+         WHEN f.length_total_m > 0
+         THEN ROUND((pf.length_used_m / f.length_total_m) * COALESCE(f.price_cents, 0))
+         ELSE 0
+       END), 0) AS fabricCost
+       FROM project_fabrics pf
+       JOIN fabrics f ON f.id = pf.fabric_id
+       WHERE pf.project_id IN (${placeholders})
+       GROUP BY pf.project_id`
+    )
+    .all(...projectIds) as Array<{ projectId: number; fabricCost: number }>;
+  for (const row of rows) costs.set(row.projectId, row.fabricCost);
+  return costs;
 }
 
 export function setTags(entityType: EntityType, entityId: number, tagIds?: number[]) {
