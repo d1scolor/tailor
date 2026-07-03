@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSessionCookieValue, sessionCookie } from "@/lib/auth/cookie";
 
-export default function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const publicPath =
     pathname === "/login" ||

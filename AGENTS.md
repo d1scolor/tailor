@@ -20,7 +20,7 @@ When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run
 - i18n: `next-intl` with locale catalogs under `messages/`.
 - Data: SQLite through `better-sqlite3`; main access layer is `src/lib/repository.ts`.
 - Schema validation: Zod schemas in `src/lib/schemas`.
-- Auth: HttpOnly session cookie; middleware performs cheap cookie-shape gating, API/layout code validates sessions.
+- Auth: HttpOnly session cookie; the Next.js proxy performs cheap cookie-shape gating, API/layout code validates sessions.
 - Photos: DB rows in `photos`; files in `data/photos/{originals,display,thumbs}`. Do not reuse photo rows across entities.
 
 ## Inventory Model
