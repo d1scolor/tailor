@@ -16,15 +16,19 @@ export function extensionForMime(mime: string) {
   return mimeToExt[mime];
 }
 
+function photoFilePath(directory: string, filename: string) {
+  return path.join(/*turbopackIgnore: true*/ directory, filename);
+}
+
 export async function writePhotoFiles(id: string, ext: string, buffer: Buffer) {
-  const originalPath = path.join(originalsDir, `${id}.${ext}`);
+  const originalPath = photoFilePath(originalsDir, `${id}.${ext}`);
   await fs.writeFile(originalPath, buffer, { mode: 0o600 });
   try {
-    await sharp(buffer).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join(displayDir, `${id}.webp`));
-    await sharp(buffer).rotate().resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true }).webp({ quality: 75 }).toFile(path.join(thumbsDir, `${id}.webp`));
+    await sharp(buffer).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toFile(photoFilePath(displayDir, `${id}.webp`));
+    await sharp(buffer).rotate().resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true }).webp({ quality: 75 }).toFile(photoFilePath(thumbsDir, `${id}.webp`));
     await Promise.all([
-      fs.chmod(path.join(displayDir, `${id}.webp`), 0o600),
-      fs.chmod(path.join(thumbsDir, `${id}.webp`), 0o600)
+      fs.chmod(photoFilePath(displayDir, `${id}.webp`), 0o600),
+      fs.chmod(photoFilePath(thumbsDir, `${id}.webp`), 0o600)
     ]);
   } catch (error) {
     await deletePhotoFiles(id, ext);
@@ -34,23 +38,23 @@ export async function writePhotoFiles(id: string, ext: string, buffer: Buffer) {
 
 export async function deletePhotoFiles(id: string, ext: string) {
   await Promise.allSettled([
-    fs.rm(path.join(originalsDir, `${id}.${ext}`), { force: true }),
-    fs.rm(path.join(displayDir, `${id}.webp`), { force: true }),
-    fs.rm(path.join(thumbsDir, `${id}.webp`), { force: true })
+    fs.rm(photoFilePath(originalsDir, `${id}.${ext}`), { force: true }),
+    fs.rm(photoFilePath(displayDir, `${id}.webp`), { force: true }),
+    fs.rm(photoFilePath(thumbsDir, `${id}.webp`), { force: true })
   ]);
 }
 
 export function deletePhotoFilesSync(id: string, ext: string) {
-  fsSync.rmSync(path.join(originalsDir, `${id}.${ext}`), { force: true });
-  fsSync.rmSync(path.join(displayDir, `${id}.webp`), { force: true });
-  fsSync.rmSync(path.join(thumbsDir, `${id}.webp`), { force: true });
+  fsSync.rmSync(photoFilePath(originalsDir, `${id}.${ext}`), { force: true });
+  fsSync.rmSync(photoFilePath(displayDir, `${id}.webp`), { force: true });
+  fsSync.rmSync(photoFilePath(thumbsDir, `${id}.webp`), { force: true });
 }
 
 export function copyPhotoFilesSync(sourceId: string, targetId: string, ext: string) {
   try {
-    fsSync.copyFileSync(path.join(originalsDir, `${sourceId}.${ext}`), path.join(originalsDir, `${targetId}.${ext}`));
-    fsSync.copyFileSync(path.join(displayDir, `${sourceId}.webp`), path.join(displayDir, `${targetId}.webp`));
-    fsSync.copyFileSync(path.join(thumbsDir, `${sourceId}.webp`), path.join(thumbsDir, `${targetId}.webp`));
+    fsSync.copyFileSync(photoFilePath(originalsDir, `${sourceId}.${ext}`), photoFilePath(originalsDir, `${targetId}.${ext}`));
+    fsSync.copyFileSync(photoFilePath(displayDir, `${sourceId}.webp`), photoFilePath(displayDir, `${targetId}.webp`));
+    fsSync.copyFileSync(photoFilePath(thumbsDir, `${sourceId}.webp`), photoFilePath(thumbsDir, `${targetId}.webp`));
   } catch (error) {
     deletePhotoFilesSync(targetId, ext);
     throw error;
@@ -58,7 +62,7 @@ export function copyPhotoFilesSync(sourceId: string, targetId: string, ext: stri
 }
 
 export function photoPath(id: string, ext: string, variant: string) {
-  if (variant === "original") return path.join(originalsDir, `${id}.${ext}`);
-  if (variant === "display") return path.join(displayDir, `${id}.webp`);
-  return path.join(thumbsDir, `${id}.webp`);
+  if (variant === "original") return photoFilePath(originalsDir, `${id}.${ext}`);
+  if (variant === "display") return photoFilePath(displayDir, `${id}.webp`);
+  return photoFilePath(thumbsDir, `${id}.webp`);
 }
