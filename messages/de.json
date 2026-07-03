@@ -285,6 +285,7 @@
     "cost": "Gesamtkosten",
     "fabricCost": "Stoffkosten",
     "value": "Geschätzter Wert",
+    "unitValue": "Stückwert",
     "produced": "Hergestellte Stücke",
     "quantity": "Menge",
     "patterns": "Verwendete Schnittmuster",
@@ -340,7 +341,11 @@
     "passwordChanged": "Passwort aktualisiert",
     "passwordInvalid": "Aktuelles Passwort ist falsch",
     "passwordTooShort": "Neues Passwort muss mindestens 12 Zeichen lang sein",
-    "heicNote": "Falls der HEIC-Upload fehlschlägt, stellen Sie das iPhone-Kameraformat auf „Maximale Kompatibilität“, damit Fotos als JPEG hochgeladen werden."
+    "about": "Über",
+    "sourceCode": "Quellcode",
+    "license": "Lizenz",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "Ausschließlich unter GNU AGPL v3 lizenziert. Ohne Gewährleistung bereitgestellt."
   },
   "meta": {
     "groups": {

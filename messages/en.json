@@ -285,6 +285,7 @@
     "cost": "Total cost",
     "fabricCost": "Fabric cost",
     "value": "Estimated value",
+    "unitValue": "Unit value",
     "produced": "Items produced",
     "quantity": "Quantity",
     "patterns": "Patterns used",
@@ -340,7 +341,11 @@
     "passwordChanged": "Password updated",
     "passwordInvalid": "Current password is incorrect",
     "passwordTooShort": "New password must be at least 12 characters",
-    "heicNote": "If HEIC upload fails, set iPhone Camera Formats to Most Compatible so photos upload as JPEG."
+    "about": "About",
+    "sourceCode": "Source code",
+    "license": "License",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "Licensed under GNU AGPL v3 only. Provided without warranty."
   },
   "meta": {
     "groups": {

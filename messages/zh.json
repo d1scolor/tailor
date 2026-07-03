@@ -285,6 +285,7 @@
     "cost": "总成本",
     "fabricCost": "布料成本",
     "value": "估值",
+    "unitValue": "单件价值",
     "produced": "成品数量",
     "quantity": "数量",
     "patterns": "使用纸样",
@@ -340,7 +341,11 @@
     "passwordChanged": "密码已更新",
     "passwordInvalid": "当前密码不正确",
     "passwordTooShort": "新密码至少需要 12 个字符",
-    "heicNote": "如果 HEIC 上传失败，请将 iPhone 相机格式设为“兼容性最佳”，照片会以 JPEG 上传。"
+    "about": "关于",
+    "sourceCode": "源代码",
+    "license": "许可证",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "仅根据 GNU AGPL v3 许可提供，不提供任何担保。"
   },
   "meta": {
     "groups": {
