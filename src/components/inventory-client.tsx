@@ -861,14 +861,14 @@ function InventoryBrowserView({
             <Select aria-label={t("common.sort")} value={sort} onChange={(event) => onSortChange(event.target.value)} className="w-52 border-0 shadow-none">
               <option value="created">{t("common.sortCreated")}</option>
               <option value="name">{t("common.sortName")}</option>
-              <option value="price">{t("common.sortPrice")}</option>
+              <option value="price">{kind === "projects" ? t("projects.value") : t("common.sortPrice")}</option>
               {kind === "fabrics" ? (
                 <>
                   <option value="unitPriceLength">{unitPriceLabel(units.lengthUnit, currencyCode, locale, t)}</option>
                   <option value="unitPriceSize">{unitPriceLabel(units.areaUnit, currencyCode, locale, t)}</option>
                 </>
               ) : (
-                <option value="unitPrice">{t("common.sortUnitPrice")}</option>
+                <option value="unitPrice">{kind === "projects" ? t("projects.unitValue") : t("common.sortUnitPrice")}</option>
               )}
               {kind === "fabrics" ? <option value="remainingMetres">{t("common.sortRemainingLength")}</option> : null}
               {kind === "tools" ? <option value="quantity">{t("common.sortQuantity")}</option> : null}
@@ -2946,7 +2946,7 @@ function unitPriceStat(
   if (kind === "projects") {
     const unitPrice = unitPriceHundredths(item.valueCents, item.quantity);
     if (unitPrice != null) {
-      return `${t("common.unitPrice")} ${money(unitPrice, locale, currencyCode)}/${t("common.piece")}`;
+      return `${t("projects.unitValue")} ${money(unitPrice, locale, currencyCode)}/${t("common.piece")}`;
     }
   }
   if (kind === "tools") {

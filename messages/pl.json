@@ -285,6 +285,7 @@
     "cost": "Łączny koszt",
     "fabricCost": "Koszt materiału",
     "value": "Szacowana wartość",
+    "unitValue": "Wartość jednostkowa",
     "produced": "Wykonane sztuki",
     "quantity": "Ilość",
     "patterns": "Użyte wykroje",
@@ -340,7 +341,11 @@
     "passwordChanged": "Hasło zaktualizowane",
     "passwordInvalid": "Aktualne hasło jest nieprawidłowe",
     "passwordTooShort": "Nowe hasło musi mieć co najmniej 12 znaków",
-    "heicNote": "Jeśli przesyłanie HEIC nie działa, ustaw format aparatu iPhone’a na Najbardziej zgodny, aby przesyłać zdjęcia jako JPEG."
+    "about": "O aplikacji",
+    "sourceCode": "Kod źródłowy",
+    "license": "Licencja",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "Licencjonowane wyłącznie na warunkach GNU AGPL v3. Udostępniane bez gwarancji."
   },
   "meta": {
     "groups": {

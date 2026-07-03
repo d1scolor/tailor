@@ -285,6 +285,7 @@
     "cost": "合計費用",
     "fabricCost": "生地代",
     "value": "見積価値",
+    "unitValue": "単位価値",
     "produced": "製作数",
     "quantity": "数量",
     "patterns": "使用型紙",
@@ -340,7 +341,11 @@
     "passwordChanged": "パスワードを更新しました",
     "passwordInvalid": "現在のパスワードが正しくありません",
     "passwordTooShort": "新しいパスワードは12文字以上にしてください",
-    "heicNote": "HEICのアップロードに失敗する場合は、iPhoneのカメラフォーマットを「互換性優先」に設定し、JPEGでアップロードしてください。"
+    "about": "このアプリについて",
+    "sourceCode": "ソースコード",
+    "license": "ライセンス",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "GNU AGPL v3 のみの条件でライセンスされています。無保証で提供されます。"
   },
   "meta": {
     "groups": {

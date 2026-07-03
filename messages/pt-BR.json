@@ -285,6 +285,7 @@
     "cost": "Custo total",
     "fabricCost": "Custo do tecido",
     "value": "Valor estimado",
+    "unitValue": "Valor unitário",
     "produced": "Itens produzidos",
     "quantity": "Quantidade",
     "patterns": "Moldes usados",
@@ -340,7 +341,11 @@
     "passwordChanged": "Senha atualizada",
     "passwordInvalid": "A senha atual está incorreta",
     "passwordTooShort": "A nova senha deve ter pelo menos 12 caracteres",
-    "heicNote": "Se o envio HEIC falhar, defina Formatos da Câmera do iPhone como Mais Compatível para enviar fotos em JPEG."
+    "about": "Sobre",
+    "sourceCode": "Código-fonte",
+    "license": "Licença",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "Licenciado exclusivamente sob a GNU AGPL v3. Fornecido sem garantia."
   },
   "meta": {
     "groups": {
