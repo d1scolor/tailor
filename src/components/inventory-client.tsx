@@ -1089,6 +1089,9 @@ function Fields(props: FieldsProps) {
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         {props.kind !== "projects" ? <Field name="priceCents" label={t("common.price")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.priceCents, currencyCode)} /> : null}
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.valueCents, currencyCode)} /> : null}
+        {props.kind === "projects" ? <Field name="materialCostCents" label={t("projects.materialCost")} type="number" inputMode="decimal" min="0" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.materialCostCents, currencyCode)} /> : null}
+        {props.kind === "projects" ? <Field name="laborHours" label={t("projects.laborHours")} type="number" inputMode="decimal" min="0" step="0.01" defaultValue={hoursFromMinutes(props.item.laborMinutes)} /> : null}
+        {props.kind === "projects" ? <Field name="laborCostCents" label={t("projects.laborCost")} type="number" inputMode="decimal" min="0" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.laborCostCents, currencyCode)} /> : null}
         {props.kind !== "projects" ? <TextChoiceField name="source" label={t("common.source")} value={props.item.source ?? ""} options={props.sourceOptions} /> : null}
         {props.kind !== "projects" ? <Field name="purchasedAt" label={t("common.date")} type="date" defaultValue={props.item.purchasedAt} /> : null}
       </div>
@@ -1444,11 +1447,11 @@ function selectedOptionItems(options: AnyItem[], selectedIds: number[]) {
   return selectedIds.map((id) => optionMap.get(id) ?? { id, name: String(id) });
 }
 
-function Field(props: { name: string; label: string; defaultValue?: any; type?: string; step?: string; required?: boolean; inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"] }) {
+function Field(props: { name: string; label: string; defaultValue?: any; type?: string; min?: string; step?: string; required?: boolean; inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"] }) {
   return (
     <label className="block space-y-1">
       <span className="text-sm font-medium">{props.label}</span>
-      <Input name={props.name} type={props.type} inputMode={props.inputMode} step={props.step} defaultValue={props.defaultValue ?? ""} required={props.required} />
+      <Input name={props.name} type={props.type} inputMode={props.inputMode} min={props.min} step={props.step} defaultValue={props.defaultValue ?? ""} required={props.required} />
     </label>
   );
 }
@@ -2866,8 +2869,9 @@ function summaryCards(
   if (kind === "projects") {
     return [
       { label: t("projects.total"), value: summary.count ?? 0 },
-      { label: t("projects.value"), value: money(summary.totalValue, locale, currencyCode) },
-      { label: t("projects.produced"), value: summary.totalProduced ?? 0 }
+      { label: t("projects.cost"), value: money(summary.totalCost, locale, currencyCode) },
+      { label: t("projects.totalLaborHours"), value: numberValue((summary.totalLaborMinutes ?? 0) / 60, locale) },
+      { label: t("projects.value"), value: money(summary.totalValue, locale, currencyCode) }
     ];
   }
   if (kind === "tools") {
@@ -3047,7 +3051,11 @@ function detailRows(
   } else {
     add(t("projects.quantity"), item.quantity);
     add(t("projects.value"), item.valueCents, (value) => money(value, locale, currencyCode));
+    add(t("projects.laborHours"), item.laborMinutes, (value) => numberValue(value / 60, locale));
     add(t("projects.fabricCost"), item.cost?.fabricCost, (value) => money(value, locale, currencyCode));
+    add(t("projects.materialCost"), item.cost?.materialCost, (value) => money(value, locale, currencyCode));
+    add(t("projects.laborCost"), item.cost?.laborCost, (value) => money(value, locale, currencyCode));
+    add(t("projects.cost"), item.cost?.totalCost, (value) => money(value, locale, currencyCode));
   }
 
   add(t("common.remarks"), item.remarks);
@@ -3202,6 +3210,9 @@ function formToBody(kind: Kind, form: FormData) {
     ...base,
     quantity: Number(form.get("quantity") || 1),
     valueCents: storedHundredthsFromInput(form.get("valueCents")),
+    materialCostCents: storedHundredthsFromInput(form.get("materialCostCents")),
+    laborMinutes: minutesFromHours(form.get("laborHours")),
+    laborCostCents: storedHundredthsFromInput(form.get("laborCostCents")),
     patternIds: [...new Set(form.getAll("patternIds").map(Number).filter(Boolean))],
     fabrics: fabricIds
       .map((id, index) => ({ fabricId: Number(id), lengthUsedM: Number(fabricAmounts[index]) }))
@@ -3243,6 +3254,16 @@ function stringOrNull(value: FormDataEntryValue | null) {
 function numberOrNull(value: FormDataEntryValue | null) {
   const text = value?.toString().trim() ?? "";
   return text ? Number(text) : null;
+}
+
+function minutesFromHours(value: FormDataEntryValue | null) {
+  const hours = numberOrNull(value);
+  return hours === null ? null : Math.round(hours * 60);
+}
+
+function hoursFromMinutes(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  return Number((Number(value) / 60).toFixed(2));
 }
 
 function storedHundredthsFromInput(value: FormDataEntryValue | null) {

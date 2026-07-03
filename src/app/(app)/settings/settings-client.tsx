@@ -20,6 +20,7 @@ type Item = {
 };
 
 export function SettingsClient({
+  username,
   locale,
   localeOptions,
   currencyCode,
@@ -29,6 +30,7 @@ export function SettingsClient({
   categories,
   units
 }: {
+  username: string;
   locale: Locale;
   localeOptions: { value: Locale; label: string }[];
   currencyCode: CurrencyCode;
@@ -43,6 +45,7 @@ export function SettingsClient({
   const [categoryList, setCategoryList] = useState(categories);
   const [unitList, setUnitList] = useState(units.filter((item) => item.definitionKey !== "unspecified"));
   const [toast, setToast] = useState<string | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   function notify(message: string) {
     setToast(message);
@@ -112,6 +115,10 @@ export function SettingsClient({
     event.preventDefault();
     const target = event.currentTarget;
     const form = new FormData(target);
+    if (form.get("next") !== form.get("confirm")) {
+      notify(t("settings.passwordMismatch"));
+      return;
+    }
     try {
       const response = await fetch("/api/auth/password", {
         method: "POST",
@@ -120,6 +127,7 @@ export function SettingsClient({
       });
       if (response.ok) {
         target.reset();
+        setShowPasswordForm(false);
         notify(t("settings.passwordChanged"));
         return;
       }
@@ -132,6 +140,44 @@ export function SettingsClient({
   return (
     <main className="space-y-5">
       <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+      <Card className="p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="font-semibold">{t("settings.account")}</h2>
+            <p className="text-sm text-muted-foreground">{t("settings.signedInAs", { username })}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Button type="button" variant="secondary" onClick={() => setShowPasswordForm((current) => !current)}>
+              {t("settings.password")}
+            </Button>
+            <Button type="button" variant="danger" onClick={logout}>
+              {t("common.logout")}
+            </Button>
+          </div>
+        </div>
+        {showPasswordForm ? (
+          <form className="mt-4 grid gap-3 border-t border-border pt-4 md:grid-cols-3" onSubmit={changePassword}>
+            <label className="grid gap-1 text-sm font-medium">
+              {t("auth.currentPassword")}
+              <Input name="current" type="password" autoComplete="current-password" required />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              {t("auth.nextPassword")}
+              <Input name="next" type="password" autoComplete="new-password" minLength={12} maxLength={72} required />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              {t("settings.confirmPassword")}
+              <Input name="confirm" type="password" autoComplete="new-password" minLength={12} maxLength={72} required />
+            </label>
+            <div className="flex flex-wrap justify-end gap-2 md:col-span-3">
+              <Button type="button" variant="secondary" onClick={() => setShowPasswordForm(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit">{t("common.save")}</Button>
+            </div>
+          </form>
+        ) : null}
+      </Card>
       <Card className="space-y-3 p-4">
         <h2 className="font-semibold">{t("settings.language")}</h2>
         <Select
@@ -172,14 +218,6 @@ export function SettingsClient({
           </Button>
         </div>
       </Card>
-      <Card className="p-4">
-        <form className="grid gap-3 md:grid-cols-3" onSubmit={changePassword}>
-          <h2 className="font-semibold md:col-span-3">{t("settings.password")}</h2>
-          <Input name="current" type="password" placeholder={t("auth.currentPassword")} required />
-          <Input name="next" type="password" placeholder={t("auth.nextPassword")} minLength={12} maxLength={72} required />
-          <Button type="submit">{t("common.save")}</Button>
-        </form>
-      </Card>
       <Manager kind="plain" title={t("settings.manageTags")} endpoint="/api/tags" items={tagList} setItems={setTagList} unitSystem={unitSystem} notify={notify} />
       <Manager kind="category" title={t("settings.manageCategories")} endpoint="/api/meta/categories" items={categoryList} setItems={setCategoryList} unitSystem={unitSystem} notify={notify} />
       <Manager kind="unit" title={t("settings.manageUnits")} endpoint="/api/meta/units" items={unitList} setItems={setUnitList} unitSystem={unitSystem} notify={notify} />
@@ -190,9 +228,6 @@ export function SettingsClient({
         </Button>
         <RestoreForm />
       </Card>
-      <Button variant="danger" onClick={logout}>
-        {t("common.logout")}
-      </Button>
       <Card className="space-y-2 p-4 text-sm">
         <h2 className="font-semibold">{t("settings.about")}</h2>
         <p className="font-medium">{t("common.brand")}</p>
@@ -395,7 +430,7 @@ function RestoreForm() {
   return (
     <form className="space-y-2" onSubmit={submit}>
       <h3 className="text-sm font-medium">{t("settings.restore")}</h3>
-      <Input type="file" name="file" accept=".tar.gz,application/gzip" required />
+      <Input className="py-2 file:mr-3 file:align-middle" type="file" name="file" accept=".tar.gz,application/gzip" required />
       <Input name="confirm" placeholder={t("settings.restoreConfirm")} required />
       <Button type="submit" variant="secondary">
         {t("settings.restore")}

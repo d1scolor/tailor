@@ -11,6 +11,7 @@ export default async function SettingsPage() {
   const renderedLocale = normalizeLocale(await getLocale()) ?? user.locale;
   return (
     <SettingsClient
+      username={user.username}
       locale={renderedLocale}
       localeOptions={locales.map((locale) => ({ value: locale, label: localeLabel(locale) }))}
       currencyCode={user.currencyCode}

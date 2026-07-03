@@ -8,13 +8,15 @@ import {
   UnsupportedDatabaseSchemaError
 } from "./db/schema-compat";
 
-test("squashed baseline satisfies the current schema contract", () => {
+test("migration set satisfies the current schema contract", () => {
   const db = new Database(":memory:");
   try {
-    db.exec(fs.readFileSync("src/lib/db/migrations/0000_initial.sql", "utf8"));
+    for (const migration of fs.readdirSync("src/lib/db/migrations").filter((name) => name.endsWith(".sql")).sort()) {
+      db.exec(fs.readFileSync(`src/lib/db/migrations/${migration}`, "utf8"));
+    }
     assert.doesNotThrow(() => assertCurrentSchema(db));
     recordSchemaVersion(db);
-    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 1 });
+    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 2 });
   } finally {
     db.close();
   }

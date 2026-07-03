@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "tables": {
     "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "created_at", "updated_at"],
     "sessions": ["id", "user_id", "expires_at", "created_at"],
@@ -8,7 +8,7 @@
     "material_categories": ["id", "user_id", "definition_key", "custom_name", "active", "sort_order", "created_at"],
     "material_units": ["id", "user_id", "definition_key", "custom_name", "active", "sort_order", "created_at"],
     "materials": ["id", "user_id", "name", "category_id", "unit_id", "quantity_total_canonical", "usage_status", "colors", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
-    "projects": ["id", "user_id", "name", "quantity", "price_cents", "value_cents", "remarks", "created_at", "updated_at"],
+    "projects": ["id", "user_id", "name", "quantity", "price_cents", "value_cents", "material_cost_cents", "labor_minutes", "labor_cost_cents", "remarks", "created_at", "updated_at"],
     "tools": ["id", "user_id", "name", "category", "quantity", "brand", "model", "source", "price_cents", "purchased_at", "condition", "remarks", "created_at", "updated_at"],
     "project_fabrics": ["id", "project_id", "fabric_id", "length_used_m", "created_at"],
     "project_patterns": ["project_id", "pattern_id"],
