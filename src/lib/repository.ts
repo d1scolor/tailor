@@ -54,7 +54,7 @@ const sortColumns: Record<Kind, Record<string, string>> = {
   projects: {
     name: "name",
     created: "created_at",
-    price: "price_cents",
+    price: "value_cents",
     value: "value_cents",
     unitPrice: "CASE WHEN quantity > 0 THEN value_cents / quantity ELSE NULL END"
   },

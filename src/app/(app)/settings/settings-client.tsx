@@ -189,11 +189,34 @@ export function SettingsClient({
           <a href="/api/backup">{t("settings.downloadBackup")}</a>
         </Button>
         <RestoreForm />
-        <p className="text-sm text-muted-foreground">{t("settings.heicNote")}</p>
       </Card>
       <Button variant="danger" onClick={logout}>
         {t("common.logout")}
       </Button>
+      <Card className="space-y-2 p-4 text-sm">
+        <h2 className="font-semibold">{t("settings.about")}</h2>
+        <p className="font-medium">{t("common.brand")}</p>
+        <p className="text-muted-foreground">{t("settings.copyright")}</p>
+        <p className="text-muted-foreground">{t("settings.licenseNotice")}</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <a
+            className="font-medium underline-offset-4 hover:underline"
+            href="https://github.com/d1scolor/tailor"
+            rel="noreferrer"
+            target="_blank"
+          >
+            {t("settings.sourceCode")}
+          </a>
+          <a
+            className="font-medium underline-offset-4 hover:underline"
+            href="https://github.com/d1scolor/tailor/blob/main/LICENSE"
+            rel="noreferrer"
+            target="_blank"
+          >
+            {t("settings.license")}
+          </a>
+        </div>
+      </Card>
       {toast ? <Toast message={toast} /> : null}
     </main>
   );

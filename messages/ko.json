@@ -285,6 +285,7 @@
     "cost": "총비용",
     "fabricCost": "원단 비용",
     "value": "예상 가치",
+    "unitValue": "단위 가치",
     "produced": "제작 수량",
     "quantity": "수량",
     "patterns": "사용 패턴",
@@ -340,7 +341,11 @@
     "passwordChanged": "비밀번호가 변경되었습니다",
     "passwordInvalid": "현재 비밀번호가 올바르지 않습니다",
     "passwordTooShort": "새 비밀번호는 12자 이상이어야 합니다",
-    "heicNote": "HEIC 업로드가 실패하면 iPhone 카메라 포맷을 '높은 호환성'으로 설정해 JPEG로 업로드하세요."
+    "about": "정보",
+    "sourceCode": "소스 코드",
+    "license": "라이선스",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "GNU AGPL v3 전용으로 라이선스됩니다. 보증 없이 제공됩니다."
   },
   "meta": {
     "groups": {

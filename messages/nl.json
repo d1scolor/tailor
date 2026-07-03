@@ -285,6 +285,7 @@
     "cost": "Totale kosten",
     "fabricCost": "Stofkosten",
     "value": "Geschatte waarde",
+    "unitValue": "Waarde per stuk",
     "produced": "Gemaakte items",
     "quantity": "Aantal",
     "patterns": "Gebruikte patronen",
@@ -340,7 +341,11 @@
     "passwordChanged": "Wachtwoord bijgewerkt",
     "passwordInvalid": "Huidig wachtwoord is onjuist",
     "passwordTooShort": "Nieuw wachtwoord moet minstens 12 tekens bevatten",
-    "heicNote": "Als HEIC-upload mislukt, stel iPhone-cameraformaten in op Meest compatibel zodat foto’s als JPEG worden geüpload."
+    "about": "Over",
+    "sourceCode": "Broncode",
+    "license": "Licentie",
+    "copyright": "Copyright © 2026 d1scolor",
+    "licenseNotice": "Uitsluitend gelicentieerd onder GNU AGPL v3. Geleverd zonder garantie."
   },
   "meta": {
     "groups": {
