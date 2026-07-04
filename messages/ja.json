@@ -240,6 +240,11 @@
     "partial": "一部使用済み",
     "used": "使い切り"
   },
+  "projectStatus": {
+    "in_progress": "進行中",
+    "completed": "完了",
+    "cancelled": "中止"
+  },
   "fabrics": {
     "title": "生地",
     "add": "生地を追加",
@@ -289,9 +294,10 @@
     "cost": "合計費用",
     "fabricCost": "生地代",
     "materialCost": "副資材費（見積もり）",
-    "laborHours": "作業時間",
-    "laborCost": "人件費（見積もり）",
-    "totalLaborHours": "合計作業時間",
+    "laborHours": "作業時間（時間）",
+    "laborCost": "人件費合計",
+    "totalLaborHours": "総作業時間（時間）",
+    "status": "ステータス",
     "value": "見積価値",
     "unitValue": "単位価値",
     "produced": "製作数",

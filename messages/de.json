@@ -240,6 +240,11 @@
     "partial": "Teilweise verwendet",
     "used": "Aufgebraucht"
   },
+  "projectStatus": {
+    "in_progress": "In Bearbeitung",
+    "completed": "Abgeschlossen",
+    "cancelled": "Abgebrochen"
+  },
   "fabrics": {
     "title": "Stoffe",
     "add": "Stoff hinzufügen",
@@ -289,9 +294,10 @@
     "cost": "Gesamtkosten",
     "fabricCost": "Stoffkosten",
     "materialCost": "Geschätzte Materialkosten",
-    "laborHours": "Arbeitsstunden",
-    "laborCost": "Geschätzte Arbeitskosten",
-    "totalLaborHours": "Arbeitsstunden gesamt",
+    "laborHours": "Arbeitszeit (Stunden)",
+    "laborCost": "Gesamtarbeitskosten",
+    "totalLaborHours": "Gesamtarbeitszeit (Stunden)",
+    "status": "Status",
     "value": "Geschätzter Wert",
     "unitValue": "Stückwert",
     "produced": "Hergestellte Stücke",

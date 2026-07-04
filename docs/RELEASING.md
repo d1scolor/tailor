@@ -26,6 +26,11 @@ images; they do not rebuild it.
 The workflows use the repository's short-lived `GITHUB_TOKEN`; no personal
 access token or repository secret is required.
 
+BuildKit provenance is embedded in every published image. The additional
+GitHub-hosted build attestation is published once the repository is public,
+because GitHub does not provide that feature for user-owned private
+repositories.
+
 ## Development images from main
 
 The `CI` workflow runs for pull requests and every push to `main`. It performs

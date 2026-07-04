@@ -240,6 +240,11 @@
     "partial": "部分使用",
     "used": "已用完"
   },
+  "projectStatus": {
+    "in_progress": "進行中",
+    "completed": "已完成",
+    "cancelled": "已取消"
+  },
   "fabrics": {
     "title": "布料",
     "add": "新增布料",
@@ -289,9 +294,10 @@
     "cost": "總成本",
     "fabricCost": "布料成本",
     "materialCost": "輔料成本估算",
-    "laborHours": "工時",
-    "laborCost": "人工成本估算",
-    "totalLaborHours": "總工時",
+    "laborHours": "工時（小時）",
+    "laborCost": "人工總成本",
+    "totalLaborHours": "總工時（小時）",
+    "status": "狀態",
     "value": "估計價值",
     "unitValue": "單件價值",
     "produced": "完成數量",

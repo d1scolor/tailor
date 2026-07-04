@@ -240,6 +240,11 @@
     "partial": "Partially used",
     "used": "Used up"
   },
+  "projectStatus": {
+    "in_progress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
   "fabrics": {
     "title": "Fabrics",
     "add": "Add fabric",
@@ -289,9 +294,10 @@
     "cost": "Total cost",
     "fabricCost": "Fabric cost",
     "materialCost": "Estimated material cost",
-    "laborHours": "Labour hours",
-    "laborCost": "Estimated labour cost",
-    "totalLaborHours": "Total labour hours",
+    "laborHours": "Labour time (hours)",
+    "laborCost": "Total labour cost",
+    "totalLaborHours": "Total labour time (hours)",
+    "status": "Status",
     "value": "Estimated value",
     "unitValue": "Unit value",
     "produced": "Items produced",

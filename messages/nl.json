@@ -240,6 +240,11 @@
     "partial": "Gedeeltelijk gebruikt",
     "used": "Opgebruikt"
   },
+  "projectStatus": {
+    "in_progress": "In uitvoering",
+    "completed": "Voltooid",
+    "cancelled": "Geannuleerd"
+  },
   "fabrics": {
     "title": "Stoffen",
     "add": "Stof toevoegen",
@@ -289,9 +294,10 @@
     "cost": "Totale kosten",
     "fabricCost": "Stofkosten",
     "materialCost": "Geschatte materiaalkosten",
-    "laborHours": "Werkuren",
-    "laborCost": "Geschatte arbeidskosten",
-    "totalLaborHours": "Totaal aantal werkuren",
+    "laborHours": "Werktijd (uren)",
+    "laborCost": "Totale arbeidskosten",
+    "totalLaborHours": "Totale werktijd (uren)",
+    "status": "Status",
     "value": "Geschatte waarde",
     "unitValue": "Waarde per stuk",
     "produced": "Gemaakte items",

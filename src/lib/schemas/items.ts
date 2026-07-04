@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectStatusOptions } from "@/lib/project-status";
 import { baseItemSchema, nullableInt, nullableNonnegativeInt, nullableNumber, nullableString } from "./common";
 
 export const entityTypeSchema = z.enum(["fabric", "pattern", "material", "project", "tool"]);
@@ -49,6 +50,7 @@ export const projectLinkMaterialSchema = z.object({
 
 export const projectSchema = z.object({
   name: z.string().trim().min(1).max(200),
+  status: z.enum(projectStatusOptions),
   quantity: z.coerce.number().int().positive().default(1),
   valueCents: nullableInt,
   materialCostCents: nullableNonnegativeInt,
