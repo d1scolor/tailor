@@ -240,6 +240,11 @@
     "partial": "Usado parcialmente",
     "used": "Agotado"
   },
+  "projectStatus": {
+    "in_progress": "En curso",
+    "completed": "Completado",
+    "cancelled": "Cancelado"
+  },
   "fabrics": {
     "title": "Telas",
     "add": "Añadir tela",
@@ -289,9 +294,10 @@
     "cost": "Coste total",
     "fabricCost": "Coste de tela",
     "materialCost": "Coste estimado de materiales",
-    "laborHours": "Horas de trabajo",
-    "laborCost": "Coste estimado de mano de obra",
-    "totalLaborHours": "Horas de trabajo totales",
+    "laborHours": "Tiempo de trabajo (horas)",
+    "laborCost": "Coste total de mano de obra",
+    "totalLaborHours": "Tiempo total de trabajo (horas)",
+    "status": "Estado",
     "value": "Valor estimado",
     "unitValue": "Valor unitario",
     "produced": "Artículos producidos",

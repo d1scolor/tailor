@@ -126,6 +126,7 @@ export const projects = sqliteTable("projects", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  status: text("status", { enum: ["in_progress", "completed", "cancelled"] }).notNull().default("in_progress"),
   quantity: integer("quantity").notNull().default(1),
   priceCents: integer("price_cents"),
   valueCents: integer("value_cents"),

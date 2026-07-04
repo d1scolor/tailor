@@ -31,6 +31,7 @@ import {
 } from "@/lib/units";
 import type { CurrencyCode } from "@/lib/currency";
 import { unitPriceHundredths } from "@/lib/pricing";
+import { projectStatusOptions } from "@/lib/project-status";
 
 type AnyItem = Record<string, any>;
 type MetaItem = {
@@ -1086,6 +1087,7 @@ function Fields(props: FieldsProps) {
         {props.kind === "tools" ? <Field name="brand" label={t("tools.brand")} defaultValue={props.item.brand} /> : null}
         {props.kind === "tools" ? <Field name="model" label={t("tools.model")} defaultValue={props.item.model} /> : null}
         {props.kind === "tools" ? <UnitSelect name="condition" label={t("tools.condition")} values={toolConditionOptions} value={props.item.condition ?? "good"} labels={(value) => t(`toolCondition.${value}`)} /> : null}
+        {props.kind === "projects" ? <UnitSelect name="status" label={t("projects.status")} values={[...projectStatusOptions]} value={props.item.status ?? "in_progress"} labels={(value) => t(`projectStatus.${value}`)} /> : null}
         {props.kind === "projects" ? <Field name="quantity" label={t("projects.quantity")} type="number" inputMode="numeric" defaultValue={props.item.quantity ?? 1} required /> : null}
         {props.kind !== "projects" ? <Field name="priceCents" label={t("common.price")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.priceCents, currencyCode)} /> : null}
         {props.kind === "projects" ? <Field name="valueCents" label={t("projects.value")} type="number" inputMode="decimal" step={currencyInputStep(currencyCode)} defaultValue={storedAmountForInput(props.item.valueCents, currencyCode)} /> : null}
@@ -2911,6 +2913,7 @@ function primaryStat(
   }
   if (kind === "tools") return `${item.category ? toolCategoryLabel(item.category, t) : t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
   return [
+    t(`projectStatus.${item.status ?? "completed"}`),
     t("projects.produced"),
     numberValue(item.quantity),
     item.valueCents != null ? money(item.valueCents, locale, currencyCode) : ""
@@ -3049,6 +3052,7 @@ function detailRows(
     add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
     add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else {
+    add(t("projects.status"), item.status ?? "completed", (value) => t(`projectStatus.${value}`));
     add(t("projects.quantity"), item.quantity);
     add(t("projects.value"), item.valueCents, (value) => money(value, locale, currencyCode));
     add(t("projects.laborHours"), item.laborMinutes, (value) => numberValue(value / 60, locale));
@@ -3146,7 +3150,7 @@ function editableNumber(value: number) {
 function defaultItem(kind: Kind) {
   if (kind === "fabrics") return { quantity: 1, purpose: "garment", materialType: "other" };
   if (kind === "materials") return { usageStatus: "available" };
-  if (kind === "projects") return { quantity: 1 };
+  if (kind === "projects") return { status: "in_progress", quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
   return { patternType: "paper", difficulty: "medium" };
 }
@@ -3208,6 +3212,7 @@ function formToBody(kind: Kind, form: FormData) {
   const materialIds = form.getAll("materialIds");
   return {
     ...base,
+    status: form.get("status"),
     quantity: Number(form.get("quantity") || 1),
     valueCents: storedHundredthsFromInput(form.get("valueCents")),
     materialCostCents: storedHundredthsFromInput(form.get("materialCostCents")),

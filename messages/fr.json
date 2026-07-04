@@ -240,6 +240,11 @@
     "partial": "Partiellement utilisé",
     "used": "Épuisé"
   },
+  "projectStatus": {
+    "in_progress": "En cours",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
   "fabrics": {
     "title": "Tissus",
     "add": "Ajouter un tissu",
@@ -289,9 +294,10 @@
     "cost": "Coût total",
     "fabricCost": "Coût du tissu",
     "materialCost": "Coût estimé des fournitures",
-    "laborHours": "Heures de travail",
-    "laborCost": "Coût de main-d’œuvre estimé",
-    "totalLaborHours": "Total des heures de travail",
+    "laborHours": "Temps de travail (heures)",
+    "laborCost": "Coût total de la main-d’œuvre",
+    "totalLaborHours": "Temps de travail total (heures)",
+    "status": "Statut",
     "value": "Valeur estimée",
     "unitValue": "Valeur unitaire",
     "produced": "Articles produits",

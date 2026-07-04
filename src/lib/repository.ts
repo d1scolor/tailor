@@ -350,12 +350,13 @@ export function createItem(kind: Kind, userId: number, input: Record<string, unk
       const result = db
         .prepare(
           `INSERT INTO projects
-          (user_id, name, quantity, value_cents, material_cost_cents, labor_minutes, labor_cost_cents, remarks, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (user_id, name, status, quantity, value_cents, material_cost_cents, labor_minutes, labor_cost_cents, remarks, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           userId,
           input.name,
+          input.status,
           input.quantity,
           input.valueCents,
           input.materialCostCents,
@@ -468,10 +469,11 @@ export function updateItem(kind: Kind, userId: number, id: number, input: Record
     } else {
       restoreProjectLinks(db, id);
       db.prepare(
-        `UPDATE projects SET name = ?, quantity = ?, value_cents = ?, material_cost_cents = ?, labor_minutes = ?,
+        `UPDATE projects SET name = ?, status = ?, quantity = ?, value_cents = ?, material_cost_cents = ?, labor_minutes = ?,
          labor_cost_cents = ?, remarks = ?, updated_at = ? WHERE id = ?`
       ).run(
         input.name,
+        input.status,
         input.quantity,
         input.valueCents,
         input.materialCostCents,

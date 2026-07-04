@@ -16,7 +16,36 @@ test("migration set satisfies the current schema contract", () => {
     }
     assert.doesNotThrow(() => assertCurrentSchema(db));
     recordSchemaVersion(db);
-    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 2 });
+    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 3 });
+  } finally {
+    db.close();
+  }
+});
+
+test("project status migration completes existing projects and defaults new projects to in progress", () => {
+  const db = new Database(":memory:");
+  try {
+    for (const migration of ["0000_initial.sql", "0001_project_costs_and_labor.sql"]) {
+      db.exec(fs.readFileSync(`src/lib/db/migrations/${migration}`, "utf8"));
+    }
+    db.prepare(
+      `INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at)
+       VALUES ('owner', 'hash', 'en-AU', 'metric', 'now', 'now')`
+    ).run();
+    db.prepare(
+      `INSERT INTO projects (user_id, name, quantity, created_at, updated_at)
+       VALUES (1, 'Existing project', 1, 'now', 'now')`
+    ).run();
+
+    db.exec(fs.readFileSync("src/lib/db/migrations/0002_project_status.sql", "utf8"));
+
+    assert.equal(db.prepare("SELECT status FROM projects WHERE name = 'Existing project'").pluck().get(), "completed");
+    db.prepare(
+      `INSERT INTO projects (user_id, name, quantity, created_at, updated_at)
+       VALUES (1, 'New project', 1, 'now', 'now')`
+    ).run();
+    assert.equal(db.prepare("SELECT status FROM projects WHERE name = 'New project'").pluck().get(), "in_progress");
+    assert.throws(() => db.prepare("UPDATE projects SET status = 'unknown' WHERE name = 'New project'").run());
   } finally {
     db.close();
   }

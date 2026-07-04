@@ -240,6 +240,11 @@
     "partial": "일부 사용",
     "used": "소진"
   },
+  "projectStatus": {
+    "in_progress": "진행 중",
+    "completed": "완료",
+    "cancelled": "취소됨"
+  },
   "fabrics": {
     "title": "원단",
     "add": "원단 추가",
@@ -289,9 +294,10 @@
     "cost": "총비용",
     "fabricCost": "원단 비용",
     "materialCost": "예상 부자재 비용",
-    "laborHours": "작업 시간",
-    "laborCost": "예상 인건비",
-    "totalLaborHours": "총 작업 시간",
+    "laborHours": "작업 시간(시간)",
+    "laborCost": "총 인건비",
+    "totalLaborHours": "총 작업 시간(시간)",
+    "status": "상태",
     "value": "예상 가치",
     "unitValue": "단위 가치",
     "produced": "제작 수량",
