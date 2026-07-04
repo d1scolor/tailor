@@ -6,7 +6,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        "h-11 w-full rounded-md border border-input bg-white px-3 text-base shadow-sm placeholder:text-muted-foreground",
+        "h-11 w-full rounded-md border border-input bg-white px-3 text-base shadow-xs placeholder:text-muted-foreground",
         props.className
       )}
     />
@@ -18,7 +18,7 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
     <textarea
       {...props}
       className={cn(
-        "min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground",
+        "min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-base shadow-xs placeholder:text-muted-foreground",
         props.className
       )}
     />
@@ -29,7 +29,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={cn("h-11 w-full rounded-md border border-input bg-white px-3 text-base shadow-sm", props.className)}
+      className={cn("h-11 w-full rounded-md border border-input bg-white px-3 text-base shadow-xs", props.className)}
     />
   );
 }

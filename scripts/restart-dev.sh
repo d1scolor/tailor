@@ -73,6 +73,9 @@ if [[ "$foreground" == "1" ]]; then
 fi
 
 start_with_launchd() {
+  local launch_home
+  local launch_path
+  local launch_tmpdir
   if [[ -z "$node_bin" ]] || [[ ! -x "$node_bin" ]]; then
     echo "Cannot find node. Set NODE_BIN=/absolute/path/to/node." >&2
     exit 1
@@ -81,6 +84,9 @@ start_with_launchd() {
     echo "Missing $next_cli. Run npm install first." >&2
     exit 1
   fi
+  launch_home="${HOME:-$(pwd)}"
+  launch_path="${DEV_PATH:-$(dirname "$node_bin"):${PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}"
+  launch_tmpdir="${TMPDIR:-/tmp}"
 
   cat >"$launchd_plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -101,6 +107,15 @@ start_with_launchd() {
   </array>
   <key>WorkingDirectory</key>
   <string>$(xml_escape "$(pwd)")</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>$(xml_escape "$launch_home")</string>
+    <key>PATH</key>
+    <string>$(xml_escape "$launch_path")</string>
+    <key>TMPDIR</key>
+    <string>$(xml_escape "$launch_tmpdir")</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>StandardOutPath</key>

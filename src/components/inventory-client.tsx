@@ -664,7 +664,7 @@ export function InventoryClient(props: Props) {
 
       {editing ? (
         <ModalPortal>
-          <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
+          <div className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
             <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-0 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
               <form key={`${props.kind}-${editing.id ?? "new"}`} className="flex min-h-0 min-w-0 w-full flex-col overflow-x-hidden" onSubmit={submit}>
                 <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
@@ -856,7 +856,7 @@ function InventoryBrowserView({
           <Input className="pl-9" placeholder={t("common.search")} value={query} onChange={(event) => onQueryChange(event.target.value)} />
         </label>
         <div className="flex gap-2 overflow-x-auto pb-1 md:overflow-visible md:pb-0">
-          <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-sm">
+          <label className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-input bg-white shadow-xs">
             <span className="border-r border-border px-3 text-sm font-medium text-muted-foreground">{t("common.sortBy")}</span>
             <Select aria-label={t("common.sort")} value={sort} onChange={(event) => onSortChange(event.target.value)} className="w-52 border-0 shadow-none">
               <option value="created">{t("common.sortCreated")}</option>
@@ -950,7 +950,7 @@ function ItemCard({
       className={`${view === "grid" ? "relative overflow-hidden" : "relative flex items-center gap-3 p-2"} ${selected ? "ring-2 ring-primary" : ""}`}
     >
       {selected ? (
-        <span className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+        <span className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
           <Check className="h-4 w-4" aria-hidden />
         </span>
       ) : null}
@@ -1390,7 +1390,7 @@ function ResourcePicker({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3" role="dialog" aria-modal="true" data-project-picker="true" onClick={onClose}>
+    <div className="fixed inset-0 z-70 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3" role="dialog" aria-modal="true" data-project-picker="true" onClick={onClose}>
       <Card className="flex max-h-[94dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:mx-auto md:h-[calc(100dvh-1.5rem)] md:max-w-5xl md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -1782,7 +1782,7 @@ function FilterDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-center justify-between gap-3">
@@ -2037,7 +2037,7 @@ function TagFilter({
       <div ref={menuRef} className="relative">
         <button
           type="button"
-          className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-sm"
+          className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-xs"
           aria-expanded={open}
           onClick={() => {
             if (open) setSearch("");
@@ -2072,7 +2072,7 @@ function TagFilter({
             </div>
 
             <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain">
-              <label className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
+              <label className="flex min-h-11 items-center gap-2 rounded-sm px-2 text-sm hover:bg-muted">
                 <input
                   type="checkbox"
                   checked={includeUntagged}
@@ -2083,7 +2083,7 @@ function TagFilter({
                 <span>{t("common.untagged")}</span>
               </label>
               {visibleTags.map((tag) => (
-                <label key={tag.id} className="flex min-h-11 items-center gap-2 rounded px-2 text-sm hover:bg-muted">
+                <label key={tag.id} className="flex min-h-11 items-center gap-2 rounded-sm px-2 text-sm hover:bg-muted">
                   <input type="checkbox" checked={selectedSet.has(tag.id)} onChange={() => toggleTag(tag.id)} />
                   <span className="min-w-0 truncate">{tag.name}</span>
                 </label>
@@ -2178,7 +2178,7 @@ function ColorSelect({
     <div ref={wrapperRef} className="relative min-w-0 flex-1" onKeyDown={(event) => event.key === "Escape" && setOpen(false)}>
       <button
         type="button"
-        className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-sm"
+        className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-white px-3 text-left text-base shadow-xs"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
@@ -2193,7 +2193,7 @@ function ColorSelect({
       {open ? (
         <div id={listId} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-white p-1 shadow-xl">
           {includeEmpty ? (
-            <button type="button" role="option" aria-selected={!value} className="flex h-10 w-full items-center rounded px-2 text-left text-base hover:bg-muted" onClick={() => choose("")}>
+            <button type="button" role="option" aria-selected={!value} className="flex h-10 w-full items-center rounded-sm px-2 text-left text-base hover:bg-muted" onClick={() => choose("")}>
               {placeholder}
             </button>
           ) : null}
@@ -2203,7 +2203,7 @@ function ColorSelect({
               type="button"
               role="option"
               aria-selected={value === color}
-              className="flex h-10 w-full items-center gap-2 rounded px-2 text-left text-base hover:bg-muted aria-selected:bg-muted"
+              className="flex h-10 w-full items-center gap-2 rounded-sm px-2 text-left text-base hover:bg-muted aria-selected:bg-muted"
               onClick={() => choose(color)}
             >
               <ColorDot color={color} />
@@ -2248,7 +2248,7 @@ function ColorDot({ color }: { color: string }) {
 function ConfirmSheet({ message, onCancel, onConfirm }: { message: string; onCancel: () => void; onConfirm: () => void }) {
   const t = useTranslations();
   return (
-    <div className="fixed inset-0 z-[80] flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
+    <div className="fixed inset-0 z-80 flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onCancel}>
       <Card className="w-full max-w-full rounded-b-none rounded-t-2xl p-4 shadow-xl md:max-w-sm md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <p className="text-base font-medium">{message}</p>
@@ -2291,12 +2291,12 @@ function Detail({
   const locale = useLocale();
   const currencyCode = useCurrencyCode();
   return (
-    <div className="fixed inset-0 z-[60] flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:items-center md:justify-center md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="max-h-[92dvh] w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-contain rounded-b-none rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl md:max-h-[88dvh] md:max-w-2xl md:rounded-b-md md:rounded-t-md md:pb-4" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="break-words text-lg font-semibold">{item.name}</h2>
+            <h2 className="wrap-break-word text-lg font-semibold">{item.name}</h2>
             <p className="text-sm text-muted-foreground">{primaryStat(kind, item, unitSystem, currencyCode, locale, t)}</p>
           </div>
           <div className="flex gap-1">
@@ -2332,7 +2332,7 @@ function Detail({
           {detailRows(kind, item, unitSystem, currencyCode, locale, t).map((row) => (
             <div key={row.label} className="min-w-0 rounded-md bg-muted p-2">
               <dt className="text-xs text-muted-foreground">{row.label}</dt>
-              <dd className="break-words">{row.value}</dd>
+              <dd className="wrap-break-word">{row.value}</dd>
             </div>
           ))}
         </dl>
@@ -2482,7 +2482,7 @@ function PhotoStrip({
               <div className="absolute inset-x-1 top-1 flex justify-between gap-1">
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white disabled:opacity-40"
                   aria-label={t("common.moveLeft")}
                   disabled={index === 0}
                   onClick={() => movePhoto(index, -1)}
@@ -2491,7 +2491,7 @@ function PhotoStrip({
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white disabled:opacity-40"
                   aria-label={t("common.moveRight")}
                   disabled={index === photos.length - 1}
                   onClick={() => movePhoto(index, 1)}
@@ -2502,7 +2502,7 @@ function PhotoStrip({
               <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
                 <button
                   type="button"
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-sm text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`}
                   aria-label={t("common.setCover")}
                   onClick={() => updatePhoto(photo.id, { isCover: true })}
                 >
@@ -2510,7 +2510,7 @@ function PhotoStrip({
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white"
                   aria-label={t("common.delete")}
                   onClick={() => onRemovePhoto?.(photo.id)}
                 >
@@ -2546,7 +2546,7 @@ function PhotoLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4"
+      className="fixed inset-0 z-80 flex items-center justify-center bg-black/85 p-4"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
@@ -2720,18 +2720,18 @@ function StagedPhotoPreview({
     <div className="group relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-md bg-muted">
       {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : null}
       <div className="absolute inset-x-1 top-1 flex justify-between gap-1">
-        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveLeft")} disabled={!canMoveLeft} onClick={onMoveLeft}>
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveLeft")} disabled={!canMoveLeft} onClick={onMoveLeft}>
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
-        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveRight")} disabled={!canMoveRight} onClick={onMoveRight}>
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white disabled:opacity-40" aria-label={t("common.moveRight")} disabled={!canMoveRight} onClick={onMoveRight}>
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
       <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
-        <button type="button" className={`inline-flex h-9 w-9 items-center justify-center rounded text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`} aria-label={t("common.setCover")} onClick={onSetCover}>
+        <button type="button" className={`inline-flex h-9 w-9 items-center justify-center rounded-sm text-white ${photo.isCover ? "bg-primary" : "bg-black/55"}`} aria-label={t("common.setCover")} onClick={onSetCover}>
           <Star className="h-4 w-4" aria-hidden />
         </button>
-        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded bg-black/55 text-white" aria-label={t("common.delete")} onClick={onDelete}>
+        <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-sm bg-black/55 text-white" aria-label={t("common.delete")} onClick={onDelete}>
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>
       </div>
