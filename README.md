@@ -1,20 +1,18 @@
 # Tailor
 
+Tailor is a self-hosted sewing inventory application for fabrics, patterns,
+materials, projects, and tools, designed to run as a single Docker container.
+It is intended for one user and stores all data in a local SQLite database with
+photos on disk.
+
 **Interface languages:** English · 简体中文 · 繁體中文 · Français · Deutsch ·
 日本語 · 한국어 · Italiano · Español · Português (Brasil) · Nederlands · Polski
 
-Tailor is a self-hosted sewing inventory application for fabrics, patterns,
-materials, projects, and tools. It is designed for one user and stores all data
-in a local SQLite database with photos on disk.
+![Fabric inventory with summary, search, sorting, and cards](docs/screenshots/fabrics.webp)
+
+![Project inventory with cost and labour summaries](docs/screenshots/projects.webp)
 
 ![Tailor inventory overview](docs/screenshots/overview.webp)
-
-<p align="center">
-  <img src="docs/screenshots/fabrics.webp" alt="Fabric inventory with summary, search, sorting, and cards" width="49%">
-  <img src="docs/screenshots/projects.webp" alt="Project inventory with cost and labour summaries" width="49%">
-</p>
-
-![Language and regional settings](docs/screenshots/settings-localization.webp)
 
 ## Internationalisation and units
 
@@ -64,17 +62,17 @@ Set a unique username, a password of at least 12 characters, and the canonical
 URL used in the browser before starting the container. Tailor has no default
 credentials. The canonical `compose.yml` loads these settings from `.env`.
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `INITIAL_USERNAME` | First boot | none | Creates the first and only user |
-| `INITIAL_PASSWORD` | First boot | none | Initial password; 12–72 UTF-8 bytes |
-| `BASE_URL` | Yes | none | Exact browser origin used for request checks and cookie security |
-| `TAILOR_IMAGE` | No | `ghcr.io/d1scolor/tailor:latest` | Image used by Compose |
-| `DEFAULT_LOCALE` | No | `en-AU` | Initial interface locale |
-| `DEFAULT_UNIT_SYSTEM` | No | `metric` | `metric` or `imperial` |
-| `CURRENCY_CODE` | No | `USD` | Initial ISO 4217 currency code |
-| `MAX_UPLOAD_MB` | No | `20` | Maximum photo upload size |
-| `MAX_BACKUP_MB` | No | `4096` | Maximum compressed and extracted restore size |
+| Variable              | Required   | Default                          | Purpose                                                          |
+| --------------------- | ---------- | -------------------------------- | ---------------------------------------------------------------- |
+| `INITIAL_USERNAME`    | First boot | none                             | Creates the first and only user                                  |
+| `INITIAL_PASSWORD`    | First boot | none                             | Initial password; 12–72 UTF-8 bytes                              |
+| `BASE_URL`            | Yes        | none                             | Exact browser origin used for request checks and cookie security |
+| `TAILOR_IMAGE`        | No         | `ghcr.io/d1scolor/tailor:latest` | Image used by Compose                                            |
+| `DEFAULT_LOCALE`      | No         | `en-AU`                          | Initial interface locale                                         |
+| `DEFAULT_UNIT_SYSTEM` | No         | `metric`                         | `metric` or `imperial`                                           |
+| `CURRENCY_CODE`       | No         | `USD`                            | Initial ISO 4217 currency code                                   |
+| `MAX_UPLOAD_MB`       | No         | `20`                             | Maximum photo upload size                                        |
+| `MAX_BACKUP_MB`       | No         | `4096`                           | Maximum compressed and extracted restore size                    |
 
 Bootstrap credentials are ignored after the first user is created. Change the
 password in Settings after the first login. Anyone with access to the Docker
@@ -111,6 +109,20 @@ docker compose ps
 
 Images published from this repository support `linux/amd64` and `linux/arm64`.
 Prefer an immutable version or `sha-*` tag when repeatable deployments matter.
+
+Published image channels are:
+
+| Tag                 | Purpose                                                                      |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `latest`            | Newest stable release; the default for self-hosting                          |
+| `edge`              | Newest successfully published tip of `main`; intended for maintainer testing |
+| `MAJOR.MINOR.PATCH` | Exact stable release, such as `0.2.0`                                        |
+| `sha-<commit>`      | Exact image built from a `main` commit                                       |
+
+`edge` may contain unannounced changes and forward database migrations. Back up
+data before testing it. Maintainers should follow
+[the release procedure](docs/RELEASING.md); stable releases promote an existing
+tested SHA image rather than rebuilding it.
 
 ### Build locally
 

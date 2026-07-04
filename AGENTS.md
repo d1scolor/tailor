@@ -9,7 +9,7 @@ Tailor is a personal sewing inventory app for one user. It is deployed as a sing
 - `npm run build`: production Next.js build.
 - `npm run db:migrate`: run SQLite migrations.
 - `npm run dev:restart`: restart the local dev server at `http://127.0.0.1:3000`.
-- `scripts/deploy-ghcr.sh`: from a clean `main`, build and push `ghcr.io/<owner>/<repo>:latest` plus `sha-<shortsha>`.
+- `scripts/release.sh VERSION [COMMIT]`: validate and push a stable release tag for an existing tested image.
 
 When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run `npm run build` for route/schema/UI changes. Run a temporary `DATA_DIR=... npm run db:migrate` when migrations or DB bootstrap code change.
 
@@ -86,6 +86,9 @@ Projects are special: they link to fabrics, patterns, and materials, consume rem
 - Runtime data is mounted at `/data`.
 - First boot uses `INITIAL_USERNAME` and `INITIAL_PASSWORD`; later boots keep the existing user.
 - The app is expected to sit behind the user's reverse proxy.
+- Read `docs/RELEASING.md` before publishing, promoting, or rolling back a release.
+- Successful `main` builds publish immutable `sha-*` images and may advance `edge`; stable tags promote an existing image to semantic-version tags and `latest`.
+- Do not build or overwrite `latest` manually. Stable releases must promote the exact SHA image already tested from `main`.
 
 ## Git And Commits
 
