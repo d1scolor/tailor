@@ -18,9 +18,9 @@ npm run dev
 Use a temporary `DATA_DIR` when testing migrations. Never commit local
 databases, photos, backups, credentials, or `.env` files.
 
-## Before opening a pull request
+## Maintaining a fork
 
-Run:
+Before publishing changes in your fork, run:
 
 ```bash
 npm run typecheck

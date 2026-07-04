@@ -13,6 +13,7 @@ import {
   recordLoginFailure
 } from "@/lib/auth/login-rate-limit";
 import { isCrossOriginMutation } from "@/lib/auth/origin";
+import { getBaseUrlPolicy } from "@/lib/auth/base-url";
 
 const loginSchema = z.object({
   username: z.string().min(1).max(200),
@@ -22,8 +23,18 @@ const loginSchema = z.object({
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const baseUrlPolicy = getBaseUrlPolicy(request.nextUrl.origin);
+  if (!baseUrlPolicy.ok) {
+    return NextResponse.json(
+      { error: "invalid_base_url", reason: baseUrlPolicy.reason },
+      { status: 500 }
+    );
+  }
   if (isCrossOriginMutation(request)) {
-    return NextResponse.json({ error: "cross_origin_request" }, { status: 403 });
+    return NextResponse.json(
+      { error: "cross_origin_request", expectedOrigin: baseUrlPolicy.origin },
+      { status: 403 }
+    );
   }
   try {
     seedDatabase();

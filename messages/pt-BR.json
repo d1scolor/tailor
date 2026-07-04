@@ -93,7 +93,11 @@
     "currentPassword": "Senha atual",
     "nextPassword": "Nova senha",
     "login": "Entrar",
-    "invalid": "Nome de usuário ou senha inválidos"
+    "invalid": "Nome de usuário ou senha inválidos",
+    "originMismatch": "Este endereço não é permitido. Abra o Tailor em {url} ou atualize BASE_URL.",
+    "rateLimited": "Muitas tentativas de login. Aguarde um pouco e tente novamente.",
+    "invalidBaseUrl": "BASE_URL deve usar HTTPS ou HTTP com um endereço IP privado.",
+    "unexpected": "Não foi possível entrar devido a um erro do servidor ou da rede. Tente novamente."
   },
   "errors": {
     "validation": "Verifique os valores inseridos",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Tecidos",
     "add": "Adicionar tecido",
-    "total": "Total de tecidos",
+    "total": "Itens de tecidos",
     "cost": "Custo total",
     "usedLength": "Comprimento usado",
     "remainingLength": "Comprimento restante",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Moldes",
     "add": "Adicionar molde",
-    "total": "Total de moldes",
+    "total": "Itens de moldes",
     "cost": "Custo total",
     "usedCount": "Usados",
     "unusedCount": "Nunca usados",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materiais",
     "add": "Adicionar material",
-    "total": "Total de materiais",
+    "total": "Itens de materiais",
     "cost": "Custo total",
     "usedCount": "Usados",
     "unusedCount": "Nunca usados",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projetos",
     "add": "Adicionar projeto",
-    "total": "Total de projetos",
+    "total": "Itens de projetos",
     "cost": "Custo total",
     "fabricCost": "Custo do tecido",
     "materialCost": "Custo estimado de materiais",
@@ -301,7 +305,7 @@
     "title": "Ferramentas",
     "add": "Adicionar ferramenta",
     "total": "Itens de ferramentas",
-    "totalQuantity": "Quantidade total",
+    "totalQuantity": "Número de ferramentas",
     "cost": "Custo total",
     "needsAttention": "Precisa de atenção",
     "category": "Categoria",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Métricas por categoria",
     "count": "Entradas",
     "used": "Usado",
-    "unused": "Não usado",
-    "totalQuantity": "Quantidade total"
+    "unused": "Não usado"
   },
   "settings": {
     "title": "Configurações",

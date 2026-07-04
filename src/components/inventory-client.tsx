@@ -2877,8 +2877,8 @@ function summaryCards(
   if (kind === "tools") {
     return [
       { label: t("tools.total"), value: summary.count ?? 0 },
-      { label: t("tools.totalQuantity"), value: summary.totalQuantity ?? 0 },
       { label: t("tools.cost"), value: money(summary.totalCost, locale, currencyCode) },
+      { label: t("tools.totalQuantity"), value: summary.totalQuantity ?? 0 },
       { label: t("tools.needsAttention"), value: summary.needsAttention ?? 0 }
     ];
   }

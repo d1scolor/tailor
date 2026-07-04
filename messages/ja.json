@@ -93,7 +93,11 @@
     "currentPassword": "現在のパスワード",
     "nextPassword": "新しいパスワード",
     "login": "ログイン",
-    "invalid": "ユーザー名またはパスワードが正しくありません"
+    "invalid": "ユーザー名またはパスワードが正しくありません",
+    "originMismatch": "このアドレスからはアクセスできません。{url} で Tailor を開くか、BASE_URL を更新してください。",
+    "rateLimited": "ログイン試行回数が多すぎます。しばらく待ってからもう一度お試しください。",
+    "invalidBaseUrl": "BASE_URL には HTTPS、またはプライベート IP アドレスの HTTP を指定してください。",
+    "unexpected": "サーバーまたはネットワークエラーのためログインできません。もう一度お試しください。"
   },
   "errors": {
     "validation": "入力内容を確認してください",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "生地",
     "add": "生地を追加",
-    "total": "生地合計",
+    "total": "生地の登録件数",
     "cost": "合計費用",
     "usedLength": "使用済み長さ",
     "remainingLength": "残りの長さ",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "型紙",
     "add": "型紙を追加",
-    "total": "型紙合計",
+    "total": "型紙の登録件数",
     "cost": "合計費用",
     "usedCount": "使用済み",
     "unusedCount": "未使用",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "副資材",
     "add": "副資材を追加",
-    "total": "副資材合計",
+    "total": "副資材の登録件数",
     "cost": "合計費用",
     "usedCount": "使用済み",
     "unusedCount": "未使用",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "プロジェクト",
     "add": "プロジェクトを追加",
-    "total": "プロジェクト合計",
+    "total": "プロジェクトの登録件数",
     "cost": "合計費用",
     "fabricCost": "生地代",
     "materialCost": "副資材費（見積もり）",
@@ -300,8 +304,8 @@
   "tools": {
     "title": "道具",
     "add": "道具を追加",
-    "total": "道具項目",
-    "totalQuantity": "合計数量",
+    "total": "道具の登録件数",
+    "totalQuantity": "道具点数",
     "cost": "合計費用",
     "needsAttention": "要確認",
     "category": "カテゴリー",
@@ -320,8 +324,7 @@
     "categoryMetrics": "カテゴリ指標",
     "count": "件数",
     "used": "使用済み",
-    "unused": "未使用",
-    "totalQuantity": "合計数量"
+    "unused": "未使用"
   },
   "settings": {
     "title": "設定",

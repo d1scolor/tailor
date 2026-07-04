@@ -1,3 +1,5 @@
+import { getBaseUrlPolicy } from "./base-url";
+
 type RequestLike = {
   method: string;
   headers: Headers;
@@ -10,10 +12,9 @@ export function isCrossOriginMutation(request: RequestLike) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   try {
-    const allowedOrigins = new Set([
-      process.env.BASE_URL ? new URL(process.env.BASE_URL).origin : request.nextUrl.origin
-    ]);
-    return !allowedOrigins.has(new URL(origin).origin);
+    const policy = getBaseUrlPolicy(request.nextUrl.origin);
+    if (!policy.ok) return true;
+    return policy.origin !== new URL(origin).origin;
   } catch {
     return true;
   }

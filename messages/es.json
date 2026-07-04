@@ -93,7 +93,11 @@
     "currentPassword": "Contraseña actual",
     "nextPassword": "Nueva contraseña",
     "login": "Iniciar sesión",
-    "invalid": "Usuario o contraseña no válidos"
+    "invalid": "Usuario o contraseña no válidos",
+    "originMismatch": "Esta dirección no está permitida. Abre Tailor en {url} o actualiza BASE_URL.",
+    "rateLimited": "Demasiados intentos de inicio de sesión. Espera un momento y vuelve a intentarlo.",
+    "invalidBaseUrl": "BASE_URL debe usar HTTPS o HTTP con una dirección IP privada.",
+    "unexpected": "No se pudo iniciar sesión debido a un error del servidor o de la red. Inténtalo de nuevo."
   },
   "errors": {
     "validation": "Comprueba los valores introducidos",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Telas",
     "add": "Añadir tela",
-    "total": "Total de telas",
+    "total": "Registros de telas",
     "cost": "Coste total",
     "usedLength": "Longitud utilizada",
     "remainingLength": "Longitud restante",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Patrones",
     "add": "Añadir patrón",
-    "total": "Total de patrones",
+    "total": "Registros de patrones",
     "cost": "Coste total",
     "usedCount": "Usados",
     "unusedCount": "Nunca usados",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materiales",
     "add": "Añadir material",
-    "total": "Total de materiales",
+    "total": "Registros de materiales",
     "cost": "Coste total",
     "usedCount": "Usados",
     "unusedCount": "Nunca usados",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Proyectos",
     "add": "Añadir proyecto",
-    "total": "Total de proyectos",
+    "total": "Registros de proyectos",
     "cost": "Coste total",
     "fabricCost": "Coste de tela",
     "materialCost": "Coste estimado de materiales",
@@ -300,8 +304,8 @@
   "tools": {
     "title": "Herramientas",
     "add": "Añadir herramienta",
-    "total": "Herramientas",
-    "totalQuantity": "Cantidad total",
+    "total": "Registros de herramientas",
+    "totalQuantity": "Número de herramientas",
     "cost": "Coste total",
     "needsAttention": "Requiere atención",
     "category": "Categoría",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Métricas por categoría",
     "count": "Entradas",
     "used": "Usado",
-    "unused": "Sin usar",
-    "totalQuantity": "Cantidad total"
+    "unused": "Sin usar"
   },
   "settings": {
     "title": "Ajustes",

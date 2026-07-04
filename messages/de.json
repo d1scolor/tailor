@@ -93,7 +93,11 @@
     "currentPassword": "Aktuelles Passwort",
     "nextPassword": "Neues Passwort",
     "login": "Anmelden",
-    "invalid": "Benutzername oder Passwort ungültig"
+    "invalid": "Benutzername oder Passwort ungültig",
+    "originMismatch": "Diese Adresse ist nicht zulässig. Öffnen Sie Tailor unter {url} oder aktualisieren Sie BASE_URL.",
+    "rateLimited": "Zu viele Anmeldeversuche. Warten Sie eine Weile und versuchen Sie es erneut.",
+    "invalidBaseUrl": "BASE_URL muss HTTPS oder HTTP mit einer privaten IP-Adresse verwenden.",
+    "unexpected": "Die Anmeldung ist wegen eines Server- oder Netzwerkfehlers fehlgeschlagen. Versuchen Sie es erneut."
   },
   "errors": {
     "validation": "Eingaben überprüfen",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Stoffe",
     "add": "Stoff hinzufügen",
-    "total": "Stoffe gesamt",
+    "total": "Stoffeinträge",
     "cost": "Gesamtkosten",
     "usedLength": "Verwendete Länge",
     "remainingLength": "Restlänge",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Schnittmuster",
     "add": "Schnittmuster hinzufügen",
-    "total": "Schnittmuster gesamt",
+    "total": "Schnittmustereinträge",
     "cost": "Gesamtkosten",
     "usedCount": "Verwendet",
     "unusedCount": "Nie verwendet",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materialien",
     "add": "Material hinzufügen",
-    "total": "Materialien gesamt",
+    "total": "Materialeinträge",
     "cost": "Gesamtkosten",
     "usedCount": "Verwendet",
     "unusedCount": "Nie verwendet",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projekte",
     "add": "Projekt hinzufügen",
-    "total": "Projekte gesamt",
+    "total": "Projekteinträge",
     "cost": "Gesamtkosten",
     "fabricCost": "Stoffkosten",
     "materialCost": "Geschätzte Materialkosten",
@@ -301,7 +305,7 @@
     "title": "Werkzeuge",
     "add": "Werkzeug hinzufügen",
     "total": "Werkzeugeinträge",
-    "totalQuantity": "Gesamtmenge",
+    "totalQuantity": "Werkzeuganzahl",
     "cost": "Gesamtkosten",
     "needsAttention": "Handlungsbedarf",
     "category": "Kategorie",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Kategoriestatistik",
     "count": "Einträge",
     "used": "Verwendet",
-    "unused": "Unbenutzt",
-    "totalQuantity": "Gesamtmenge"
+    "unused": "Unbenutzt"
   },
   "settings": {
     "title": "Einstellungen",
