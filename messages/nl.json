@@ -93,7 +93,11 @@
     "currentPassword": "Huidig wachtwoord",
     "nextPassword": "Nieuw wachtwoord",
     "login": "Inloggen",
-    "invalid": "Ongeldige gebruikersnaam of wachtwoord"
+    "invalid": "Ongeldige gebruikersnaam of wachtwoord",
+    "originMismatch": "Dit adres is niet toegestaan. Open Tailor via {url} of werk BASE_URL bij.",
+    "rateLimited": "Te veel aanmeldpogingen. Wacht even en probeer het opnieuw.",
+    "invalidBaseUrl": "BASE_URL moet HTTPS gebruiken, of HTTP met een privé-IP-adres.",
+    "unexpected": "Aanmelden is mislukt door een server- of netwerkfout. Probeer het opnieuw."
   },
   "errors": {
     "validation": "Controleer de ingevoerde waarden",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Stoffen",
     "add": "Stof toevoegen",
-    "total": "Totaal stoffen",
+    "total": "Stofitems",
     "cost": "Totale kosten",
     "usedLength": "Gebruikte lengte",
     "remainingLength": "Resterende lengte",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Patronen",
     "add": "Patroon toevoegen",
-    "total": "Totaal patronen",
+    "total": "Patroonitems",
     "cost": "Totale kosten",
     "usedCount": "Gebruikt",
     "unusedCount": "Nooit gebruikt",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materialen",
     "add": "Materiaal toevoegen",
-    "total": "Totaal materialen",
+    "total": "Materiaalitems",
     "cost": "Totale kosten",
     "usedCount": "Gebruikt",
     "unusedCount": "Nooit gebruikt",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projecten",
     "add": "Project toevoegen",
-    "total": "Totaal projecten",
+    "total": "Projectitems",
     "cost": "Totale kosten",
     "fabricCost": "Stofkosten",
     "materialCost": "Geschatte materiaalkosten",
@@ -301,7 +305,7 @@
     "title": "Gereedschap",
     "add": "Gereedschap toevoegen",
     "total": "Gereedschapsitems",
-    "totalQuantity": "Totale hoeveelheid",
+    "totalQuantity": "Aantal gereedschappen",
     "cost": "Totale kosten",
     "needsAttention": "Aandacht nodig",
     "category": "Categorie",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Categoriestatistieken",
     "count": "Items",
     "used": "Gebruikt",
-    "unused": "Ongebruikt",
-    "totalQuantity": "Totale hoeveelheid"
+    "unused": "Ongebruikt"
   },
   "settings": {
     "title": "Instellingen",

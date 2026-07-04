@@ -36,3 +36,35 @@ test("configured public origin takes precedence over a forwarded request origin"
     else process.env.BASE_URL = previous;
   }
 });
+
+test("configured private HTTP origins allow matching mutations", () => {
+  const previous = process.env.BASE_URL;
+  process.env.BASE_URL = "http://192.168.1.20:3000";
+  try {
+    const privateRequest = {
+      method: "POST",
+      headers: new Headers({ origin: "http://192.168.1.20:3000" }),
+      nextUrl: { origin: "http://192.168.1.20:3000" }
+    };
+    assert.equal(isCrossOriginMutation(privateRequest), false);
+  } finally {
+    if (previous === undefined) delete process.env.BASE_URL;
+    else process.env.BASE_URL = previous;
+  }
+});
+
+test("configured public HTTP origins reject mutations", () => {
+  const previous = process.env.BASE_URL;
+  process.env.BASE_URL = "http://tailor.example.com";
+  try {
+    const publicRequest = {
+      method: "POST",
+      headers: new Headers({ origin: "http://tailor.example.com" }),
+      nextUrl: { origin: "http://tailor.example.com" }
+    };
+    assert.equal(isCrossOriginMutation(publicRequest), true);
+  } finally {
+    if (previous === undefined) delete process.env.BASE_URL;
+    else process.env.BASE_URL = previous;
+  }
+});

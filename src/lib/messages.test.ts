@@ -71,7 +71,15 @@ test("all messages compile and format through next-intl", () => {
       }
     }) as (key: string, values?: Record<string, unknown>) => string;
     for (const key of flattenValues(messages).keys()) {
-      translate(key, { count: 2, unit: "m", from: "USD", to: "AUD", currency: "JPY", username: "tailor" });
+      translate(key, {
+        count: 2,
+        unit: "m",
+        from: "USD",
+        to: "AUD",
+        currency: "JPY",
+        username: "tailor",
+        url: "https://tailor.example.com"
+      });
     }
   }
 });

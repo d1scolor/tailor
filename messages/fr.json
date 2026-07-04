@@ -93,7 +93,11 @@
     "currentPassword": "Mot de passe actuel",
     "nextPassword": "Nouveau mot de passe",
     "login": "Se connecter",
-    "invalid": "Nom d’utilisateur ou mot de passe incorrect"
+    "invalid": "Nom d’utilisateur ou mot de passe incorrect",
+    "originMismatch": "Cette adresse n’est pas autorisée. Ouvrez Tailor à l’adresse {url} ou mettez à jour BASE_URL.",
+    "rateLimited": "Trop de tentatives de connexion. Patientez un moment, puis réessayez.",
+    "invalidBaseUrl": "BASE_URL doit utiliser HTTPS ou HTTP avec une adresse IP privée.",
+    "unexpected": "La connexion a échoué en raison d’une erreur du serveur ou du réseau. Réessayez."
   },
   "errors": {
     "validation": "Vérifiez les valeurs saisies",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Tissus",
     "add": "Ajouter un tissu",
-    "total": "Total des tissus",
+    "total": "Fiches de tissus",
     "cost": "Coût total",
     "usedLength": "Longueur utilisée",
     "remainingLength": "Longueur restante",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Patrons",
     "add": "Ajouter un patron",
-    "total": "Total des patrons",
+    "total": "Fiches de patrons",
     "cost": "Coût total",
     "usedCount": "Utilisés",
     "unusedCount": "Jamais utilisés",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Fournitures",
     "add": "Ajouter une fourniture",
-    "total": "Total des fournitures",
+    "total": "Fiches de fournitures",
     "cost": "Coût total",
     "usedCount": "Utilisées",
     "unusedCount": "Jamais utilisées",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projets",
     "add": "Ajouter un projet",
-    "total": "Total des projets",
+    "total": "Fiches de projets",
     "cost": "Coût total",
     "fabricCost": "Coût du tissu",
     "materialCost": "Coût estimé des fournitures",
@@ -300,8 +304,8 @@
   "tools": {
     "title": "Outils",
     "add": "Ajouter un outil",
-    "total": "Outils",
-    "totalQuantity": "Quantité totale",
+    "total": "Fiches d’outils",
+    "totalQuantity": "Nombre d’outils",
     "cost": "Coût total",
     "needsAttention": "À surveiller",
     "category": "Catégorie",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Indicateurs par catégorie",
     "count": "Entrées",
     "used": "Utilisé",
-    "unused": "Inutilisé",
-    "totalQuantity": "Quantité totale"
+    "unused": "Inutilisé"
   },
   "settings": {
     "title": "Paramètres",

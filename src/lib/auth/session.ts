@@ -11,6 +11,7 @@ import { defaultLocale } from "@/lib/env";
 import { normalizeLocale, type Locale } from "@/lib/i18n/locales";
 import { normalizeCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
+import { sessionCookiesAreSecure } from "./base-url";
 import { isCrossOriginMutation } from "./origin";
 
 export type AuthUser = {
@@ -39,7 +40,7 @@ export function createSession(userId: number) {
 export function setSessionCookie(response: NextResponse, sessionId: string) {
   response.cookies.set(sessionCookie, sessionId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookiesAreSecure(),
     sameSite: "lax",
     path: "/",
     maxAge: sessionMaxAgeSeconds,
@@ -50,7 +51,7 @@ export function setSessionCookie(response: NextResponse, sessionId: string) {
 export function clearSessionCookie(response: NextResponse) {
   response.cookies.set(sessionCookie, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookiesAreSecure(),
     sameSite: "lax",
     path: "/",
     maxAge: 0,

@@ -93,7 +93,11 @@
     "currentPassword": "Password attuale",
     "nextPassword": "Nuova password",
     "login": "Accedi",
-    "invalid": "Nome utente o password non validi"
+    "invalid": "Nome utente o password non validi",
+    "originMismatch": "Questo indirizzo non è consentito. Apri Tailor all’indirizzo {url} oppure aggiorna BASE_URL.",
+    "rateLimited": "Troppi tentativi di accesso. Attendi qualche minuto e riprova.",
+    "invalidBaseUrl": "BASE_URL deve usare HTTPS oppure HTTP con un indirizzo IP privato.",
+    "unexpected": "Impossibile accedere a causa di un errore del server o della rete. Riprova."
   },
   "errors": {
     "validation": "Controlla i valori inseriti",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Tessuti",
     "add": "Aggiungi tessuto",
-    "total": "Totale tessuti",
+    "total": "Voci tessuti",
     "cost": "Costo totale",
     "usedLength": "Lunghezza usata",
     "remainingLength": "Lunghezza restante",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Cartamodelli",
     "add": "Aggiungi cartamodello",
-    "total": "Totale cartamodelli",
+    "total": "Voci cartamodelli",
     "cost": "Costo totale",
     "usedCount": "Usati",
     "unusedCount": "Mai usati",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materiali",
     "add": "Aggiungi materiale",
-    "total": "Totale materiali",
+    "total": "Voci materiali",
     "cost": "Costo totale",
     "usedCount": "Usati",
     "unusedCount": "Mai usati",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Progetti",
     "add": "Aggiungi progetto",
-    "total": "Totale progetti",
+    "total": "Voci progetti",
     "cost": "Costo totale",
     "fabricCost": "Costo tessuto",
     "materialCost": "Costo stimato dei materiali",
@@ -301,7 +305,7 @@
     "title": "Strumenti",
     "add": "Aggiungi strumento",
     "total": "Voci strumenti",
-    "totalQuantity": "Quantità totale",
+    "totalQuantity": "Numero di strumenti",
     "cost": "Costo totale",
     "needsAttention": "Da controllare",
     "category": "Categoria",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Metriche per categoria",
     "count": "Voci",
     "used": "Usato",
-    "unused": "Non usato",
-    "totalQuantity": "Quantità totale"
+    "unused": "Non usato"
   },
   "settings": {
     "title": "Impostazioni",

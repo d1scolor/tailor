@@ -8,22 +8,43 @@ import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const t = useTranslations();
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(false);
+    setError(null);
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: form.get("username"),
-        password: form.get("password")
-      })
-    });
-    if (response.ok) window.location.href = "/fabrics";
-    else setError(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: form.get("username"),
+          password: form.get("password")
+        })
+      });
+      if (response.ok) {
+        window.location.href = "/fabrics";
+        return;
+      }
+      const body = (await response.json().catch(() => null)) as {
+        error?: unknown;
+        expectedOrigin?: unknown;
+      } | null;
+      if (response.status === 401) {
+        setError(t("auth.invalid"));
+      } else if (body?.error === "cross_origin_request" && typeof body.expectedOrigin === "string") {
+        setError(t("auth.originMismatch", { url: body.expectedOrigin }));
+      } else if (response.status === 429 || body?.error === "rate_limited") {
+        setError(t("auth.rateLimited"));
+      } else if (body?.error === "invalid_base_url") {
+        setError(t("auth.invalidBaseUrl"));
+      } else {
+        setError(t("auth.unexpected"));
+      }
+    } catch {
+      setError(t("auth.unexpected"));
+    }
   }
 
   return (
@@ -42,7 +63,7 @@ export function LoginForm() {
             <span className="text-sm font-medium">{t("auth.password")}</span>
             <Input name="password" type="password" autoComplete="current-password" required />
           </label>
-          {error ? <p className="text-sm text-destructive">{t("auth.invalid")}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button className="w-full" type="submit">
             {t("auth.login")}
           </Button>

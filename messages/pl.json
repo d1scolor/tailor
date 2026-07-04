@@ -93,7 +93,11 @@
     "currentPassword": "Aktualne hasło",
     "nextPassword": "Nowe hasło",
     "login": "Zaloguj",
-    "invalid": "Nieprawidłowa nazwa użytkownika lub hasło"
+    "invalid": "Nieprawidłowa nazwa użytkownika lub hasło",
+    "originMismatch": "Ten adres jest niedozwolony. Otwórz Tailor pod adresem {url} lub zaktualizuj BASE_URL.",
+    "rateLimited": "Zbyt wiele prób logowania. Odczekaj chwilę i spróbuj ponownie.",
+    "invalidBaseUrl": "BASE_URL musi używać HTTPS albo HTTP z prywatnym adresem IP.",
+    "unexpected": "Logowanie nie powiodło się z powodu błędu serwera lub sieci. Spróbuj ponownie."
   },
   "errors": {
     "validation": "Sprawdź wprowadzone wartości",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Materiały",
     "add": "Dodaj materiał",
-    "total": "Łączna liczba materiałów",
+    "total": "Wpisy materiałów",
     "cost": "Łączny koszt",
     "usedLength": "Użyta długość",
     "remainingLength": "Pozostała długość",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Wykroje",
     "add": "Dodaj wykrój",
-    "total": "Łączna liczba wykrojów",
+    "total": "Wpisy wykrojów",
     "cost": "Łączny koszt",
     "usedCount": "Używane",
     "unusedCount": "Nigdy nieużywane",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Dodatki",
     "add": "Dodaj dodatek",
-    "total": "Łączna liczba dodatków",
+    "total": "Wpisy dodatków",
     "cost": "Łączny koszt",
     "usedCount": "Używane",
     "unusedCount": "Nigdy nieużywane",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projekty",
     "add": "Dodaj projekt",
-    "total": "Łączna liczba projektów",
+    "total": "Wpisy projektów",
     "cost": "Łączny koszt",
     "fabricCost": "Koszt materiału",
     "materialCost": "Szacowany koszt dodatków",
@@ -300,8 +304,8 @@
   "tools": {
     "title": "Narzędzia",
     "add": "Dodaj narzędzie",
-    "total": "Pozycje narzędzi",
-    "totalQuantity": "Ilość całkowita",
+    "total": "Wpisy narzędzi",
+    "totalQuantity": "Liczba narzędzi",
     "cost": "Łączny koszt",
     "needsAttention": "Wymaga uwagi",
     "category": "Kategoria",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Statystyki kategorii",
     "count": "Pozycje",
     "used": "Używane",
-    "unused": "Nieużywane",
-    "totalQuantity": "Ilość całkowita"
+    "unused": "Nieużywane"
   },
   "settings": {
     "title": "Ustawienia",

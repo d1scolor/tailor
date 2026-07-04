@@ -93,7 +93,11 @@
     "currentPassword": "Current password",
     "nextPassword": "New password",
     "login": "Log in",
-    "invalid": "Invalid username or password"
+    "invalid": "Invalid username or password",
+    "originMismatch": "This address is not allowed. Open Tailor at {url}, or update BASE_URL.",
+    "rateLimited": "Too many login attempts. Wait a while and try again.",
+    "invalidBaseUrl": "BASE_URL must use HTTPS or HTTP with a private IP address.",
+    "unexpected": "Unable to log in because of a server or network error. Try again."
   },
   "errors": {
     "validation": "Check the entered values",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "Fabrics",
     "add": "Add fabric",
-    "total": "Total fabrics",
+    "total": "Fabric entries",
     "cost": "Total cost",
     "usedLength": "Used length",
     "remainingLength": "Remaining length",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "Patterns",
     "add": "Add pattern",
-    "total": "Total patterns",
+    "total": "Pattern entries",
     "cost": "Total cost",
     "usedCount": "Used",
     "unusedCount": "Never used",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "Materials",
     "add": "Add material",
-    "total": "Total materials",
+    "total": "Material entries",
     "cost": "Total cost",
     "usedCount": "Used",
     "unusedCount": "Never used",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "Projects",
     "add": "Add project",
-    "total": "Total projects",
+    "total": "Project entries",
     "cost": "Total cost",
     "fabricCost": "Fabric cost",
     "materialCost": "Estimated material cost",
@@ -301,7 +305,7 @@
     "title": "Tools",
     "add": "Add tool",
     "total": "Tool entries",
-    "totalQuantity": "Total quantity",
+    "totalQuantity": "Tool count",
     "cost": "Total cost",
     "needsAttention": "Needs attention",
     "category": "Category",
@@ -320,8 +324,7 @@
     "categoryMetrics": "Category metrics",
     "count": "Entries",
     "used": "Used",
-    "unused": "Unused",
-    "totalQuantity": "Total quantity"
+    "unused": "Unused"
   },
   "settings": {
     "title": "Settings",

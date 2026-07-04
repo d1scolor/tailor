@@ -64,7 +64,7 @@ export default async function OverviewPage() {
       cost: tools.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: tools.count ?? 0 },
-        { label: t("overview.totalQuantity"), value: tools.totalQuantity ?? 0 },
+        { label: t("tools.totalQuantity"), value: tools.totalQuantity ?? 0 },
         { label: t("tools.needsAttention"), value: tools.needsAttention ?? 0 }
       ]
     },

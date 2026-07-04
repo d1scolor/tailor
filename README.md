@@ -1,8 +1,29 @@
 # Tailor
 
+**Interface languages:** English · 简体中文 · 繁體中文 · Français · Deutsch ·
+日本語 · 한국어 · Italiano · Español · Português (Brasil) · Nederlands · Polski
+
 Tailor is a self-hosted sewing inventory application for fabrics, patterns,
 materials, projects, and tools. It is designed for one user and stores all data
 in a local SQLite database with photos on disk.
+
+![Tailor inventory overview](docs/screenshots/overview.webp)
+
+<p align="center">
+  <img src="docs/screenshots/fabrics.webp" alt="Fabric inventory with summary, search, sorting, and cards" width="49%">
+  <img src="docs/screenshots/projects.webp" alt="Project inventory with cost and labour summaries" width="49%">
+</p>
+
+![Language and regional settings](docs/screenshots/settings-localization.webp)
+
+## Internationalisation and units
+
+Supported locales are `en-AU`, `en-GB`, `en-US`, `zh-CN`, `zh-TW`, `zh-HK`,
+`fr`, `de`, `ja`, `ko`, `it`, `es`, `pt-BR`, `nl`, and `pl`.
+
+Supported unit systems are `metric` and `imperial`. Supported currencies are
+defined in `src/lib/currency-config.json`. Currency is a display interpretation
+for all inventory values; changing it does not convert stored amounts.
 
 ## Features
 
@@ -33,19 +54,22 @@ internet.
 ### Configure
 
 ```bash
+git clone https://github.com/d1scolor/tailor.git
+cd tailor
 cp .env.example .env
 chmod 600 .env
 ```
 
-Set a unique username, a password of at least 12 characters, and the public
-HTTPS URL before starting the container. Tailor has no default credentials.
+Set a unique username, a password of at least 12 characters, and the canonical
+URL used in the browser before starting the container. Tailor has no default
+credentials. The canonical `compose.yml` loads these settings from `.env`.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `INITIAL_USERNAME` | First boot | none | Creates the first and only user |
 | `INITIAL_PASSWORD` | First boot | none | Initial password; 12–72 UTF-8 bytes |
-| `BASE_URL` | Yes | none | Public origin used for cross-origin request checks |
-| `TAILOR_IMAGE` | No | `tailor:local` | Image used by Compose |
+| `BASE_URL` | Yes | none | Exact browser origin used for request checks and cookie security |
+| `TAILOR_IMAGE` | No | `ghcr.io/d1scolor/tailor:latest` | Image used by Compose |
 | `DEFAULT_LOCALE` | No | `en-AU` | Initial interface locale |
 | `DEFAULT_UNIT_SYSTEM` | No | `metric` | `metric` or `imperial` |
 | `CURRENCY_CODE` | No | `USD` | Initial ISO 4217 currency code |
@@ -57,30 +81,45 @@ password in Settings after the first login. Anyone with access to the Docker
 daemon or the deployment environment can read container environment variables,
 so restrict host access and protect `.env`.
 
+For example, a Chinese-language deployment using CNY and the published image
+can use:
+
+```dotenv
+TAILOR_IMAGE=ghcr.io/d1scolor/tailor:latest
+INITIAL_USERNAME=tailor
+INITIAL_PASSWORD=replace-with-a-long-unique-password
+BASE_URL=https://tailor.example.com
+DEFAULT_LOCALE=zh-CN
+DEFAULT_UNIT_SYSTEM=metric
+CURRENCY_CODE=CNY
+MAX_UPLOAD_MB=20
+MAX_BACKUP_MB=4096
+```
+
+`NODE_ENV=production` is already set by the image and does not need to be
+repeated in Compose.
+
+### Run the GHCR image
+
+The published image is the default in `.env.example` and `compose.yml`:
+
+```bash
+docker compose pull
+docker compose up -d --no-build
+docker compose ps
+```
+
+Images published from this repository support `linux/amd64` and `linux/arm64`.
+Prefer an immutable version or `sha-*` tag when repeatable deployments matter.
+
 ### Build locally
+
+Set `TAILOR_IMAGE=tailor:local` in `.env`, then run:
 
 ```bash
 docker compose up -d --build
 docker compose ps
 ```
-
-### Run a GHCR image
-
-Set the public image in `.env`:
-
-```dotenv
-TAILOR_IMAGE=ghcr.io/OWNER/REPOSITORY:latest
-```
-
-Then pull and start without rebuilding:
-
-```bash
-docker compose pull
-docker compose up -d --no-build
-```
-
-Images published from this repository support `linux/amd64` and `linux/arm64`.
-Prefer an immutable version or `sha-*` tag when repeatable deployments matter.
 
 ### Reverse proxy
 
@@ -97,6 +136,32 @@ tailor.example.com {
 ```
 
 Set `BASE_URL=https://tailor.example.com` to the same public origin.
+
+To use host port `9010`, change the Compose port mapping to
+`127.0.0.1:9010:3000` and proxy to `http://127.0.0.1:9010`. Bind to
+`0.0.0.0:9010:3000` only when you intentionally want Tailor reachable through
+every host network interface.
+
+### Private network or VPN
+
+HTTPS is recommended but is not required when Tailor is accessed directly
+through a trusted private network or VPN. Set `BASE_URL` to the exact private
+address, including its port:
+
+```dotenv
+BASE_URL=http://192.168.1.20:3000
+```
+
+For direct network access, change the Compose port mapping to
+`0.0.0.0:3000:3000`. Tailor permits HTTP only for `localhost`, loopback,
+private IPv4 addresses, link-local addresses, the `100.64.0.0/10` shared range
+used by VPNs such as Tailscale, and private or link-local IPv6 addresses. A
+public hostname or public IP address must use HTTPS.
+
+With an HTTP `BASE_URL`, the session cookie cannot use the `Secure` attribute.
+Credentials and sessions are therefore unencrypted unless the network or VPN
+provides encryption. The configured origin check, HttpOnly cookie protection,
+SameSite policy, and login rate limit remain enabled.
 
 ### Persistent data
 
@@ -161,7 +226,8 @@ npm run db:migrate
 npm run dev
 ```
 
-The development server uses `./data` by default.
+For local development, set `BASE_URL=http://127.0.0.1:3000` in `.env`. The
+development server uses `./data` by default.
 
 Useful checks:
 
@@ -173,23 +239,21 @@ npm run build
 npm audit
 ```
 
-## Internationalisation and units
-
-Supported locales are `en-AU`, `en-GB`, `en-US`, `zh-CN`, `zh-TW`, `zh-HK`,
-`fr`, `de`, `ja`, `ko`, `it`, `es`, `pt-BR`, `nl`, and `pl`.
-
-Supported unit systems are `metric` and `imperial`. Supported currencies are
-defined in `src/lib/currency-config.json`. Currency is a display interpretation
-for all inventory values; changing it does not convert stored amounts.
-
 ## Security model
 
-Tailor is single-user software intended to run behind an HTTPS reverse proxy.
-It uses bcrypt password hashes, random server-side sessions, Secure HttpOnly
-SameSite cookies in production, cross-origin mutation checks, and bounded login
-attempts. The container runs without Linux capabilities as a non-root user.
-The login limiter is process-local, so internet-facing deployments should also
-rate-limit `/api/auth/login` at the reverse proxy.
+Tailor is single-user software intended to run behind an HTTPS reverse proxy or
+on a trusted private network or VPN. It uses bcrypt password hashes, random
+server-side sessions, HttpOnly SameSite cookies, cross-origin mutation checks,
+and bounded login attempts. Session cookies use the `Secure` attribute whenever
+`BASE_URL` uses HTTPS. The container runs without Linux capabilities as a
+non-root user.
+
+The application tracks failed logins by case-insensitive username. Eight
+failures within 15 minutes block further attempts for that username for 15
+minutes and return HTTP `429` with a `Retry-After` header. A successful login
+clears the failures. This limiter is process-local and resets when the container
+restarts, so internet-facing deployments should also rate-limit
+`/api/auth/login` at the reverse proxy.
 
 The unprotected `/api/health` endpoint only reports process availability.
 

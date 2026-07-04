@@ -93,7 +93,11 @@
     "currentPassword": "目前密碼",
     "nextPassword": "新密碼",
     "login": "登入",
-    "invalid": "使用者名稱或密碼無效"
+    "invalid": "使用者名稱或密碼無效",
+    "originMismatch": "不允許使用此網址。請在 {url} 開啟 Tailor，或更新 BASE_URL。",
+    "rateLimited": "登入嘗試次數過多。請稍候再試。",
+    "invalidBaseUrl": "BASE_URL 必須使用 HTTPS，或使用私人 IP 位址的 HTTP。",
+    "unexpected": "因伺服器或網路錯誤而無法登入。請再試一次。"
   },
   "errors": {
     "validation": "請檢查輸入內容",
@@ -239,7 +243,7 @@
   "fabrics": {
     "title": "布料",
     "add": "新增布料",
-    "total": "布料總數",
+    "total": "條目數量",
     "cost": "總成本",
     "usedLength": "已用長度",
     "remainingLength": "剩餘長度",
@@ -255,7 +259,7 @@
   "patterns": {
     "title": "紙型",
     "add": "新增紙型",
-    "total": "紙型總數",
+    "total": "條目數量",
     "cost": "總成本",
     "usedCount": "已使用",
     "unusedCount": "從未使用",
@@ -268,7 +272,7 @@
   "materials": {
     "title": "輔料",
     "add": "新增輔料",
-    "total": "輔料總數",
+    "total": "條目數量",
     "cost": "總成本",
     "usedCount": "已使用",
     "unusedCount": "從未使用",
@@ -281,7 +285,7 @@
   "projects": {
     "title": "作品",
     "add": "新增作品",
-    "total": "作品總數",
+    "total": "條目數量",
     "cost": "總成本",
     "fabricCost": "布料成本",
     "materialCost": "輔料成本估算",
@@ -300,8 +304,8 @@
   "tools": {
     "title": "工具",
     "add": "新增工具",
-    "total": "工具項目",
-    "totalQuantity": "總數量",
+    "total": "條目數量",
+    "totalQuantity": "工具件數",
     "cost": "總成本",
     "needsAttention": "需要處理",
     "category": "分類",
@@ -320,8 +324,7 @@
     "categoryMetrics": "分類統計",
     "count": "項目數",
     "used": "已使用",
-    "unused": "未使用",
-    "totalQuantity": "總數量"
+    "unused": "未使用"
   },
   "settings": {
     "title": "設定",
