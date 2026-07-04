@@ -56,6 +56,7 @@ jobs:
         with:
           images: ${{ steps.image.outputs.name }}
           tags: type=raw,value=sha-${{ github.sha }}
+          labels: org.opencontainers.image.licenses=AGPL-3.0-only
       - id: build
         uses: docker/build-push-action@v7
         with:
@@ -66,7 +67,9 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha,scope=tailor-container
           cache-to: type=gha,mode=max,scope=tailor-container
-      - uses: actions/attest-build-provenance@v2
+      - if: github.event.repository.private == false
+        name: Publish GitHub build provenance
+        uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
