@@ -27,6 +27,7 @@
     "refreshFailed": "刷新失败",
     "grid": "网格",
     "list": "列表",
+    "itemsPerPage": "每页条目数",
     "save": "保存",
     "saving": "保存中",
     "cancel": "取消",
@@ -76,6 +77,10 @@
     "previous": "上一张",
     "details": "详情",
     "summary": "概览",
+    "showMetric": "显示{metric}",
+    "linkedProjects": "已关联作品",
+    "noLinkedProjects": "没有已关联作品",
+    "viewAll": "查看全部",
     "total": "总计",
     "remaining": "剩余",
     "unit": "单位",
@@ -235,11 +240,6 @@
     "maintenance": "维修保养",
     "other": "其他"
   },
-  "materialUsageStatus": {
-    "available": "未使用",
-    "partial": "部分使用",
-    "used": "已用完"
-  },
   "projectStatus": {
     "in_progress": "进行中",
     "completed": "已完成",
@@ -251,7 +251,9 @@
     "total": "条目数量",
     "cost": "总成本",
     "usedLength": "已用长度",
+    "usedValue": "已用布料价值",
     "remainingLength": "剩余长度",
+    "remainingValue": "剩余布料价值",
     "quantity": "数量",
     "lengthTotal": "总长度",
     "lengthRemaining": "剩余长度",
@@ -279,13 +281,14 @@
     "add": "添加辅料",
     "total": "条目数量",
     "cost": "总成本",
-    "usedCount": "已使用",
-    "unusedCount": "未使用",
+    "usedCount": "已在作品中使用",
+    "unusedCount": "从未在作品中使用",
+    "projectUsage": "作品使用情况",
+    "availability": "可用状态",
+    "available": "可用",
     "category": "分类",
     "unit": "单位",
-    "quantityTotal": "总数量",
-    "quantityRemaining": "剩余数量",
-    "usageStatus": "状态"
+    "quantityTotal": "总数量"
   },
   "projects": {
     "title": "作品",
@@ -347,6 +350,7 @@
     "metricUnits": "公制（米 / 厘米 / 千克 / 克）",
     "imperialUnits": "英制（码 / 英寸 / 磅 / 盎司）",
     "manageTags": "管理标签",
+    "tagCategory": "库存类别",
     "manageCategories": "管理辅料分类",
     "manageUnits": "管理辅料单位",
     "backup": "备份",

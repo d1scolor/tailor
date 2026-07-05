@@ -35,7 +35,7 @@ export const materialSchema = baseItemSchema.extend({
   categoryId: nullableInt,
   unitId: z.coerce.number().int().positive(),
   quantityTotalCanonical: z.coerce.number().positive(),
-  usageStatus: z.enum(["available", "partial", "used"]).default("available"),
+  isUsedUp: z.boolean().default(false),
   colors: colorsSchema
 });
 
@@ -78,6 +78,10 @@ export const tagSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable()
     .optional()
+});
+
+export const tagCreateSchema = tagSchema.extend({
+  entityType: entityTypeSchema
 });
 
 export const metaSchema = z.object({

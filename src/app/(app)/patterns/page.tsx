@@ -11,9 +11,10 @@ export default async function PatternsPage() {
       kind="patterns"
       items={listItems("patterns", user.id, new URLSearchParams())}
       summary={summary("patterns", user.id)}
-      tags={listTags(user.id) as any}
+      tags={listTags(user.id, "pattern") as any}
       sourceOptions={listSources("patterns", user.id)}
       patternTypeOptions={listPatternTypes(user.id)}
+      summaryDisplayModes={user.summaryDisplayModes}
     />
   );
 }

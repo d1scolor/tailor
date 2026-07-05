@@ -27,6 +27,7 @@
     "refreshFailed": "Odświeżanie nie powiodło się",
     "grid": "Siatka",
     "list": "Lista",
+    "itemsPerPage": "Pozycji na stronę",
     "save": "Zapisz",
     "saving": "Zapisywanie",
     "cancel": "Anuluj",
@@ -76,6 +77,10 @@
     "previous": "Poprzedni",
     "details": "Szczegóły",
     "summary": "Podsumowanie",
+    "showMetric": "Pokaż: {metric}",
+    "linkedProjects": "Powiązane projekty",
+    "noLinkedProjects": "Brak powiązanych projektów",
+    "viewAll": "Pokaż wszystkie",
     "total": "Łącznie",
     "remaining": "Pozostało",
     "unit": "jednostka",
@@ -235,11 +240,6 @@
     "maintenance": "Konserwacja",
     "other": "Inne"
   },
-  "materialUsageStatus": {
-    "available": "Nieużywany",
-    "partial": "Częściowo zużyty",
-    "used": "Zużyty"
-  },
   "projectStatus": {
     "in_progress": "W toku",
     "completed": "Ukończony",
@@ -251,7 +251,9 @@
     "total": "Wpisy materiałów",
     "cost": "Łączny koszt",
     "usedLength": "Użyta długość",
+    "usedValue": "Wartość wykorzystanej tkaniny",
     "remainingLength": "Pozostała długość",
+    "remainingValue": "Wartość pozostałej tkaniny",
     "quantity": "Ilość",
     "lengthTotal": "Długość całkowita",
     "lengthRemaining": "Pozostała długość",
@@ -279,13 +281,14 @@
     "add": "Dodaj dodatek",
     "total": "Wpisy dodatków",
     "cost": "Łączny koszt",
-    "usedCount": "Używane",
-    "unusedCount": "Nigdy nieużywane",
+    "usedCount": "Używane w projektach",
+    "unusedCount": "Nigdy nieużywane w projektach",
+    "projectUsage": "Użycie w projektach",
+    "availability": "Dostępność",
+    "available": "Dostępny",
     "category": "Kategoria",
     "unit": "Jednostka",
-    "quantityTotal": "Ilość całkowita",
-    "quantityRemaining": "Pozostała ilość",
-    "usageStatus": "Status"
+    "quantityTotal": "Ilość całkowita"
   },
   "projects": {
     "title": "Projekty",
@@ -347,6 +350,7 @@
     "metricUnits": "Metryczny (m / cm / kg / g)",
     "imperialUnits": "Imperialny (yd / in / lb / oz)",
     "manageTags": "Zarządzaj tagami",
+    "tagCategory": "Kategoria zasobów",
     "manageCategories": "Zarządzaj kategoriami dodatków",
     "manageUnits": "Zarządzaj jednostkami dodatków",
     "backup": "Kopia zapasowa",

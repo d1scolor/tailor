@@ -27,6 +27,7 @@
     "refreshFailed": "Vernieuwen mislukt",
     "grid": "Raster",
     "list": "Lijst",
+    "itemsPerPage": "Items per pagina",
     "save": "Opslaan",
     "saving": "Opslaan",
     "cancel": "Annuleren",
@@ -76,6 +77,10 @@
     "previous": "Vorige",
     "details": "Details",
     "summary": "Samenvatting",
+    "showMetric": "{metric} tonen",
+    "linkedProjects": "Gekoppelde projecten",
+    "noLinkedProjects": "Geen gekoppelde projecten",
+    "viewAll": "Alles bekijken",
     "total": "Totaal",
     "remaining": "Resterend",
     "unit": "eenheid",
@@ -235,11 +240,6 @@
     "maintenance": "Onderhoud",
     "other": "Overig"
   },
-  "materialUsageStatus": {
-    "available": "Ongebruikt",
-    "partial": "Gedeeltelijk gebruikt",
-    "used": "Opgebruikt"
-  },
   "projectStatus": {
     "in_progress": "In uitvoering",
     "completed": "Voltooid",
@@ -251,7 +251,9 @@
     "total": "Stofitems",
     "cost": "Totale kosten",
     "usedLength": "Gebruikte lengte",
+    "usedValue": "Waarde gebruikte stof",
     "remainingLength": "Resterende lengte",
+    "remainingValue": "Waarde resterende stof",
     "quantity": "Aantal",
     "lengthTotal": "Totale lengte",
     "lengthRemaining": "Resterende lengte",
@@ -279,13 +281,14 @@
     "add": "Materiaal toevoegen",
     "total": "Materiaalitems",
     "cost": "Totale kosten",
-    "usedCount": "Gebruikt",
-    "unusedCount": "Nooit gebruikt",
+    "usedCount": "Gebruikt in projecten",
+    "unusedCount": "Nooit gebruikt in projecten",
+    "projectUsage": "Gebruik in projecten",
+    "availability": "Beschikbaarheid",
+    "available": "Beschikbaar",
     "category": "Categorie",
     "unit": "Eenheid",
-    "quantityTotal": "Totale hoeveelheid",
-    "quantityRemaining": "Resterende hoeveelheid",
-    "usageStatus": "Status"
+    "quantityTotal": "Totale hoeveelheid"
   },
   "projects": {
     "title": "Projecten",
@@ -347,6 +350,7 @@
     "metricUnits": "Metrisch (m / cm / kg / g)",
     "imperialUnits": "Imperiaal (yd / in / lb / oz)",
     "manageTags": "Labels beheren",
+    "tagCategory": "Inventariscategorie",
     "manageCategories": "Materiaalcategorieën beheren",
     "manageUnits": "Materiaaleenheden beheren",
     "backup": "Back-up",

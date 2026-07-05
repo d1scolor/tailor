@@ -16,7 +16,7 @@ import {
   numberValue,
   storedAmountForInput
 } from "@/lib/format";
-import type { Kind } from "@/lib/repository";
+import type { EntityType, Kind } from "@/lib/repository";
 import {
   areaToDisplay,
   displayUnit,
@@ -31,11 +31,16 @@ import {
 } from "@/lib/units";
 import type { CurrencyCode } from "@/lib/currency";
 import { unitPriceHundredths } from "@/lib/pricing";
-import { projectStatusOptions } from "@/lib/project-status";
+import { projectStatusOptions, type ProjectStatus } from "@/lib/project-status";
+import type {
+  SummaryDisplayKey,
+  SummaryDisplayModes
+} from "@/lib/summary-display";
 
 type AnyItem = Record<string, any>;
 type MetaItem = {
   id: number;
+  entityType?: EntityType;
   name?: string;
   definitionKey?: string | null;
   customName?: string | null;
@@ -45,6 +50,24 @@ type MetaItem = {
 type PickerKind = Extract<Kind, "fabrics" | "patterns" | "materials">;
 type InventoryUsageStatus = "unused" | "partial" | "usedUp";
 type TagMatch = "any" | "all";
+type PageSize = 20 | 50 | 100 | "all";
+type InitialRelationshipFilters = {
+  patternId?: string;
+  fabricId?: string;
+  materialId?: string;
+};
+type SummaryCardDefinition = {
+  key: string;
+  label: string;
+  value: string | number;
+  toggle?: {
+    key: SummaryDisplayKey;
+    primaryUnit: string;
+    alternateUnit: string;
+    alternateActive: boolean;
+    nextLabel: string;
+  };
+};
 type CreateMetaHandler = {
   (name: string): Promise<MetaItem | null>;
 };
@@ -69,6 +92,8 @@ type Filters = {
   materialId: string;
   category: string;
   condition: string;
+  materialAvailability: string;
+  projectStatuses: ProjectStatus[];
 };
 type LightboxState = { photos: string[]; index: number };
 type StagedPhoto = { id: string; file: File; isCover: boolean };
@@ -89,7 +114,11 @@ type Props = {
   materialTypeOptions?: string[];
   patternTypeOptions?: string[];
   toolCategoryOptions?: string[];
+  colorOptions?: string[];
   unitSystem?: UnitSystem;
+  summaryDisplayModes: SummaryDisplayModes;
+  initialRelationshipFilters?: InitialRelationshipFilters;
+  initialSelectedItem?: AnyItem | null;
 };
 type FieldsProps = {
   kind: Kind;
@@ -170,6 +199,23 @@ function ModalPortal({ children }: { children: ReactNode }) {
   return mounted ? createPortal(children, document.body) : null;
 }
 
+function replaceProjectIdInUrl(projectId: number | null) {
+  const url = new URL(window.location.href);
+  if (projectId == null) url.searchParams.delete("projectId");
+  else url.searchParams.set("projectId", String(projectId));
+  window.history.replaceState(window.history.state, "", url);
+}
+
+function replaceProjectRelationshipFiltersInUrl(filters: InitialRelationshipFilters) {
+  const url = new URL(window.location.href);
+  for (const key of ["fabricId", "patternId", "materialId"] as const) {
+    const value = filters[key];
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
+  window.history.replaceState(window.history.state, "", url);
+}
+
 const entityByKind = {
   fabrics: "fabric",
   patterns: "pattern",
@@ -180,7 +226,6 @@ const entityByKind = {
 const fabricPurposeOptions = ["garment", "craft"];
 const patternTypeDefaults = ["paper", "digital"];
 const patternDifficultyOptions = ["easy", "medium", "hard"];
-const materialUsageStatusOptions = ["available", "partial", "used"];
 const inventoryUsageStatusOptions: InventoryUsageStatus[] = ["unused", "partial", "usedUp"];
 const patternForOptions = [
   "headwear",
@@ -321,10 +366,19 @@ export function InventoryClient(props: Props) {
   const [sort, setSort] = useState("created");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [filters, setFilters] = useState<Filters>(() => emptyFilters());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(20);
+  const [summaryDisplayModes, setSummaryDisplayModes] = useState<SummaryDisplayModes>(
+    props.summaryDisplayModes
+  );
+  const [filters, setFilters] = useState<Filters>(() =>
+    emptyFilters(props.initialRelationshipFilters)
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [editing, setEditing] = useState<AnyItem | null>(null);
-  const [selected, setSelected] = useState<AnyItem | null>(null);
+  const [selected, setSelected] = useState<AnyItem | null>(
+    props.initialSelectedItem ?? null
+  );
   const [confirmDelete, setConfirmDelete] = useState<AnyItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -341,6 +395,8 @@ export function InventoryClient(props: Props) {
   const submitLockRef = useRef(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
+  const summaryDisplayModesRef = useRef(props.summaryDisplayModes);
+  const summarySaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const title = t(`${props.kind}.title`);
   const displayCategoryList = useMemo(
     () => categoryList.map((item) => ({ ...item, name: metaItemLabel(item, "category", unitSystem, t) })),
@@ -351,8 +407,15 @@ export function InventoryClient(props: Props) {
     [unitList, unitSystem, t]
   );
   const colorOptions = useMemo(
-    () => collectColors([props.items, items, props.fabricOptions ?? [], props.materialOptions ?? []]),
-    [items, props.items, props.fabricOptions, props.materialOptions]
+    () =>
+      collectColors([
+        (props.colorOptions ?? []).map((color) => ({ colors: [color] })),
+        props.items,
+        items,
+        props.fabricOptions ?? [],
+        props.materialOptions ?? []
+      ]),
+    [items, props.colorOptions, props.items, props.fabricOptions, props.materialOptions]
   );
 
   useEffect(() => {
@@ -366,7 +429,10 @@ export function InventoryClient(props: Props) {
         setRemovedPhotoIds([]);
         setEditing(null);
       }
-      else if (selected) setSelected(null);
+      else if (selected) {
+        setSelected(null);
+        if (props.kind === "projects") replaceProjectIdInUrl(null);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -400,9 +466,37 @@ export function InventoryClient(props: Props) {
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
   }
 
-  async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters, nextDir = dir) {
+  function toggleSummaryMetric(key: SummaryDisplayKey) {
+    const value = !summaryDisplayModesRef.current[key];
+    const next = { ...summaryDisplayModesRef.current, [key]: value };
+    summaryDisplayModesRef.current = next;
+    setSummaryDisplayModes(next);
+    summarySaveQueueRef.current = summarySaveQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const response = await fetch("/api/settings/summary-display", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value }),
+          keepalive: true
+        });
+        if (!response.ok) {
+          notify(await errorMessage(response, t));
+        }
+      })
+      .catch(() => notify(t("common.error")));
+  }
+
+  async function refresh(
+    nextQuery = query,
+    nextSort = sort,
+    nextFilters = filters,
+    nextDir = dir,
+    nextPage = page,
+    nextPageSize = pageSize
+  ) {
     const requestId = ++refreshSeqRef.current;
-    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir);
+    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir, nextPage, nextPageSize);
     const [listResponse, summaryResponse] = await Promise.all([
       fetch(`/api/${props.kind}?${params.toString()}`),
       fetch(`/api/${props.kind}/summary?${params.toString()}`)
@@ -410,14 +504,30 @@ export function InventoryClient(props: Props) {
     const nextItems = (await listResponse.json()).items;
     const nextSummary = await summaryResponse.json();
     if (requestId !== refreshSeqRef.current) return;
+    const lastPage =
+      nextPageSize === "all"
+        ? 1
+        : Math.max(1, Math.ceil(Number(nextSummary.count ?? 0) / nextPageSize));
+    if (nextPage > lastPage) {
+      setPage(lastPage);
+      await refresh(nextQuery, nextSort, nextFilters, nextDir, lastPage, nextPageSize);
+      return;
+    }
     setItems(nextItems);
     setSummary(nextSummary);
   }
 
-  function debounceRefresh(nextQuery: string, nextSort = sort, nextFilters = filters, nextDir = dir) {
+  function debounceRefresh(
+    nextQuery: string,
+    nextSort = sort,
+    nextFilters = filters,
+    nextDir = dir,
+    nextPage = page,
+    nextPageSize = pageSize
+  ) {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      void refresh(nextQuery, nextSort, nextFilters, nextDir);
+      void refresh(nextQuery, nextSort, nextFilters, nextDir, nextPage, nextPageSize);
     }, 250);
   }
 
@@ -485,10 +595,6 @@ export function InventoryClient(props: Props) {
   }
 
   async function openSelected(item: AnyItem) {
-    if (props.kind !== "projects") {
-      setSelected(item);
-      return;
-    }
     const response = await fetch(`/api/${props.kind}/${item.id}`);
     if (!response.ok) {
       notify(await errorMessage(response, t));
@@ -496,6 +602,12 @@ export function InventoryClient(props: Props) {
     }
     const { item: fullItem } = (await response.json()) as { item: AnyItem };
     setSelected(fullItem);
+    if (props.kind === "projects") replaceProjectIdInUrl(fullItem.id);
+  }
+
+  function closeSelected() {
+    setSelected(null);
+    if (props.kind === "projects") replaceProjectIdInUrl(null);
   }
 
   function closeEditor() {
@@ -511,7 +623,7 @@ export function InventoryClient(props: Props) {
       return;
     }
     setConfirmDelete(null);
-    setSelected(null);
+    closeSelected();
     await refresh();
   }
 
@@ -531,11 +643,17 @@ export function InventoryClient(props: Props) {
     const response = await fetch("/api/tags", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), color: null })
+      body: JSON.stringify({
+        entityType: entityByKind[props.kind],
+        name: name.trim(),
+        color: null
+      })
     });
     if (response.ok) {
       const { item } = await response.json();
       setTagList((current) => [...current, item]);
+    } else {
+      notify(await errorMessage(response, t));
     }
   }
 
@@ -559,7 +677,11 @@ export function InventoryClient(props: Props) {
 
   function applyFilters(nextFilters: Filters) {
     setFilters(nextFilters);
-    void refresh(query, sort, nextFilters, dir);
+    if (props.kind === "projects") {
+      replaceProjectRelationshipFiltersInUrl(nextFilters);
+    }
+    setPage(1);
+    void refresh(query, sort, nextFilters, dir, 1, pageSize);
   }
 
   function openLightbox(photos: string[], index: number) {
@@ -625,11 +747,20 @@ export function InventoryClient(props: Props) {
       </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label={t("common.summary")}>
-        {summaryCards(props.kind, summary, unitSystem, currencyCode, locale, t).map((card) => (
-          <Card key={card.label} className="p-3">
-            <div className="text-xs text-muted-foreground">{card.label}</div>
-            <div className="mt-1 text-lg font-semibold">{card.value}</div>
-          </Card>
+        {summaryCards(
+          props.kind,
+          summary,
+          summaryDisplayModes,
+          unitSystem,
+          currencyCode,
+          locale,
+          t
+        ).map((card) => (
+          <SummaryMetricCard
+            key={card.key}
+            card={card}
+            onToggle={() => card.toggle && toggleSummaryMetric(card.toggle.key)}
+          />
         ))}
       </section>
 
@@ -640,26 +771,41 @@ export function InventoryClient(props: Props) {
         sort={sort}
         dir={dir}
         view={view}
+        page={page}
+        pageSize={pageSize}
+        totalItems={Number(summary.count ?? 0)}
         filters={filters}
         filterOpen={filterOpen}
         resources={browserResources}
         unitSystem={unitSystem}
         onQueryChange={(nextQuery) => {
           setQuery(nextQuery);
-          debounceRefresh(nextQuery, sort, filters, dir);
+          setPage(1);
+          debounceRefresh(nextQuery, sort, filters, dir, 1, pageSize);
         }}
         onSortChange={(nextSort) => {
           setSort(nextSort);
-          void refresh(query, nextSort, filters, dir);
+          setPage(1);
+          void refresh(query, nextSort, filters, dir, 1, pageSize);
         }}
         onDirChange={(nextDir) => {
           setDir(nextDir);
-          void refresh(query, sort, filters, nextDir);
+          setPage(1);
+          void refresh(query, sort, filters, nextDir, 1, pageSize);
         }}
         onFilterOpen={() => setFilterOpen(true)}
         onFilterClose={() => setFilterOpen(false)}
         onApplyFilters={applyFilters}
         onViewChange={setView}
+        onPageChange={(nextPage) => {
+          setPage(nextPage);
+          void refresh(query, sort, filters, dir, nextPage, pageSize);
+        }}
+        onPageSizeChange={(nextPageSize) => {
+          setPageSize(nextPageSize);
+          setPage(1);
+          void refresh(query, sort, filters, dir, 1, nextPageSize);
+        }}
         onItemClick={(item) => void openSelected(item)}
       />
 
@@ -743,7 +889,7 @@ export function InventoryClient(props: Props) {
             onEdit={() => openEdit(selected)}
             onDuplicate={props.kind === "projects" ? undefined : () => duplicate(selected)}
             onDelete={() => setConfirmDelete(selected)}
-            onClose={() => setSelected(null)}
+            onClose={closeSelected}
             onOpenPhoto={openLightbox}
             onUploaded={() => refreshOpenItem(selected.id)}
           />
@@ -782,6 +928,67 @@ export function InventoryClient(props: Props) {
   );
 }
 
+function SummaryMetricCard({
+  card,
+  onToggle
+}: {
+  card: SummaryCardDefinition;
+  onToggle: () => void;
+}) {
+  const t = useTranslations();
+  const content = (
+    <>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0 text-xs leading-4 text-muted-foreground">
+          {card.label}
+        </div>
+        {card.toggle ? (
+          <span
+            className="inline-flex shrink-0 overflow-hidden rounded-md border border-border bg-muted/50 text-[10px] font-semibold leading-none"
+            aria-hidden
+          >
+            <span
+              className={`whitespace-nowrap px-1.5 py-1 ${
+                card.toggle.alternateActive
+                  ? "text-muted-foreground"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
+              {card.toggle.primaryUnit}
+            </span>
+            <span
+              className={`whitespace-nowrap border-l border-border px-1.5 py-1 ${
+                card.toggle.alternateActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {card.toggle.alternateUnit}
+            </span>
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-1 min-w-0 [overflow-wrap:anywhere] text-lg font-semibold leading-tight tabular-nums">
+        {card.value}
+      </div>
+    </>
+  );
+
+  if (!card.toggle) return <Card className="min-w-0 p-3">{content}</Card>;
+  const actionLabel = t("common.showMetric", { metric: card.toggle.nextLabel });
+  return (
+    <button
+      type="button"
+      className="min-w-0 rounded-lg border border-border bg-card p-3 text-left text-card-foreground shadow-xs transition-colors hover:border-primary/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={actionLabel}
+      title={actionLabel}
+      onClick={onToggle}
+    >
+      {content}
+    </button>
+  );
+}
+
 function InventoryBrowserView({
   kind,
   items,
@@ -789,6 +996,10 @@ function InventoryBrowserView({
   sort,
   dir,
   view,
+  page,
+  pageSize,
+  totalItems,
+  showPagination = true,
   filters,
   filterOpen,
   filterPortal = true,
@@ -802,6 +1013,8 @@ function InventoryBrowserView({
   onFilterClose,
   onApplyFilters,
   onViewChange,
+  onPageChange,
+  onPageSizeChange,
   onItemClick
 }: {
   kind: Kind;
@@ -810,6 +1023,10 @@ function InventoryBrowserView({
   sort: string;
   dir: "asc" | "desc";
   view: "grid" | "list";
+  page: number;
+  pageSize: PageSize;
+  totalItems: number;
+  showPagination?: boolean;
   filters: Filters;
   filterOpen: boolean;
   filterPortal?: boolean;
@@ -823,12 +1040,15 @@ function InventoryBrowserView({
   onFilterClose: () => void;
   onApplyFilters: (filters: Filters) => void;
   onViewChange: (view: "grid" | "list") => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: PageSize) => void;
   onItemClick: (item: AnyItem) => void;
 }) {
   const t = useTranslations();
   const locale = useLocale();
   const currencyCode = useCurrencyCode();
   const units = fabricUnits(unitSystem);
+  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(totalItems / pageSize));
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const filterDrawer = filterOpen ? (
     <FilterDrawer
@@ -906,6 +1126,54 @@ function InventoryBrowserView({
           <p className="mt-3 text-sm text-muted-foreground">{t("common.empty")}</p>
         </Card>
       )}
+
+      {showPagination ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{t("common.itemsPerPage")}</span>
+            <Select
+              className="w-24"
+              value={String(pageSize)}
+              onChange={(event) => {
+                const value = event.target.value;
+                onPageSizeChange(value === "all" ? "all" : (Number(value) as 20 | 50 | 100));
+              }}
+            >
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">{t("common.all")}</option>
+            </Select>
+          </label>
+          {pageSize !== "all" ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label={t("common.previous")}
+                disabled={page <= 1}
+                onClick={() => onPageChange(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              </Button>
+              <span className="min-w-16 text-center text-sm text-muted-foreground">
+                {page} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-label={t("common.next")}
+                disabled={page >= totalPages}
+                onClick={() => onPageChange(page + 1)}
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {filterPortal ? (filterDrawer ? <ModalPortal>{filterDrawer}</ModalPortal> : null) : filterDrawer}
     </>
@@ -1072,7 +1340,16 @@ function Fields(props: FieldsProps) {
             required
           />
         ) : null}
-        {props.kind === "materials" ? <UnitSelect name="usageStatus" label={t("materials.usageStatus")} values={materialUsageStatusOptions} value={props.item.usageStatus ?? "available"} labels={(value) => t(`materialUsageStatus.${value}`)} /> : null}
+        {props.kind === "materials" ? (
+          <label className="flex min-h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium">
+            <input
+              name="isUsedUp"
+              type="checkbox"
+              defaultChecked={Boolean(props.item.isUsedUp)}
+            />
+            <span>{t("common.usedUp")}</span>
+          </label>
+        ) : null}
         {props.kind === "tools" ? (
           <TextChoiceField
             name="category"
@@ -1371,7 +1648,7 @@ function ResourcePicker({
 
   async function refresh(nextQuery = query, nextSort = sort, nextFilters = filters, nextDir = dir) {
     const requestId = ++refreshSeqRef.current;
-    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir);
+    const params = buildListParams(nextQuery, nextSort, nextFilters, nextDir, 1, "all");
     const response = await fetch(`/api/${kind}?${params.toString()}`);
     if (!response.ok) return;
     const nextItems = (await response.json()).items;
@@ -1409,6 +1686,10 @@ function ResourcePicker({
             sort={sort}
             dir={dir}
             view={view}
+            page={1}
+            pageSize="all"
+            totalItems={items.length}
+            showPagination={false}
             filters={filters}
             filterOpen={filterOpen}
             filterPortal={false}
@@ -1431,6 +1712,8 @@ function ResourcePicker({
             onFilterClose={() => setFilterOpen(false)}
             onApplyFilters={applyFilters}
             onViewChange={setView}
+            onPageChange={() => undefined}
+            onPageSizeChange={() => undefined}
             onItemClick={onItemClick}
           />
         </div>
@@ -1783,6 +2066,17 @@ function FilterDrawer({
     onApply(next);
   }
 
+  function toggleProjectStatus(status: ProjectStatus) {
+    const next = {
+      ...draft,
+      projectStatuses: draft.projectStatuses.includes(status)
+        ? draft.projectStatuses.filter((current) => current !== status)
+        : projectStatusOptions.filter((current) => [...draft.projectStatuses, status].includes(current))
+    };
+    setDraft(next);
+    onApply(next);
+  }
+
   return (
     <div className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:p-3" role="dialog" aria-modal="true" onClick={onClose}>
       <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-4 shadow-xl md:ml-auto md:h-full md:max-w-md md:rounded-b-md md:rounded-t-md" onClick={(event) => event.stopPropagation()}>
@@ -1832,7 +2126,7 @@ function FilterDrawer({
             </div>
           ) : null}
 
-          {kind === "fabrics" || kind === "materials" ? (
+          {kind === "fabrics" ? (
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">{t("common.usage")}</legend>
               <div className="flex flex-wrap gap-2">
@@ -1944,7 +2238,7 @@ function FilterDrawer({
             </label>
           ) : null}
 
-          {kind === "patterns" ? (
+          {kind === "patterns" || kind === "materials" ? (
             <label className="block space-y-1">
               <span className="text-sm font-medium">{t("common.used")}</span>
               <Select value={draft.used} onChange={(event) => update("used", event.target.value)}>
@@ -1957,6 +2251,17 @@ function FilterDrawer({
 
           {kind === "materials" ? (
             <div className="grid gap-3">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">{t("materials.availability")}</span>
+                <Select
+                  value={draft.materialAvailability}
+                  onChange={(event) => update("materialAvailability", event.target.value)}
+                >
+                  <option value="">{t("common.all")}</option>
+                  <option value="available">{t("materials.available")}</option>
+                  <option value="usedUp">{t("common.usedUp")}</option>
+                </Select>
+              </label>
               <OptionFilter label={t("materials.category")} value={draft.categoryId} options={categories} onChange={(value) => update("categoryId", value)} />
               <OptionFilter label={t("materials.unit")} value={draft.unitId} options={units} onChange={(value) => update("unitId", value)} />
             </div>
@@ -1964,6 +2269,21 @@ function FilterDrawer({
 
           {kind === "projects" ? (
             <div className="grid gap-3">
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">{t("projects.status")}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {projectStatusOptions.map((status) => (
+                    <label key={status} className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={draft.projectStatuses.includes(status)}
+                        onChange={() => toggleProjectStatus(status)}
+                      />
+                      <span>{t(`projectStatus.${status}`)}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <OptionFilter label={t("projects.patterns")} value={draft.patternId} options={patternOptions} onChange={(value) => update("patternId", value)} />
               <OptionFilter label={t("projects.fabrics")} value={draft.fabricId} options={fabricOptions} onChange={(value) => update("fabricId", value)} />
               <OptionFilter label={t("projects.materials")} value={draft.materialId} options={materialOptions} onChange={(value) => update("materialId", value)} />
@@ -2330,6 +2650,9 @@ function Detail({
             onOpenPhoto={onOpenPhoto}
           />
         ) : null}
+        {kind === "fabrics" || kind === "materials" || kind === "patterns" ? (
+          <LinkedProjectsDetails item={item} kind={kind} />
+        ) : null}
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           {detailRows(kind, item, unitSystem, currencyCode, locale, t).map((row) => (
             <div key={row.label} className="min-w-0 rounded-md bg-muted p-2">
@@ -2340,6 +2663,66 @@ function Detail({
         </dl>
       </Card>
     </div>
+  );
+}
+
+function LinkedProjectsDetails({
+  item,
+  kind
+}: {
+  item: AnyItem;
+  kind: Extract<Kind, "fabrics" | "materials" | "patterns">;
+}) {
+  const t = useTranslations();
+  const projects = (item.linkedProjects ?? []) as Array<{
+    id: number;
+    name: string;
+    status: ProjectStatus;
+  }>;
+  const count = Number(item.linkedProjectCount ?? projects.length);
+  const relationshipParam = {
+    fabrics: "fabricId",
+    materials: "materialId",
+    patterns: "patternId"
+  }[kind];
+  const viewAllParams = new URLSearchParams({
+    [relationshipParam]: String(item.id)
+  });
+
+  return (
+    <section className="mt-4 space-y-2">
+      <h3 className="text-sm font-medium">
+        {t("common.linkedProjects")} ({count})
+      </h3>
+      {projects.length ? (
+        <div className="overflow-hidden rounded-md border border-border">
+          {projects.map((project) => (
+            <a
+              key={project.id}
+              href={`/projects?projectId=${project.id}`}
+              className="flex min-h-11 items-center justify-between gap-3 border-b border-border px-3 py-2 text-sm last:border-b-0 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              <span className="min-w-0 truncate font-medium">{project.name}</span>
+              <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                {t(`projectStatus.${project.status}`)}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          {t("common.noLinkedProjects")}
+        </p>
+      )}
+      {count > projects.length ? (
+        <Button asChild variant="secondary" className="w-full">
+          <a href={`/projects?${viewAllParams.toString()}`}>
+            {t("common.viewAll")}
+          </a>
+        </Button>
+      ) : null}
+    </section>
   );
 }
 
@@ -2741,7 +3124,7 @@ function StagedPhotoPreview({
   );
 }
 
-function emptyFilters(): Filters {
+function emptyFilters(initial: InitialRelationshipFilters = {}): Filters {
   return {
     tagIds: [],
     tagMatch: "any",
@@ -2758,11 +3141,13 @@ function emptyFilters(): Filters {
     color: "",
     categoryId: "",
     unitId: "",
-    patternId: "",
-    fabricId: "",
-    materialId: "",
+    patternId: initial.patternId ?? "",
+    fabricId: initial.fabricId ?? "",
+    materialId: initial.materialId ?? "",
     category: "",
-    condition: ""
+    condition: "",
+    materialAvailability: "",
+    projectStatuses: [...projectStatusOptions]
   };
 }
 
@@ -2771,12 +3156,20 @@ function hasFilters(filters: Filters) {
     filters.tagIds.length > 0 ||
     filters.includeUntagged ||
     filters.usageStatuses.length !== inventoryUsageStatusOptions.length ||
-    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.from || filters.to || filters.used || filters.color) ||
+    filters.projectStatuses.length !== projectStatusOptions.length ||
+    Boolean(filters.source || filters.purpose || filters.materialType || filters.patternType || filters.difficulty || filters.category || filters.condition || filters.materialAvailability || filters.from || filters.to || filters.used || filters.color) ||
     Boolean(filters.categoryId || filters.unitId || filters.patternId || filters.fabricId || filters.materialId)
   );
 }
 
-function buildListParams(query: string, sort: string, filters: Filters, dir: "asc" | "desc") {
+function buildListParams(
+  query: string,
+  sort: string,
+  filters: Filters,
+  dir: "asc" | "desc",
+  page: number,
+  pageSize: PageSize
+) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   params.set("sort", sort);
@@ -2803,6 +3196,14 @@ function buildListParams(query: string, sort: string, filters: Filters, dir: "as
   if (filters.materialId) params.set("materialId", filters.materialId);
   if (filters.category) params.set("category", filters.category);
   if (filters.condition) params.set("condition", filters.condition);
+  if (filters.materialAvailability) {
+    params.set("materialAvailability", filters.materialAvailability);
+  }
+  if (filters.projectStatuses.length !== projectStatusOptions.length) {
+    params.set("projectStatuses", filters.projectStatuses.join(","));
+  }
+  params.set("page", String(page));
+  params.set("pageSize", String(pageSize));
   return params;
 }
 
@@ -2855,42 +3256,126 @@ function collectColors(groups: AnyItem[][]) {
 function summaryCards(
   kind: Kind,
   summary: Record<string, any>,
+  displayModes: SummaryDisplayModes,
   unitSystem: UnitSystem,
   currencyCode: CurrencyCode,
   locale: string,
   t: ReturnType<typeof useTranslations>
 ) {
   if (kind === "fabrics") {
+    const lengthUnit = fabricUnits(unitSystem).lengthUnit;
+    const monetaryUnit = currencySymbol(locale, currencyCode);
+    const usedValueActive = displayModes.fabricUsedValue;
+    const remainingValueActive = displayModes.fabricRemainingValue;
     return [
-      { label: t("fabrics.total"), value: summary.count ?? 0 },
-      { label: t("fabrics.cost"), value: money(summary.totalCost, locale, currencyCode) },
-      { label: t("fabrics.usedLength"), value: formatMeasurement(summary.lengthUsedM ?? 0, "lengthLong", unitSystem, locale) },
-      { label: t("fabrics.remainingLength"), value: formatMeasurement(summary.lengthRemainingM ?? 0, "lengthLong", unitSystem, locale) }
-    ];
+      { key: "count", label: t("fabrics.total"), value: summary.count ?? 0 },
+      {
+        key: "cost",
+        label: t("fabrics.cost"),
+        value: money(summary.totalCost, locale, currencyCode)
+      },
+      {
+        key: "used",
+        label: t(usedValueActive ? "fabrics.usedValue" : "fabrics.usedLength"),
+        value: usedValueActive
+          ? money(summary.usedValue ?? 0, locale, currencyCode)
+          : formatMeasurement(summary.lengthUsedM ?? 0, "lengthLong", unitSystem, locale),
+        toggle: {
+          key: "fabricUsedValue" as const,
+          primaryUnit: lengthUnit,
+          alternateUnit: monetaryUnit,
+          alternateActive: usedValueActive,
+          nextLabel: t(usedValueActive ? "fabrics.usedLength" : "fabrics.usedValue")
+        }
+      },
+      {
+        key: "remaining",
+        label: t(
+          remainingValueActive ? "fabrics.remainingValue" : "fabrics.remainingLength"
+        ),
+        value: remainingValueActive
+          ? money(summary.remainingValue ?? 0, locale, currencyCode)
+          : formatMeasurement(
+              summary.lengthRemainingM ?? 0,
+              "lengthLong",
+              unitSystem,
+              locale
+            ),
+        toggle: {
+          key: "fabricRemainingValue" as const,
+          primaryUnit: lengthUnit,
+          alternateUnit: monetaryUnit,
+          alternateActive: remainingValueActive,
+          nextLabel: t(
+            remainingValueActive ? "fabrics.remainingLength" : "fabrics.remainingValue"
+          )
+        }
+      }
+    ] satisfies SummaryCardDefinition[];
   }
   if (kind === "projects") {
+    const laborCostActive = displayModes.projectLaborCost;
     return [
-      { label: t("projects.total"), value: summary.count ?? 0 },
-      { label: t("projects.cost"), value: money(summary.totalCost, locale, currencyCode) },
-      { label: t("projects.totalLaborHours"), value: numberValue((summary.totalLaborMinutes ?? 0) / 60, locale) },
-      { label: t("projects.value"), value: money(summary.totalValue, locale, currencyCode) }
-    ];
+      { key: "count", label: t("projects.total"), value: summary.count ?? 0 },
+      {
+        key: "cost",
+        label: t("projects.cost"),
+        value: money(summary.totalCost, locale, currencyCode)
+      },
+      {
+        key: "labor",
+        label: t(laborCostActive ? "projects.laborCost" : "projects.totalLaborHours"),
+        value: laborCostActive
+          ? money(summary.totalLaborCost ?? 0, locale, currencyCode)
+          : numberValue((summary.totalLaborMinutes ?? 0) / 60, locale),
+        toggle: {
+          key: "projectLaborCost" as const,
+          primaryUnit: "h",
+          alternateUnit: currencySymbol(locale, currencyCode),
+          alternateActive: laborCostActive,
+          nextLabel: t(
+            laborCostActive ? "projects.totalLaborHours" : "projects.laborCost"
+          )
+        }
+      },
+      {
+        key: "value",
+        label: t("projects.value"),
+        value: money(summary.totalValue, locale, currencyCode)
+      }
+    ] satisfies SummaryCardDefinition[];
   }
   if (kind === "tools") {
     return [
-      { label: t("tools.total"), value: summary.count ?? 0 },
-      { label: t("tools.cost"), value: money(summary.totalCost, locale, currencyCode) },
-      { label: t("tools.totalQuantity"), value: summary.totalQuantity ?? 0 },
-      { label: t("tools.needsAttention"), value: summary.needsAttention ?? 0 }
-    ];
+      { key: "count", label: t("tools.total"), value: summary.count ?? 0 },
+      {
+        key: "cost",
+        label: t("tools.cost"),
+        value: money(summary.totalCost, locale, currencyCode)
+      },
+      {
+        key: "quantity",
+        label: t("tools.totalQuantity"),
+        value: summary.totalQuantity ?? 0
+      },
+      {
+        key: "attention",
+        label: t("tools.needsAttention"),
+        value: summary.needsAttention ?? 0
+      }
+    ] satisfies SummaryCardDefinition[];
   }
   const prefix = kind === "patterns" ? "patterns" : "materials";
   return [
-    { label: t(`${prefix}.total`), value: summary.count ?? 0 },
-    { label: t(`${prefix}.cost`), value: money(summary.totalCost, locale, currencyCode) },
-    { label: t(`${prefix}.usedCount`), value: summary.used ?? 0 },
-    { label: t(`${prefix}.unusedCount`), value: summary.unused ?? 0 }
-  ];
+    { key: "count", label: t(`${prefix}.total`), value: summary.count ?? 0 },
+    {
+      key: "cost",
+      label: t(`${prefix}.cost`),
+      value: money(summary.totalCost, locale, currencyCode)
+    },
+    { key: "used", label: t(`${prefix}.usedCount`), value: summary.used ?? 0 },
+    { key: "unused", label: t(`${prefix}.unusedCount`), value: summary.unused ?? 0 }
+  ] satisfies SummaryCardDefinition[];
 }
 
 function primaryStat(
@@ -2909,7 +3394,11 @@ function primaryStat(
     return [patternFor, item.size].filter(Boolean).join(" · ") || t("common.details");
   }
   if (kind === "materials") {
-    return `${t(`materialUsageStatus.${item.usageStatus ?? "available"}`)} · ${t("common.total")} ${materialQuantityText(item, unitSystem, locale, t)}`;
+    return [
+      t(item.isUsed ? "materials.usedCount" : "materials.unusedCount"),
+      t(item.isUsedUp ? "common.usedUp" : "materials.available"),
+      `${t("common.total")} ${materialQuantityText(item, unitSystem, locale, t)}`
+    ].join(" · ");
   }
   if (kind === "tools") return `${item.category ? toolCategoryLabel(item.category, t) : t("common.details")} · ${t("tools.quantity")} ${item.quantity ?? 1}`;
   return [
@@ -3034,11 +3523,17 @@ function detailRows(
     add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
     add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
   } else if (kind === "materials") {
-    add(t("materials.usageStatus"), item.usageStatus ?? "available", (value) => t(`materialUsageStatus.${value}`));
+    add(
+      t("materials.projectUsage"),
+      item.isUsed ? t("materials.usedCount") : t("materials.unusedCount")
+    );
+    add(
+      t("materials.availability"),
+      item.isUsedUp ? t("common.usedUp") : t("materials.available")
+    );
     add(t("materials.category"), materialCategoryLabel(item, t));
     add(t("materials.unit"), materialUnitLabel(item, unitSystem, t));
     add(t("materials.quantityTotal"), materialDisplayQuantity(item, unitSystem), numberValue);
-    add(t("materials.quantityRemaining"), materialDisplayRemaining(item, unitSystem), numberValue);
     add(t("common.source"), item.source);
     add(t("common.price"), item.priceCents, (value) => money(value, locale, currencyCode));
     add(t("common.date"), item.purchasedAt, (value) => dateValue(value, locale));
@@ -3102,14 +3597,6 @@ function materialDisplayQuantity(item: AnyItem, unitSystem: UnitSystem) {
   return definition.behavior === "convertible" ? toDisplayValue(canonical, definition.key, unitSystem) : canonical;
 }
 
-function materialDisplayRemaining(item: AnyItem, unitSystem: UnitSystem) {
-  if (item.quantityRemainingCanonical == null) return null;
-  const canonical = Number(item.quantityRemainingCanonical);
-  if (!isManagedUnitKey(item.unitDefinitionKey)) return canonical;
-  const definition = managedUnitDefinitions[item.unitDefinitionKey];
-  return definition.behavior === "convertible" ? toDisplayValue(canonical, definition.key, unitSystem) : canonical;
-}
-
 function materialQuantityText(
   item: AnyItem,
   unitSystem: UnitSystem,
@@ -3149,7 +3636,7 @@ function editableNumber(value: number) {
 
 function defaultItem(kind: Kind) {
   if (kind === "fabrics") return { quantity: 1, purpose: "garment", materialType: "other" };
-  if (kind === "materials") return { usageStatus: "available" };
+  if (kind === "materials") return { isUsedUp: false };
   if (kind === "projects") return { status: "in_progress", quantity: 1 };
   if (kind === "tools") return { quantity: 1, category: "other", condition: "good" };
   return { patternType: "paper", difficulty: "medium" };
@@ -3193,7 +3680,7 @@ function formToBody(kind: Kind, form: FormData) {
       categoryId: numberOrNull(form.get("categoryId")),
       unitId: numberOrNull(form.get("unitId")),
       quantityTotalCanonical: Number(form.get("quantityTotalCanonical")),
-      usageStatus: form.get("usageStatus") || "available",
+      isUsedUp: form.get("isUsedUp") === "on",
       colors: sanitizeColors(form.getAll("colors"))
     };
   }

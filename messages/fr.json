@@ -27,6 +27,7 @@
     "refreshFailed": "Échec de l’actualisation",
     "grid": "Grille",
     "list": "Liste",
+    "itemsPerPage": "Éléments par page",
     "save": "Enregistrer",
     "saving": "Enregistrement",
     "cancel": "Annuler",
@@ -76,6 +77,10 @@
     "previous": "Précédent",
     "details": "Détails",
     "summary": "Résumé",
+    "showMetric": "Afficher {metric}",
+    "linkedProjects": "Projets liés",
+    "noLinkedProjects": "Aucun projet lié",
+    "viewAll": "Tout afficher",
     "total": "Total",
     "remaining": "Restant",
     "unit": "unité",
@@ -235,11 +240,6 @@
     "maintenance": "Entretien",
     "other": "Autre"
   },
-  "materialUsageStatus": {
-    "available": "Non utilisé",
-    "partial": "Partiellement utilisé",
-    "used": "Épuisé"
-  },
   "projectStatus": {
     "in_progress": "En cours",
     "completed": "Terminé",
@@ -251,7 +251,9 @@
     "total": "Fiches de tissus",
     "cost": "Coût total",
     "usedLength": "Longueur utilisée",
+    "usedValue": "Valeur du tissu utilisé",
     "remainingLength": "Longueur restante",
+    "remainingValue": "Valeur du tissu restant",
     "quantity": "Quantité",
     "lengthTotal": "Longueur totale",
     "lengthRemaining": "Longueur restante",
@@ -279,13 +281,14 @@
     "add": "Ajouter une fourniture",
     "total": "Fiches de fournitures",
     "cost": "Coût total",
-    "usedCount": "Utilisées",
-    "unusedCount": "Jamais utilisées",
+    "usedCount": "Utilisées dans des projets",
+    "unusedCount": "Jamais utilisées dans des projets",
+    "projectUsage": "Utilisation dans les projets",
+    "availability": "Disponibilité",
+    "available": "Disponible",
     "category": "Catégorie",
     "unit": "Unité",
-    "quantityTotal": "Quantité totale",
-    "quantityRemaining": "Quantité restante",
-    "usageStatus": "État"
+    "quantityTotal": "Quantité totale"
   },
   "projects": {
     "title": "Projets",
@@ -347,6 +350,7 @@
     "metricUnits": "Métrique (m / cm / kg / g)",
     "imperialUnits": "Impérial (yd / in / lb / oz)",
     "manageTags": "Gérer les étiquettes",
+    "tagCategory": "Catégorie d’inventaire",
     "manageCategories": "Gérer les catégories de fournitures",
     "manageUnits": "Gérer les unités de fournitures",
     "backup": "Sauvegarde",

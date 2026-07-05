@@ -27,6 +27,7 @@
     "refreshFailed": "Falha ao atualizar",
     "grid": "Grade",
     "list": "Lista",
+    "itemsPerPage": "Itens por página",
     "save": "Salvar",
     "saving": "Salvando",
     "cancel": "Cancelar",
@@ -76,6 +77,10 @@
     "previous": "Anterior",
     "details": "Detalhes",
     "summary": "Resumo",
+    "showMetric": "Mostrar {metric}",
+    "linkedProjects": "Projetos vinculados",
+    "noLinkedProjects": "Nenhum projeto vinculado",
+    "viewAll": "Ver todos",
     "total": "Total",
     "remaining": "Restante",
     "unit": "unidade",
@@ -235,11 +240,6 @@
     "maintenance": "Manutenção",
     "other": "Outro"
   },
-  "materialUsageStatus": {
-    "available": "Não usado",
-    "partial": "Parcialmente usado",
-    "used": "Esgotado"
-  },
   "projectStatus": {
     "in_progress": "Em andamento",
     "completed": "Concluído",
@@ -251,7 +251,9 @@
     "total": "Itens de tecidos",
     "cost": "Custo total",
     "usedLength": "Comprimento usado",
+    "usedValue": "Valor do tecido usado",
     "remainingLength": "Comprimento restante",
+    "remainingValue": "Valor do tecido restante",
     "quantity": "Quantidade",
     "lengthTotal": "Comprimento total",
     "lengthRemaining": "Comprimento restante",
@@ -279,13 +281,14 @@
     "add": "Adicionar material",
     "total": "Itens de materiais",
     "cost": "Custo total",
-    "usedCount": "Usados",
-    "unusedCount": "Nunca usados",
+    "usedCount": "Usados em projetos",
+    "unusedCount": "Nunca usados em projetos",
+    "projectUsage": "Uso em projetos",
+    "availability": "Disponibilidade",
+    "available": "Disponível",
     "category": "Categoria",
     "unit": "Unidade",
-    "quantityTotal": "Quantidade total",
-    "quantityRemaining": "Quantidade restante",
-    "usageStatus": "Status"
+    "quantityTotal": "Quantidade total"
   },
   "projects": {
     "title": "Projetos",
@@ -347,6 +350,7 @@
     "metricUnits": "Métrico (m / cm / kg / g)",
     "imperialUnits": "Imperial (yd / in / lb / oz)",
     "manageTags": "Gerenciar etiquetas",
+    "tagCategory": "Categoria do inventário",
     "manageCategories": "Gerenciar categorias de materiais",
     "manageUnits": "Gerenciar unidades de materiais",
     "backup": "Backup",

@@ -46,8 +46,8 @@ export default async function OverviewPage() {
       cost: materials.totalCost ?? 0,
       metrics: [
         { label: t("overview.count"), value: materials.count ?? 0 },
-        { label: t("overview.used"), value: materials.used ?? 0 },
-        { label: t("overview.unused"), value: materials.unused ?? 0 }
+        { label: t("materials.usedCount"), value: materials.used ?? 0 },
+        { label: t("materials.unusedCount"), value: materials.unused ?? 0 }
       ]
     },
     {

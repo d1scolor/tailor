@@ -27,6 +27,7 @@
     "refreshFailed": "重新整理失敗",
     "grid": "網格",
     "list": "列表",
+    "itemsPerPage": "每頁條目數",
     "save": "儲存",
     "saving": "儲存中",
     "cancel": "取消",
@@ -76,6 +77,10 @@
     "previous": "上一個",
     "details": "詳細資料",
     "summary": "摘要",
+    "showMetric": "顯示{metric}",
+    "linkedProjects": "已連結項目",
+    "noLinkedProjects": "沒有已連結項目",
+    "viewAll": "查看全部",
     "total": "總計",
     "remaining": "剩餘",
     "unit": "單位",
@@ -235,11 +240,6 @@
     "maintenance": "保養",
     "other": "其他"
   },
-  "materialUsageStatus": {
-    "available": "未使用",
-    "partial": "部分使用",
-    "used": "已用完"
-  },
   "projectStatus": {
     "in_progress": "進行中",
     "completed": "已完成",
@@ -251,7 +251,9 @@
     "total": "條目數量",
     "cost": "總成本",
     "usedLength": "已用長度",
+    "usedValue": "已用布料價值",
     "remainingLength": "剩餘長度",
+    "remainingValue": "剩餘布料價值",
     "quantity": "數量",
     "lengthTotal": "總長度",
     "lengthRemaining": "剩餘長度",
@@ -279,13 +281,14 @@
     "add": "新增輔料",
     "total": "條目數量",
     "cost": "總成本",
-    "usedCount": "已使用",
-    "unusedCount": "從未使用",
+    "usedCount": "已在項目中使用",
+    "unusedCount": "從未在項目中使用",
+    "projectUsage": "項目使用情況",
+    "availability": "可用狀態",
+    "available": "可用",
     "category": "分類",
     "unit": "單位",
-    "quantityTotal": "總數量",
-    "quantityRemaining": "剩餘數量",
-    "usageStatus": "狀態"
+    "quantityTotal": "總數量"
   },
   "projects": {
     "title": "項目",
@@ -347,6 +350,7 @@
     "metricUnits": "公制（m / cm / kg / g）",
     "imperialUnits": "英制（yd / in / lb / oz）",
     "manageTags": "管理標籤",
+    "tagCategory": "庫存類別",
     "manageCategories": "管理輔料分類",
     "manageUnits": "管理輔料單位",
     "backup": "備份",
