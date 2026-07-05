@@ -16,7 +16,7 @@ through an ordinary desktop browser from the same deployment.
 
 ![Project inventory with cost and labour summaries](docs/screenshots/projects.webp)
 
-![Tailor inventory overview](docs/screenshots/overview.webp)
+![Pattern details with linked projects](docs/screenshots/patterns.webp)
 
 ## Internationalisation and units
 
@@ -41,6 +41,10 @@ for all inventory values; changing it does not convert stored amounts.
 
 Tailor runs as one Docker container with one persistent `/data` volume. It does
 not require an external database, object store, cache, or queue.
+
+Tailor does not currently provide a shared multi-user instance. To support
+multiple people, run a separate container and `/data` volume for each user, or
+wait for a future release with native multi-user support.
 
 The Compose configuration binds the application to `127.0.0.1:3000`. Keep that
 loopback binding and place an HTTPS reverse proxy such as Caddy, nginx, or
