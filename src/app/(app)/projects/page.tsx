@@ -21,6 +21,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
   for (const [key, value] of Object.entries(initialRelationshipFilters)) {
     if (value) listParams.set(key, value);
   }
+  const summaryParams = new URLSearchParams(listParams);
+  listParams.set("pageSize", String(user.inventoryPageSize));
   const rawProjectId = firstQueryValue(query.projectId);
   const projectId = positiveQueryValue(query.projectId);
   if (rawProjectId && !projectId) notFound();
@@ -40,7 +42,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
     <InventoryClient
       kind="projects"
       items={listItems("projects", user.id, listParams)}
-      summary={summary("projects", user.id, listParams)}
+      summary={summary("projects", user.id, summaryParams)}
       tags={listTags(user.id, "project") as any}
       categories={listMeta("material_categories", user.id) as any}
       units={listMeta("material_units", user.id) as any}
@@ -55,6 +57,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       summaryDisplayModes={user.summaryDisplayModes}
       initialRelationshipFilters={initialRelationshipFilters}
       initialSelectedItem={initialSelectedItem}
+      initialPageSize={user.inventoryPageSize}
     />
   );
 }

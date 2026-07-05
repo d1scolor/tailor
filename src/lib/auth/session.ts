@@ -11,6 +11,10 @@ import { defaultLocale } from "@/lib/env";
 import { normalizeLocale, type Locale } from "@/lib/i18n/locales";
 import { normalizeCurrencyCode, type CurrencyCode } from "@/lib/currency";
 import type { SummaryDisplayModes } from "@/lib/summary-display";
+import {
+  normalizeInventoryPageSize,
+  type InventoryPageSize
+} from "@/lib/pagination";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
 import { sessionCookiesAreSecure } from "./base-url";
 import { isCrossOriginMutation } from "./origin";
@@ -22,6 +26,7 @@ export type AuthUser = {
   unitSystem: UnitSystem;
   currencyCode: CurrencyCode;
   summaryDisplayModes: SummaryDisplayModes;
+  inventoryPageSize: InventoryPageSize;
   sessionId: string;
 };
 
@@ -72,7 +77,8 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
               users.unit_system AS unitSystem, users.currency_code AS currencyCode,
               users.fabric_used_value_display AS fabricUsedValueDisplay,
               users.fabric_remaining_value_display AS fabricRemainingValueDisplay,
-              users.project_labor_cost_display AS projectLaborCostDisplay
+              users.project_labor_cost_display AS projectLaborCostDisplay,
+              users.inventory_page_size AS inventoryPageSize
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.id = ?`
@@ -89,6 +95,7 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
         fabricUsedValueDisplay: number;
         fabricRemainingValueDisplay: number;
         projectLaborCostDisplay: number;
+        inventoryPageSize: string;
       }
     | undefined;
   if (!row) return null;
@@ -114,6 +121,7 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
       fabricRemainingValue: row.fabricRemainingValueDisplay === 1,
       projectLaborCost: row.projectLaborCostDisplay === 1
     },
+    inventoryPageSize: normalizeInventoryPageSize(row.inventoryPageSize),
     sessionId: row.sessionId
   };
 }

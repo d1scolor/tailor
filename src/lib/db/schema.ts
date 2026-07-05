@@ -17,6 +17,7 @@ export const users = sqliteTable("users", {
   fabricUsedValueDisplay: integer("fabric_used_value_display").notNull().default(0),
   fabricRemainingValueDisplay: integer("fabric_remaining_value_display").notNull().default(0),
   projectLaborCostDisplay: integer("project_labor_cost_display").notNull().default(0),
+  inventoryPageSize: text("inventory_page_size").notNull().default("20"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()
 });
