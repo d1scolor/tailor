@@ -14,6 +14,9 @@ export const users = sqliteTable("users", {
   locale: text("locale").notNull().default("en"),
   unitSystem: text("unit_system").notNull().default("metric"),
   currencyCode: text("currency_code"),
+  fabricUsedValueDisplay: integer("fabric_used_value_display").notNull().default(0),
+  fabricRemainingValueDisplay: integer("fabric_remaining_value_display").notNull().default(0),
+  projectLaborCostDisplay: integer("project_labor_cost_display").notNull().default(0),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()
 });
@@ -112,7 +115,7 @@ export const materials = sqliteTable("materials", {
   categoryId: integer("category_id").references(() => materialCategories.id, { onDelete: "set null" }),
   unitId: integer("unit_id").notNull().references(() => materialUnits.id, { onDelete: "restrict" }),
   quantityTotalCanonical: real("quantity_total_canonical").notNull(),
-  usageStatus: text("usage_status").notNull().default("available"),
+  isUsedUp: integer("is_used_up").notNull().default(0),
   colors: text("colors").notNull().default("[]"),
   source: text("source"),
   priceCents: integer("price_cents"),
@@ -187,12 +190,13 @@ export const tags = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    entityType: text("entity_type", { enum: ["fabric", "pattern", "material", "project", "tool"] }).notNull(),
     name: text("name").notNull(),
     color: text("color"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull()
   },
-  (table) => ({ uniqueName: uniqueIndex("tags_user_name").on(table.userId, table.name) })
+  (table) => ({ uniqueName: uniqueIndex("tags_user_entity_name").on(table.userId, table.entityType, table.name) })
 );
 
 export const entityTags = sqliteTable(

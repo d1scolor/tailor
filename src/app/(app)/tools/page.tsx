@@ -11,9 +11,10 @@ export default async function ToolsPage() {
       kind="tools"
       items={listItems("tools", user.id, new URLSearchParams())}
       summary={summary("tools", user.id)}
-      tags={listTags(user.id) as any}
+      tags={listTags(user.id, "tool") as any}
       sourceOptions={listSources("tools", user.id)}
       toolCategoryOptions={listToolCategories(user.id)}
+      summaryDisplayModes={user.summaryDisplayModes}
     />
   );
 }

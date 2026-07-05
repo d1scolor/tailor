@@ -1,20 +1,20 @@
 {
-  "version": 3,
+  "version": 6,
   "tables": {
-    "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "created_at", "updated_at"],
+    "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "fabric_used_value_display", "fabric_remaining_value_display", "project_labor_cost_display", "created_at", "updated_at"],
     "sessions": ["id", "user_id", "expires_at", "created_at"],
     "fabrics": ["id", "user_id", "name", "quantity", "length_total_m", "width_m", "colors", "purpose", "material_type", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
     "patterns": ["id", "user_id", "name", "pattern_type", "difficulty", "pattern_for", "size", "pieces", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
     "material_categories": ["id", "user_id", "definition_key", "custom_name", "active", "sort_order", "created_at"],
     "material_units": ["id", "user_id", "definition_key", "custom_name", "active", "sort_order", "created_at"],
-    "materials": ["id", "user_id", "name", "category_id", "unit_id", "quantity_total_canonical", "usage_status", "colors", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
+    "materials": ["id", "user_id", "name", "category_id", "unit_id", "quantity_total_canonical", "is_used_up", "colors", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
     "projects": ["id", "user_id", "name", "status", "quantity", "price_cents", "value_cents", "material_cost_cents", "labor_minutes", "labor_cost_cents", "remarks", "created_at", "updated_at"],
     "tools": ["id", "user_id", "name", "category", "quantity", "brand", "model", "source", "price_cents", "purchased_at", "condition", "remarks", "created_at", "updated_at"],
     "project_fabrics": ["id", "project_id", "fabric_id", "length_used_m", "created_at"],
     "project_patterns": ["project_id", "pattern_id"],
     "project_materials": ["id", "project_id", "material_id"],
     "photos": ["id", "user_id", "entity_type", "entity_id", "original_ext", "is_cover", "sort_order", "created_at"],
-    "tags": ["id", "user_id", "name", "color", "created_at", "updated_at"],
+    "tags": ["id", "user_id", "entity_type", "name", "color", "created_at", "updated_at"],
     "entity_tags": ["entity_type", "entity_id", "tag_id"]
   }
 }

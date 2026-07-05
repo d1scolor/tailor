@@ -77,6 +77,7 @@ test("all messages compile and format through next-intl", () => {
         from: "USD",
         to: "AUD",
         currency: "JPY",
+        metric: "Used fabric value",
         username: "tailor",
         url: "https://tailor.example.com"
       });

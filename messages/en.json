@@ -27,6 +27,7 @@
     "refreshFailed": "Refresh failed",
     "grid": "Grid",
     "list": "List",
+    "itemsPerPage": "Items per page",
     "save": "Save",
     "saving": "Saving",
     "cancel": "Cancel",
@@ -76,6 +77,10 @@
     "previous": "Previous",
     "details": "Details",
     "summary": "Summary",
+    "showMetric": "Show {metric}",
+    "linkedProjects": "Linked projects",
+    "noLinkedProjects": "No linked projects",
+    "viewAll": "View all",
     "total": "Total",
     "remaining": "Remaining",
     "unit": "unit",
@@ -235,11 +240,6 @@
     "maintenance": "Maintenance",
     "other": "Other"
   },
-  "materialUsageStatus": {
-    "available": "Unused",
-    "partial": "Partially used",
-    "used": "Used up"
-  },
   "projectStatus": {
     "in_progress": "In progress",
     "completed": "Completed",
@@ -251,7 +251,9 @@
     "total": "Fabric entries",
     "cost": "Total cost",
     "usedLength": "Used length",
+    "usedValue": "Used fabric value",
     "remainingLength": "Remaining length",
+    "remainingValue": "Remaining fabric value",
     "quantity": "Quantity",
     "lengthTotal": "Length total",
     "lengthRemaining": "Length remaining",
@@ -279,13 +281,14 @@
     "add": "Add material",
     "total": "Material entries",
     "cost": "Total cost",
-    "usedCount": "Used",
-    "unusedCount": "Never used",
+    "usedCount": "Used in projects",
+    "unusedCount": "Never used in projects",
+    "projectUsage": "Project usage",
+    "availability": "Availability",
+    "available": "Available",
     "category": "Category",
     "unit": "Unit",
-    "quantityTotal": "Quantity total",
-    "quantityRemaining": "Quantity remaining",
-    "usageStatus": "Status"
+    "quantityTotal": "Quantity total"
   },
   "projects": {
     "title": "Projects",
@@ -347,6 +350,7 @@
     "metricUnits": "Metric (m / cm / kg / g)",
     "imperialUnits": "Imperial (yd / in / lb / oz)",
     "manageTags": "Manage tags",
+    "tagCategory": "Inventory category",
     "manageCategories": "Manage material categories",
     "manageUnits": "Manage material units",
     "backup": "Backup",

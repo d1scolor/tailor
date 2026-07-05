@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/ui/input";
 import { isManagedUnitKey, managedUnitDefinitions, type UnitSystem } from "@/lib/units";
 import type { Locale } from "@/lib/i18n/locales";
 import { currencyCodes, currencyFractionDigits, type CurrencyCode } from "@/lib/currency";
+import type { EntityType } from "@/lib/repository";
 
 type Item = {
   id: number;
@@ -17,7 +18,16 @@ type Item = {
   active?: number;
   color?: string | null;
   sortOrder?: number;
+  entityType?: EntityType;
 };
+
+const tagScopes: Array<{ value: EntityType; labelKey: string }> = [
+  { value: "fabric", labelKey: "fabrics.title" },
+  { value: "pattern", labelKey: "patterns.title" },
+  { value: "material", labelKey: "materials.title" },
+  { value: "project", labelKey: "projects.title" },
+  { value: "tool", labelKey: "tools.title" }
+];
 
 export function SettingsClient({
   username,
@@ -42,6 +52,7 @@ export function SettingsClient({
 }) {
   const t = useTranslations();
   const [tagList, setTagList] = useState(tags);
+  const [tagScope, setTagScope] = useState<EntityType>("fabric");
   const [categoryList, setCategoryList] = useState(categories);
   const [unitList, setUnitList] = useState(units.filter((item) => item.definitionKey !== "unspecified"));
   const [toast, setToast] = useState<string | null>(null);
@@ -218,7 +229,17 @@ export function SettingsClient({
           </Button>
         </div>
       </Card>
-      <Manager kind="plain" title={t("settings.manageTags")} endpoint="/api/tags" items={tagList} setItems={setTagList} unitSystem={unitSystem} notify={notify} />
+      <Manager
+        kind="plain"
+        title={t("settings.manageTags")}
+        endpoint="/api/tags"
+        items={tagList}
+        setItems={setTagList}
+        unitSystem={unitSystem}
+        notify={notify}
+        tagScope={tagScope}
+        onTagScopeChange={setTagScope}
+      />
       <Manager kind="category" title={t("settings.manageCategories")} endpoint="/api/meta/categories" items={categoryList} setItems={setCategoryList} unitSystem={unitSystem} notify={notify} />
       <Manager kind="unit" title={t("settings.manageUnits")} endpoint="/api/meta/units" items={unitList} setItems={setUnitList} unitSystem={unitSystem} notify={notify} />
       <Card className="space-y-3 p-4">
@@ -272,7 +293,9 @@ function Manager({
   items,
   setItems,
   unitSystem,
-  notify
+  notify,
+  tagScope,
+  onTagScopeChange
 }: {
   kind: "plain" | "category" | "unit";
   title: string;
@@ -281,17 +304,23 @@ function Manager({
   setItems: (items: Item[]) => void;
   unitSystem: UnitSystem;
   notify: (message: string) => void;
+  tagScope?: EntityType;
+  onTagScopeChange?: (scope: EntityType) => void;
 }) {
   const t = useTranslations();
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
+  const visibleItems =
+    kind === "plain" && tagScope
+      ? items.filter((item) => item.entityType === tagScope)
+      : items;
   async function create() {
     if (!name.trim()) return;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, ...(kind === "plain" && tagScope ? { entityType: tagScope } : {}) })
     });
     if (response.ok) {
       const { item } = await response.json();
@@ -346,6 +375,25 @@ function Manager({
   return (
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">{title}</h2>
+      {kind === "plain" && tagScope && onTagScopeChange ? (
+        <label className="block max-w-xs space-y-1">
+          <span className="text-sm font-medium">{t("settings.tagCategory")}</span>
+          <Select
+            value={tagScope}
+            onChange={(event) => {
+              setEditingId(null);
+              setEditingName("");
+              onTagScopeChange(event.target.value as EntityType);
+            }}
+          >
+            {tagScopes.map((scope) => (
+              <option key={scope.value} value={scope.value}>
+                {t(scope.labelKey as any)}
+              </option>
+            ))}
+          </Select>
+        </label>
+      ) : null}
       <div className="flex gap-2">
         <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("common.name")} />
         <Button type="button" onClick={create}>
@@ -353,7 +401,7 @@ function Manager({
         </Button>
       </div>
       <div className="space-y-2">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <div key={item.id} className={`flex items-center justify-between gap-2 rounded-md border border-border p-2 ${item.active === 0 ? "opacity-60" : ""}`}>
             {editingId === item.id ? (
               <Input value={editingName} onChange={(event) => setEditingName(event.target.value)} />
@@ -363,8 +411,8 @@ function Manager({
             <div className="flex gap-1">
               {editingId === item.id ? (
                 <Button size="sm" variant="ghost" onClick={() => rename(item.id)}>{t("common.save")}</Button>
-              ) : item.customName && item.active !== 0 ? (
-                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setEditingName(item.customName ?? ""); }}>{t("common.edit")}</Button>
+              ) : (kind === "plain" ? item.name : item.customName) && item.active !== 0 ? (
+                <Button size="sm" variant="ghost" onClick={() => { setEditingId(item.id); setEditingName(kind === "plain" ? item.name ?? "" : item.customName ?? ""); }}>{t("common.edit")}</Button>
               ) : null}
               {item.active === 0 ? (
                 <Button size="sm" variant="ghost" onClick={() => restore(item.id)}>{t("common.restore")}</Button>

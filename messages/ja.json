@@ -27,6 +27,7 @@
     "refreshFailed": "更新に失敗しました",
     "grid": "グリッド",
     "list": "リスト",
+    "itemsPerPage": "1ページの表示件数",
     "save": "保存",
     "saving": "保存中",
     "cancel": "キャンセル",
@@ -76,6 +77,10 @@
     "previous": "前へ",
     "details": "詳細",
     "summary": "概要",
+    "showMetric": "{metric}を表示",
+    "linkedProjects": "関連プロジェクト",
+    "noLinkedProjects": "関連プロジェクトはありません",
+    "viewAll": "すべて表示",
     "total": "合計",
     "remaining": "残り",
     "unit": "単位",
@@ -235,11 +240,6 @@
     "maintenance": "メンテナンス",
     "other": "その他"
   },
-  "materialUsageStatus": {
-    "available": "未使用",
-    "partial": "一部使用済み",
-    "used": "使い切り"
-  },
   "projectStatus": {
     "in_progress": "進行中",
     "completed": "完了",
@@ -251,7 +251,9 @@
     "total": "生地の登録件数",
     "cost": "合計費用",
     "usedLength": "使用済み長さ",
+    "usedValue": "使用済み生地の金額",
     "remainingLength": "残りの長さ",
+    "remainingValue": "残り生地の金額",
     "quantity": "数量",
     "lengthTotal": "合計長",
     "lengthRemaining": "残りの長さ",
@@ -279,13 +281,14 @@
     "add": "副資材を追加",
     "total": "副資材の登録件数",
     "cost": "合計費用",
-    "usedCount": "使用済み",
-    "unusedCount": "未使用",
+    "usedCount": "プロジェクトで使用",
+    "unusedCount": "プロジェクトで未使用",
+    "projectUsage": "プロジェクトでの使用",
+    "availability": "在庫状況",
+    "available": "利用可能",
     "category": "カテゴリー",
     "unit": "単位",
-    "quantityTotal": "合計数量",
-    "quantityRemaining": "残り数量",
-    "usageStatus": "状態"
+    "quantityTotal": "合計数量"
   },
   "projects": {
     "title": "プロジェクト",
@@ -347,6 +350,7 @@
     "metricUnits": "メートル法（m / cm / kg / g）",
     "imperialUnits": "ヤード・ポンド法（yd / in / lb / oz）",
     "manageTags": "タグを管理",
+    "tagCategory": "在庫カテゴリー",
     "manageCategories": "副資材カテゴリーを管理",
     "manageUnits": "副資材単位を管理",
     "backup": "バックアップ",

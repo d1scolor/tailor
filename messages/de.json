@@ -27,6 +27,7 @@
     "refreshFailed": "Aktualisierung fehlgeschlagen",
     "grid": "Raster",
     "list": "Liste",
+    "itemsPerPage": "Einträge pro Seite",
     "save": "Speichern",
     "saving": "Wird gespeichert",
     "cancel": "Abbrechen",
@@ -76,6 +77,10 @@
     "previous": "Zurück",
     "details": "Details",
     "summary": "Übersicht",
+    "showMetric": "{metric} anzeigen",
+    "linkedProjects": "Verknüpfte Projekte",
+    "noLinkedProjects": "Keine verknüpften Projekte",
+    "viewAll": "Alle anzeigen",
     "total": "Gesamt",
     "remaining": "Verbleibend",
     "unit": "Einheit",
@@ -235,11 +240,6 @@
     "maintenance": "Wartung",
     "other": "Sonstiges"
   },
-  "materialUsageStatus": {
-    "available": "Unbenutzt",
-    "partial": "Teilweise verwendet",
-    "used": "Aufgebraucht"
-  },
   "projectStatus": {
     "in_progress": "In Bearbeitung",
     "completed": "Abgeschlossen",
@@ -251,7 +251,9 @@
     "total": "Stoffeinträge",
     "cost": "Gesamtkosten",
     "usedLength": "Verwendete Länge",
+    "usedValue": "Wert des verbrauchten Stoffs",
     "remainingLength": "Restlänge",
+    "remainingValue": "Wert des verbleibenden Stoffs",
     "quantity": "Menge",
     "lengthTotal": "Gesamtlänge",
     "lengthRemaining": "Verbleibende Länge",
@@ -279,13 +281,14 @@
     "add": "Material hinzufügen",
     "total": "Materialeinträge",
     "cost": "Gesamtkosten",
-    "usedCount": "Verwendet",
-    "unusedCount": "Nie verwendet",
+    "usedCount": "In Projekten verwendet",
+    "unusedCount": "Nie in Projekten verwendet",
+    "projectUsage": "Projektverwendung",
+    "availability": "Verfügbarkeit",
+    "available": "Verfügbar",
     "category": "Kategorie",
     "unit": "Einheit",
-    "quantityTotal": "Gesamtmenge",
-    "quantityRemaining": "Restmenge",
-    "usageStatus": "Status"
+    "quantityTotal": "Gesamtmenge"
   },
   "projects": {
     "title": "Projekte",
@@ -347,6 +350,7 @@
     "metricUnits": "Metrisch (m / cm / kg / g)",
     "imperialUnits": "Imperial (yd / in / lb / oz)",
     "manageTags": "Tags verwalten",
+    "tagCategory": "Inventarbereich",
     "manageCategories": "Materialkategorien verwalten",
     "manageUnits": "Materialeinheiten verwalten",
     "backup": "Sicherung",

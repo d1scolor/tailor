@@ -10,6 +10,7 @@ import { normalizeUnitSystem, type UnitSystem } from "@/lib/units";
 import { defaultLocale } from "@/lib/env";
 import { normalizeLocale, type Locale } from "@/lib/i18n/locales";
 import { normalizeCurrencyCode, type CurrencyCode } from "@/lib/currency";
+import type { SummaryDisplayModes } from "@/lib/summary-display";
 import { isSessionCookieValue, sessionCookie, sessionMaxAgeSeconds } from "./cookie";
 import { sessionCookiesAreSecure } from "./base-url";
 import { isCrossOriginMutation } from "./origin";
@@ -20,6 +21,7 @@ export type AuthUser = {
   locale: Locale;
   unitSystem: UnitSystem;
   currencyCode: CurrencyCode;
+  summaryDisplayModes: SummaryDisplayModes;
   sessionId: string;
 };
 
@@ -67,7 +69,10 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
   const row = db
     .prepare(
       `SELECT sessions.id AS sessionId, sessions.expires_at AS expiresAt, users.id, users.username, users.locale,
-              users.unit_system AS unitSystem, users.currency_code AS currencyCode
+              users.unit_system AS unitSystem, users.currency_code AS currencyCode,
+              users.fabric_used_value_display AS fabricUsedValueDisplay,
+              users.fabric_remaining_value_display AS fabricRemainingValueDisplay,
+              users.project_labor_cost_display AS projectLaborCostDisplay
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.id = ?`
@@ -81,6 +86,9 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
         locale: string;
         unitSystem?: string;
         currencyCode?: string | null;
+        fabricUsedValueDisplay: number;
+        fabricRemainingValueDisplay: number;
+        projectLaborCostDisplay: number;
       }
     | undefined;
   if (!row) return null;
@@ -101,6 +109,11 @@ export function getUserBySession(sessionId?: string | null): AuthUser | null {
     locale: normalizeLocale(row.locale) ?? defaultLocale,
     unitSystem: normalizeUnitSystem(row.unitSystem),
     currencyCode,
+    summaryDisplayModes: {
+      fabricUsedValue: row.fabricUsedValueDisplay === 1,
+      fabricRemainingValue: row.fabricRemainingValueDisplay === 1,
+      projectLaborCost: row.projectLaborCostDisplay === 1
+    },
     sessionId: row.sessionId
   };
 }

@@ -4,7 +4,7 @@ import { requireAuthFromRequest } from "@/lib/auth/session";
 import { getSqlite } from "@/lib/db/client";
 import { idParamSchema } from "@/lib/schemas/common";
 import { tagSchema } from "@/lib/schemas/items";
-import { nowIso } from "@/lib/time";
+import { updateTag } from "@/lib/repository";
 
 export const runtime = "nodejs";
 
@@ -14,10 +14,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const { id } = idParamSchema.parse(await params);
     const input = tagSchema.parse(await request.json());
-    getSqlite()
-      .prepare("UPDATE tags SET name = ?, color = ?, updated_at = ? WHERE id = ? AND user_id = ?")
-      .run(input.name, input.color ?? null, nowIso(), id, user.id);
-    return ok({ ok: true });
+    return ok({ item: updateTag(user.id, id, input) });
   } catch (error) {
     return handleApiError(error);
   }

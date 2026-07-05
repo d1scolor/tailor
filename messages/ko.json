@@ -27,6 +27,7 @@
     "refreshFailed": "새로고침 실패",
     "grid": "격자",
     "list": "목록",
+    "itemsPerPage": "페이지당 항목 수",
     "save": "저장",
     "saving": "저장 중",
     "cancel": "취소",
@@ -76,6 +77,10 @@
     "previous": "이전",
     "details": "세부 정보",
     "summary": "요약",
+    "showMetric": "{metric} 표시",
+    "linkedProjects": "연결된 프로젝트",
+    "noLinkedProjects": "연결된 프로젝트가 없습니다",
+    "viewAll": "모두 보기",
     "total": "합계",
     "remaining": "남음",
     "unit": "단위",
@@ -235,11 +240,6 @@
     "maintenance": "정비",
     "other": "기타"
   },
-  "materialUsageStatus": {
-    "available": "미사용",
-    "partial": "일부 사용",
-    "used": "소진"
-  },
   "projectStatus": {
     "in_progress": "진행 중",
     "completed": "완료",
@@ -251,7 +251,9 @@
     "total": "원단 항목 수",
     "cost": "총비용",
     "usedLength": "사용 길이",
+    "usedValue": "사용한 원단 가치",
     "remainingLength": "남은 길이",
+    "remainingValue": "남은 원단 가치",
     "quantity": "수량",
     "lengthTotal": "총길이",
     "lengthRemaining": "남은 길이",
@@ -279,13 +281,14 @@
     "add": "부자재 추가",
     "total": "부자재 항목 수",
     "cost": "총비용",
-    "usedCount": "사용됨",
-    "unusedCount": "사용 안 함",
+    "usedCount": "프로젝트에서 사용됨",
+    "unusedCount": "프로젝트에서 사용 안 함",
+    "projectUsage": "프로젝트 사용",
+    "availability": "사용 가능 상태",
+    "available": "사용 가능",
     "category": "카테고리",
     "unit": "단위",
-    "quantityTotal": "총수량",
-    "quantityRemaining": "남은 수량",
-    "usageStatus": "상태"
+    "quantityTotal": "총수량"
   },
   "projects": {
     "title": "프로젝트",
@@ -347,6 +350,7 @@
     "metricUnits": "미터법(m / cm / kg / g)",
     "imperialUnits": "야드파운드법(yd / in / lb / oz)",
     "manageTags": "태그 관리",
+    "tagCategory": "재고 분류",
     "manageCategories": "부자재 카테고리 관리",
     "manageUnits": "부자재 단위 관리",
     "backup": "백업",
