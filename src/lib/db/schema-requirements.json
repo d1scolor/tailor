@@ -1,5 +1,4 @@
 {
-  "version": 7,
   "tables": {
     "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "fabric_used_value_display", "fabric_remaining_value_display", "project_labor_cost_display", "inventory_page_size", "created_at", "updated_at"],
     "sessions": ["id", "user_id", "expires_at", "created_at"],

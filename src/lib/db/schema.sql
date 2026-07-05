@@ -7,6 +7,14 @@ CREATE TABLE users (
   locale TEXT NOT NULL DEFAULT 'en',
   unit_system TEXT NOT NULL DEFAULT 'metric',
   currency_code TEXT,
+  fabric_used_value_display INTEGER NOT NULL DEFAULT 0
+    CHECK (fabric_used_value_display IN (0, 1)),
+  fabric_remaining_value_display INTEGER NOT NULL DEFAULT 0
+    CHECK (fabric_remaining_value_display IN (0, 1)),
+  project_labor_cost_display INTEGER NOT NULL DEFAULT 0
+    CHECK (project_labor_cost_display IN (0, 1)),
+  inventory_page_size TEXT NOT NULL DEFAULT '20'
+    CHECK (inventory_page_size IN ('20', '50', '100', 'all')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -101,7 +109,7 @@ CREATE TABLE materials (
   category_id INTEGER REFERENCES material_categories(id) ON DELETE SET NULL,
   unit_id INTEGER NOT NULL REFERENCES material_units(id) ON DELETE RESTRICT,
   quantity_total_canonical REAL NOT NULL,
-  usage_status TEXT NOT NULL DEFAULT 'available',
+  is_used_up INTEGER NOT NULL DEFAULT 0 CHECK (is_used_up IN (0, 1)),
   colors TEXT NOT NULL DEFAULT '[]',
   source TEXT,
   price_cents INTEGER,
@@ -115,9 +123,14 @@ CREATE TABLE projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'in_progress'
+    CHECK (status IN ('in_progress', 'completed', 'cancelled')),
   quantity INTEGER NOT NULL DEFAULT 1,
   price_cents INTEGER,
   value_cents INTEGER,
+  material_cost_cents INTEGER,
+  labor_minutes INTEGER,
+  labor_cost_cents INTEGER,
   remarks TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -169,7 +182,8 @@ CREATE UNIQUE INDEX project_materials_project_material_idx
 CREATE TABLE photos (
   id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('fabric','pattern','material','project','tool')),
+  entity_type TEXT NOT NULL
+    CHECK (entity_type IN ('fabric', 'pattern', 'material', 'project', 'tool')),
   entity_id INTEGER NOT NULL,
   original_ext TEXT NOT NULL,
   is_cover INTEGER NOT NULL DEFAULT 0,
@@ -181,15 +195,18 @@ CREATE INDEX photos_entity_idx ON photos(entity_type, entity_id);
 CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL
+    CHECK (entity_type IN ('fabric', 'pattern', 'material', 'project', 'tool')),
   name TEXT NOT NULL,
   color TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  UNIQUE(user_id, name)
+  UNIQUE(user_id, entity_type, name)
 );
 
 CREATE TABLE entity_tags (
-  entity_type TEXT NOT NULL CHECK(entity_type IN ('fabric','pattern','material','project','tool')),
+  entity_type TEXT NOT NULL
+    CHECK (entity_type IN ('fabric', 'pattern', 'material', 'project', 'tool')),
   entity_id INTEGER NOT NULL,
   tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY(entity_type, entity_id, tag_id)

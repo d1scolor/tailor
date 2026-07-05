@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Grid2X2, List, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
@@ -62,9 +62,6 @@ type SummaryCardDefinition = {
   value: string | number;
   toggle?: {
     key: SummaryDisplayKey;
-    primaryUnit: string;
-    alternateUnit: string;
-    alternateActive: boolean;
     nextLabel: string;
   };
 };
@@ -404,6 +401,7 @@ export function InventoryClient(props: Props) {
   const pageSizeSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const editorFormRef = useRef<HTMLFormElement | null>(null);
   const editorBaselineRef = useRef<string | null>(null);
+  const editorInteractedRef = useRef(false);
   const title = t(`${props.kind}.title`);
   const displayCategoryList = useMemo(
     () => categoryList.map((item) => ({ ...item, name: metaItemLabel(item, "category", unitSystem, t) })),
@@ -460,20 +458,19 @@ export function InventoryClient(props: Props) {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing) {
       editorBaselineRef.current = null;
+      editorInteractedRef.current = false;
       return;
     }
-    const frame = window.requestAnimationFrame(() => {
-      if (editorFormRef.current) {
-        editorBaselineRef.current = editorFormSnapshot(
-          props.kind,
-          editorFormRef.current
-        );
-      }
-    });
-    return () => window.cancelAnimationFrame(frame);
+    if (editorFormRef.current) {
+      editorBaselineRef.current = editorFormSnapshot(
+        props.kind,
+        editorFormRef.current
+      );
+      editorInteractedRef.current = false;
+    }
   }, [editing, props.kind]);
 
   useEffect(() => {
@@ -661,16 +658,18 @@ export function InventoryClient(props: Props) {
     setStagedPhotoFiles([]);
     setRemovedPhotoIds([]);
     editorBaselineRef.current = null;
+    editorInteractedRef.current = false;
     setEditing(null);
   }
 
   function requestCloseEditor() {
     if (submitting) return;
-    const formChanged =
-      editorFormRef.current &&
-      editorBaselineRef.current !== null &&
-      editorFormSnapshot(props.kind, editorFormRef.current) !==
-        editorBaselineRef.current;
+    const formChanged = editorFormRef.current
+      ? editorBaselineRef.current === null
+        ? editorInteractedRef.current
+        : editorFormSnapshot(props.kind, editorFormRef.current) !==
+          editorBaselineRef.current
+      : editorInteractedRef.current;
     const hasChanges =
       Boolean(formChanged) ||
       stagedPhotoFiles.length > 0 ||
@@ -888,6 +887,12 @@ export function InventoryClient(props: Props) {
                 key={`${props.kind}-${editing.id ?? "new"}`}
                 className="flex min-h-0 min-w-0 w-full flex-col overflow-x-hidden"
                 onSubmit={submit}
+                onInputCapture={() => {
+                  editorInteractedRef.current = true;
+                }}
+                onChangeCapture={() => {
+                  editorInteractedRef.current = true;
+                }}
               >
                 <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
                   <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
@@ -1013,38 +1018,9 @@ function SummaryMetricCard({
   const t = useTranslations();
   const content = (
     <>
-      <div
-        className={`truncate text-xs leading-4 text-muted-foreground ${
-          card.toggle ? "pr-[4.5rem]" : ""
-        }`}
-      >
+      <div className="truncate text-xs leading-4 text-muted-foreground">
         {card.label}
       </div>
-      {card.toggle ? (
-        <span
-          className="absolute right-2 top-2 grid w-16 grid-cols-2 overflow-hidden rounded-md border border-border bg-muted/50 text-center text-[10px] font-semibold leading-none"
-          aria-hidden
-        >
-          <span
-            className={`min-w-0 truncate px-1 py-1 ${
-              card.toggle.alternateActive
-                ? "text-muted-foreground"
-                : "bg-primary text-primary-foreground"
-            }`}
-          >
-            {card.toggle.primaryUnit}
-          </span>
-          <span
-            className={`min-w-0 truncate border-l border-border px-1 py-1 ${
-              card.toggle.alternateActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            {card.toggle.alternateUnit}
-          </span>
-        </span>
-      ) : null}
       <div className="mt-1 min-w-0 truncate text-lg font-semibold leading-tight tabular-nums">
         {card.value}
       </div>
@@ -1062,7 +1038,7 @@ function SummaryMetricCard({
   return (
     <button
       type="button"
-      className="relative h-[4.5rem] min-w-0 overflow-hidden rounded-lg border border-border bg-card p-3 text-left text-card-foreground shadow-xs transition-colors hover:border-primary/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="relative h-[4.5rem] min-w-0 cursor-pointer overflow-hidden rounded-lg border border-border bg-card p-3 text-left text-card-foreground shadow-xs transition-colors hover:border-primary/60 hover:bg-muted/30 active:border-primary/60 active:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label={actionLabel}
       title={actionLabel}
       onClick={onToggle}
@@ -3362,8 +3338,6 @@ function summaryCards(
   t: ReturnType<typeof useTranslations>
 ) {
   if (kind === "fabrics") {
-    const lengthUnit = fabricUnits(unitSystem).lengthUnit;
-    const monetaryUnit = currencySymbol(locale, currencyCode);
     const usedValueActive = displayModes.fabricUsedValue;
     const remainingValueActive = displayModes.fabricRemainingValue;
     return [
@@ -3381,9 +3355,6 @@ function summaryCards(
           : formatMeasurement(summary.lengthUsedM ?? 0, "lengthLong", unitSystem, locale),
         toggle: {
           key: "fabricUsedValue" as const,
-          primaryUnit: lengthUnit,
-          alternateUnit: monetaryUnit,
-          alternateActive: usedValueActive,
           nextLabel: t(usedValueActive ? "fabrics.usedLength" : "fabrics.usedValue")
         }
       },
@@ -3402,9 +3373,6 @@ function summaryCards(
             ),
         toggle: {
           key: "fabricRemainingValue" as const,
-          primaryUnit: lengthUnit,
-          alternateUnit: monetaryUnit,
-          alternateActive: remainingValueActive,
           nextLabel: t(
             remainingValueActive ? "fabrics.remainingLength" : "fabrics.remainingValue"
           )
@@ -3429,9 +3397,6 @@ function summaryCards(
           : numberValue((summary.totalLaborMinutes ?? 0) / 60, locale),
         toggle: {
           key: "projectLaborCost" as const,
-          primaryUnit: "h",
-          alternateUnit: currencySymbol(locale, currencyCode),
-          alternateActive: laborCostActive,
           nextLabel: t(
             laborCostActive ? "projects.totalLaborHours" : "projects.laborCost"
           )

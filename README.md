@@ -5,6 +5,10 @@ materials, projects, and tools, designed to run as a single Docker container.
 It is intended for one user and stores all data in a local SQLite database with
 photos on disk.
 
+On iPhone, open Tailor in Safari and choose **Share → Add to Home Screen**.
+Tailor then launches in a standalone, app-like window and remains available
+through an ordinary desktop browser from the same deployment.
+
 **Interface languages:** English · 简体中文 · 繁體中文 · Français · Deutsch ·
 日本語 · 한국어 · Italiano · Español · Português (Brasil) · Nederlands · Polski
 
@@ -119,8 +123,8 @@ Published image channels are:
 | `MAJOR.MINOR.PATCH` | Exact stable release, such as `0.2.0`                                        |
 | `sha-<commit>`      | Exact image built from a `main` commit                                       |
 
-`edge` may contain unannounced changes and forward database migrations. Back up
-data before testing it. Maintainers should follow
+`edge` may contain unannounced changes. Back up data before testing it.
+Maintainers should follow
 [the release procedure](docs/RELEASING.md); stable releases promote an existing
 tested SHA image rather than rebuilding it.
 
@@ -199,9 +203,9 @@ Backups contain the password hash, inventory, and original photos and must be
 handled as sensitive data. Active session tokens are removed from exported
 backups, and restoring a backup invalidates all sessions.
 
-Restore validates archive paths, entry types, size, SQLite integrity, required
-tables, and migrations before replacing live data. The previous data directory
-is retained under `/data/restore-backup-*` for emergency rollback; remove old
+Restore validates archive paths, entry types, size, SQLite integrity, and the
+current schema before replacing live data. The previous data directory is
+retained under `/data/restore-backup-*` for emergency rollback; remove old
 restore backups from the Docker host after verifying a successful restore.
 Backups from pre-public development builds are not supported by the public
 schema baseline.
@@ -225,7 +229,8 @@ git pull --ff-only
 docker compose up -d --build
 ```
 
-Database migrations run automatically during container startup.
+Container startup initializes an empty database or validates an existing
+database against the current public schema.
 
 ## Local development
 
@@ -234,7 +239,6 @@ Use Node.js 24 LTS.
 ```bash
 cp .env.example .env
 npm ci
-npm run db:migrate
 npm run dev
 ```
 

@@ -45,27 +45,19 @@ const db = new Database(dbPath);
 fs.chmodSync(dbPath, 0o600);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
-db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)");
-const migrationsDir = path.join(process.cwd(), "src/lib/db/migrations");
-for (const migration of fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort()) {
-  if (!db.prepare("SELECT name FROM _migrations WHERE name = ?").get(migration)) {
-    db.transaction(() => {
-      db.exec(fs.readFileSync(path.join(migrationsDir, migration), "utf8"));
-      db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(migration, now());
-    })();
-    console.log(`Applied migration ${migration}`);
-  }
+const tableCount = db
+  .prepare(
+    `SELECT COUNT(*) AS count
+     FROM sqlite_master
+     WHERE type = 'table'
+       AND name NOT LIKE 'sqlite_%'`
+  )
+  .get().count;
+if (tableCount === 0) {
+  db.exec(fs.readFileSync(path.join(process.cwd(), "src/lib/db/schema.sql"), "utf8"));
+  console.log("Initialized database schema");
 }
 assertCurrentSchema(db);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS _schema_version (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    version INTEGER NOT NULL
-  );
-  INSERT INTO _schema_version (id, version)
-  VALUES (1, ${schemaRequirements.version})
-  ON CONFLICT(id) DO UPDATE SET version = excluded.version;
-`);
 
 const count = db.prepare("SELECT COUNT(*) AS count FROM users").get().count;
 if (count === 0) {

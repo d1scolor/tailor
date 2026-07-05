@@ -8,8 +8,8 @@ import type { NextRequest } from "next/server";
 import { ApiError, handleApiError, ok } from "@/lib/api";
 import { requireAuthFromRequest } from "@/lib/auth/session";
 import { isSafeBackupEntry } from "@/lib/backup";
-import { closeDb, getSqlite, runMigrations } from "@/lib/db/client";
-import { UnsupportedDatabaseSchemaError } from "@/lib/db/schema-compat";
+import { closeDb, getSqlite } from "@/lib/db/client";
+import { assertCurrentSchema, UnsupportedDatabaseSchemaError } from "@/lib/db/schema-compat";
 import { dataDir, dbDir, maxBackupMb, photosDir } from "@/lib/env";
 import { restoreState } from "@/lib/restore-state";
 import { dateForFile } from "@/lib/time";
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       if (!hasRequiredTables(tempDb)) {
         return Response.json({ error: "invalid_database" }, { status: 400 });
       }
-      runMigrations(tempDb);
+      assertCurrentSchema(tempDb);
       tempDb.prepare("DELETE FROM sessions").run();
       const integrity = tempDb.prepare("PRAGMA integrity_check").get() as { integrity_check: string };
       if (integrity.integrity_check !== "ok") {
