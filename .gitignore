@@ -4,6 +4,8 @@
 .next/
 .dev-server/
 .DS_Store
+docs/screenshots/*.jpg
+docs/screenshots/*.jpeg
 node_modules/
 data/
 coverage/
