@@ -1,7 +1,7 @@
 {
-  "version": 6,
+  "version": 7,
   "tables": {
-    "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "fabric_used_value_display", "fabric_remaining_value_display", "project_labor_cost_display", "created_at", "updated_at"],
+    "users": ["id", "username", "password_hash", "locale", "unit_system", "currency_code", "fabric_used_value_display", "fabric_remaining_value_display", "project_labor_cost_display", "inventory_page_size", "created_at", "updated_at"],
     "sessions": ["id", "user_id", "expires_at", "created_at"],
     "fabrics": ["id", "user_id", "name", "quantity", "length_total_m", "width_m", "colors", "purpose", "material_type", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],
     "patterns": ["id", "user_id", "name", "pattern_type", "difficulty", "pattern_for", "size", "pieces", "source", "price_cents", "purchased_at", "remarks", "created_at", "updated_at"],

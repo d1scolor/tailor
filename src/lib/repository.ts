@@ -4,6 +4,7 @@ import { getSqlite } from "@/lib/db/client";
 import { copyPhotoFilesSync, deletePhotoFilesSync } from "@/lib/images";
 import { applyProjectLinks, restoreProjectLinks } from "@/lib/consumption";
 import { usedValueHundredths } from "@/lib/pricing";
+import { normalizeInventoryPageSize } from "@/lib/pagination";
 import { nowIso } from "@/lib/time";
 
 export type Kind = "fabrics" | "patterns" | "materials" | "projects" | "tools";
@@ -241,7 +242,7 @@ export function listItems(
       : kind === "materials"
         ? `materials.*, ${materialIsUsed} AS is_used`
         : `${kind}.*`;
-  const pageSize = parsePageSize(params.get("pageSize"));
+  const pageSize = normalizeInventoryPageSize(params.get("pageSize"));
   const page = parsePage(params.get("page"));
   const pagination =
     paginate && pageSize !== "all" ? ` LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}` : "";
@@ -1176,12 +1177,6 @@ export function listColors(kind: Extract<Kind, "fabrics" | "materials">, userId:
     .prepare(`SELECT colors FROM ${kind} WHERE user_id = ?`)
     .all(userId) as Array<{ colors: string | null }>;
   return [...new Set(rows.flatMap((row) => decodeColors(row.colors)))].sort();
-}
-
-function parsePageSize(value: string | null): 20 | 50 | 100 | "all" {
-  if (value === "all") return "all";
-  const parsed = Number(value);
-  return parsed === 50 || parsed === 100 ? parsed : 20;
 }
 
 function parsePage(value: string | null) {

@@ -16,7 +16,7 @@ test("migration set satisfies the current schema contract", () => {
     }
     assert.doesNotThrow(() => assertCurrentSchema(db));
     recordSchemaVersion(db);
-    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 6 });
+    assert.deepEqual(db.prepare("SELECT id, version FROM _schema_version").get(), { id: 1, version: 7 });
   } finally {
     db.close();
   }
@@ -224,6 +224,43 @@ test("material availability migration preserves used-up records and removes manu
     assert.equal(columns.some((column) => column.name === "usage_status"), false);
     assert.throws(() =>
       db.prepare("UPDATE materials SET is_used_up = 2 WHERE id = 1").run()
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("inventory page size defaults to 20 and accepts supported global values", () => {
+  const db = new Database(":memory:");
+  try {
+    db.exec(fs.readFileSync("src/lib/db/migrations/0000_initial.sql", "utf8"));
+    db.prepare(
+      `INSERT INTO users (username, password_hash, locale, unit_system, created_at, updated_at)
+       VALUES ('owner', 'hash', 'en-AU', 'metric', 'now', 'now')`
+    ).run();
+
+    db.exec(
+      fs.readFileSync("src/lib/db/migrations/0006_inventory_page_size.sql", "utf8")
+    );
+
+    assert.equal(
+      db
+        .prepare("SELECT inventory_page_size FROM users WHERE id = 1")
+        .pluck()
+        .get(),
+      "20"
+    );
+    for (const value of ["50", "100", "all"]) {
+      assert.doesNotThrow(() =>
+        db
+          .prepare("UPDATE users SET inventory_page_size = ? WHERE id = 1")
+          .run(value)
+      );
+    }
+    assert.throws(() =>
+      db
+        .prepare("UPDATE users SET inventory_page_size = '25' WHERE id = 1")
+        .run()
     );
   } finally {
     db.close();

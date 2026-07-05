@@ -36,6 +36,7 @@ import type {
   SummaryDisplayKey,
   SummaryDisplayModes
 } from "@/lib/summary-display";
+import type { InventoryPageSize } from "@/lib/pagination";
 
 type AnyItem = Record<string, any>;
 type MetaItem = {
@@ -50,7 +51,6 @@ type MetaItem = {
 type PickerKind = Extract<Kind, "fabrics" | "patterns" | "materials">;
 type InventoryUsageStatus = "unused" | "partial" | "usedUp";
 type TagMatch = "any" | "all";
-type PageSize = 20 | 50 | 100 | "all";
 type InitialRelationshipFilters = {
   patternId?: string;
   fabricId?: string;
@@ -117,6 +117,7 @@ type Props = {
   colorOptions?: string[];
   unitSystem?: UnitSystem;
   summaryDisplayModes: SummaryDisplayModes;
+  initialPageSize: InventoryPageSize;
   initialRelationshipFilters?: InitialRelationshipFilters;
   initialSelectedItem?: AnyItem | null;
 };
@@ -199,10 +200,11 @@ function ModalPortal({ children }: { children: ReactNode }) {
   return mounted ? createPortal(children, document.body) : null;
 }
 
-function replaceProjectIdInUrl(projectId: number | null) {
+function replaceSelectedItemIdInUrl(kind: Kind, itemId: number | null) {
   const url = new URL(window.location.href);
-  if (projectId == null) url.searchParams.delete("projectId");
-  else url.searchParams.set("projectId", String(projectId));
+  const param = kind === "projects" ? "projectId" : "itemId";
+  if (itemId == null) url.searchParams.delete(param);
+  else url.searchParams.set(param, String(itemId));
   window.history.replaceState(window.history.state, "", url);
 }
 
@@ -367,7 +369,9 @@ export function InventoryClient(props: Props) {
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSize>(20);
+  const [pageSize, setPageSize] = useState<InventoryPageSize>(
+    props.initialPageSize
+  );
   const [summaryDisplayModes, setSummaryDisplayModes] = useState<SummaryDisplayModes>(
     props.summaryDisplayModes
   );
@@ -397,6 +401,9 @@ export function InventoryClient(props: Props) {
   const refreshSeqRef = useRef(0);
   const summaryDisplayModesRef = useRef(props.summaryDisplayModes);
   const summarySaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pageSizeSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const editorFormRef = useRef<HTMLFormElement | null>(null);
+  const editorBaselineRef = useRef<string | null>(null);
   const title = t(`${props.kind}.title`);
   const displayCategoryList = useMemo(
     () => categoryList.map((item) => ({ ...item, name: metaItemLabel(item, "category", unitSystem, t) })),
@@ -425,24 +432,49 @@ export function InventoryClient(props: Props) {
       else if (lightbox) setLightbox(null);
       else if (filterOpen) setFilterOpen(false);
       else if (editing) {
-        setStagedPhotoFiles([]);
-        setRemovedPhotoIds([]);
-        setEditing(null);
+        requestCloseEditor();
       }
       else if (selected) {
         setSelected(null);
-        if (props.kind === "projects") replaceProjectIdInUrl(null);
+        replaceSelectedItemIdInUrl(props.kind, null);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editing, selected, lightbox, filterOpen, confirmDelete]);
+  }, [
+    editing,
+    selected,
+    lightbox,
+    filterOpen,
+    confirmDelete,
+    stagedPhotoFiles,
+    removedPhotoIds,
+    submitting,
+    props.kind,
+    t
+  ]);
 
   useEffect(() => {
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!editing) {
+      editorBaselineRef.current = null;
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      if (editorFormRef.current) {
+        editorBaselineRef.current = editorFormSnapshot(
+          props.kind,
+          editorFormRef.current
+        );
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editing, props.kind]);
 
   useEffect(() => {
     const hasModal = Boolean(editing || selected || filterOpen || lightbox || confirmDelete);
@@ -483,6 +515,21 @@ export function InventoryClient(props: Props) {
         if (!response.ok) {
           notify(await errorMessage(response, t));
         }
+      })
+      .catch(() => notify(t("common.error")));
+  }
+
+  function persistPageSize(nextPageSize: InventoryPageSize) {
+    pageSizeSaveQueueRef.current = pageSizeSaveQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const response = await fetch("/api/settings/page-size", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pageSize: String(nextPageSize) }),
+          keepalive: true
+        });
+        if (!response.ok) notify(await errorMessage(response, t));
       })
       .catch(() => notify(t("common.error")));
   }
@@ -602,18 +649,34 @@ export function InventoryClient(props: Props) {
     }
     const { item: fullItem } = (await response.json()) as { item: AnyItem };
     setSelected(fullItem);
-    if (props.kind === "projects") replaceProjectIdInUrl(fullItem.id);
+    replaceSelectedItemIdInUrl(props.kind, fullItem.id);
   }
 
   function closeSelected() {
     setSelected(null);
-    if (props.kind === "projects") replaceProjectIdInUrl(null);
+    replaceSelectedItemIdInUrl(props.kind, null);
   }
 
   function closeEditor() {
     setStagedPhotoFiles([]);
     setRemovedPhotoIds([]);
+    editorBaselineRef.current = null;
     setEditing(null);
+  }
+
+  function requestCloseEditor() {
+    if (submitting) return;
+    const formChanged =
+      editorFormRef.current &&
+      editorBaselineRef.current !== null &&
+      editorFormSnapshot(props.kind, editorFormRef.current) !==
+        editorBaselineRef.current;
+    const hasChanges =
+      Boolean(formChanged) ||
+      stagedPhotoFiles.length > 0 ||
+      removedPhotoIds.length > 0;
+    if (hasChanges && !window.confirm(t("common.discardChangesConfirm"))) return;
+    closeEditor();
   }
 
   async function remove(item: AnyItem) {
@@ -803,6 +866,7 @@ export function InventoryClient(props: Props) {
         }}
         onPageSizeChange={(nextPageSize) => {
           setPageSize(nextPageSize);
+          persistPageSize(nextPageSize);
           setPage(1);
           void refresh(query, sort, filters, dir, 1, nextPageSize);
         }}
@@ -811,14 +875,25 @@ export function InventoryClient(props: Props) {
 
       {editing ? (
         <ModalPortal>
-          <div className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3">
-            <Card className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-0 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md">
-              <form key={`${props.kind}-${editing.id ?? "new"}`} className="flex min-h-0 min-w-0 w-full flex-col overflow-x-hidden" onSubmit={submit}>
+          <div
+            className="fixed inset-0 z-60 flex items-end overflow-x-hidden bg-black/40 p-0 md:block md:overflow-y-auto md:p-3"
+            onClick={requestCloseEditor}
+          >
+            <Card
+              className="flex max-h-[92dvh] w-full max-w-full flex-col overflow-hidden rounded-b-none rounded-t-2xl p-0 shadow-xl md:mx-auto md:max-w-2xl md:rounded-b-md md:rounded-t-md"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <form
+                ref={editorFormRef}
+                key={`${props.kind}-${editing.id ?? "new"}`}
+                className="flex min-h-0 min-w-0 w-full flex-col overflow-x-hidden"
+                onSubmit={submit}
+              >
                 <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
                   <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/35 md:hidden" />
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold">{editing.id ? t("common.edit") : t("common.create")}</h2>
-                    <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={closeEditor}>
+                    <Button type="button" variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={requestCloseEditor}>
                       <X className="h-4 w-4" aria-hidden />
                     </Button>
                   </div>
@@ -864,7 +939,7 @@ export function InventoryClient(props: Props) {
                   />
                 </div>
                 <div className="flex min-w-0 shrink-0 justify-end gap-2 border-t border-border bg-card px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
-                  <Button type="button" variant="secondary" onClick={closeEditor}>
+                  <Button type="button" variant="secondary" onClick={requestCloseEditor}>
                     {t("common.cancel")}
                   </Button>
                   <Button type="submit" disabled={submitting}>
@@ -938,48 +1013,56 @@ function SummaryMetricCard({
   const t = useTranslations();
   const content = (
     <>
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <div className="min-w-0 text-xs leading-4 text-muted-foreground">
-          {card.label}
-        </div>
-        {card.toggle ? (
-          <span
-            className="inline-flex shrink-0 overflow-hidden rounded-md border border-border bg-muted/50 text-[10px] font-semibold leading-none"
-            aria-hidden
-          >
-            <span
-              className={`whitespace-nowrap px-1.5 py-1 ${
-                card.toggle.alternateActive
-                  ? "text-muted-foreground"
-                  : "bg-primary text-primary-foreground"
-              }`}
-            >
-              {card.toggle.primaryUnit}
-            </span>
-            <span
-              className={`whitespace-nowrap border-l border-border px-1.5 py-1 ${
-                card.toggle.alternateActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {card.toggle.alternateUnit}
-            </span>
-          </span>
-        ) : null}
+      <div
+        className={`truncate text-xs leading-4 text-muted-foreground ${
+          card.toggle ? "pr-[4.5rem]" : ""
+        }`}
+      >
+        {card.label}
       </div>
-      <div className="mt-1 min-w-0 [overflow-wrap:anywhere] text-lg font-semibold leading-tight tabular-nums">
+      {card.toggle ? (
+        <span
+          className="absolute right-2 top-2 grid w-16 grid-cols-2 overflow-hidden rounded-md border border-border bg-muted/50 text-center text-[10px] font-semibold leading-none"
+          aria-hidden
+        >
+          <span
+            className={`min-w-0 truncate px-1 py-1 ${
+              card.toggle.alternateActive
+                ? "text-muted-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
+            {card.toggle.primaryUnit}
+          </span>
+          <span
+            className={`min-w-0 truncate border-l border-border px-1 py-1 ${
+              card.toggle.alternateActive
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            {card.toggle.alternateUnit}
+          </span>
+        </span>
+      ) : null}
+      <div className="mt-1 min-w-0 truncate text-lg font-semibold leading-tight tabular-nums">
         {card.value}
       </div>
     </>
   );
 
-  if (!card.toggle) return <Card className="min-w-0 p-3">{content}</Card>;
+  if (!card.toggle) {
+    return (
+      <Card className="relative h-[4.5rem] min-w-0 overflow-hidden p-3">
+        {content}
+      </Card>
+    );
+  }
   const actionLabel = t("common.showMetric", { metric: card.toggle.nextLabel });
   return (
     <button
       type="button"
-      className="min-w-0 rounded-lg border border-border bg-card p-3 text-left text-card-foreground shadow-xs transition-colors hover:border-primary/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="relative h-[4.5rem] min-w-0 overflow-hidden rounded-lg border border-border bg-card p-3 text-left text-card-foreground shadow-xs transition-colors hover:border-primary/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label={actionLabel}
       title={actionLabel}
       onClick={onToggle}
@@ -1024,7 +1107,7 @@ function InventoryBrowserView({
   dir: "asc" | "desc";
   view: "grid" | "list";
   page: number;
-  pageSize: PageSize;
+  pageSize: InventoryPageSize;
   totalItems: number;
   showPagination?: boolean;
   filters: Filters;
@@ -1041,7 +1124,7 @@ function InventoryBrowserView({
   onApplyFilters: (filters: Filters) => void;
   onViewChange: (view: "grid" | "list") => void;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: PageSize) => void;
+  onPageSizeChange: (pageSize: InventoryPageSize) => void;
   onItemClick: (item: AnyItem) => void;
 }) {
   const t = useTranslations();
@@ -1136,7 +1219,11 @@ function InventoryBrowserView({
               value={String(pageSize)}
               onChange={(event) => {
                 const value = event.target.value;
-                onPageSizeChange(value === "all" ? "all" : (Number(value) as 20 | 50 | 100));
+                onPageSizeChange(
+                  value === "all"
+                    ? "all"
+                    : (Number(value) as 20 | 50 | 100)
+                );
               }}
             >
               <option value="20">20</option>
@@ -1341,14 +1428,19 @@ function Fields(props: FieldsProps) {
           />
         ) : null}
         {props.kind === "materials" ? (
-          <label className="flex min-h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium">
-            <input
-              name="isUsedUp"
-              type="checkbox"
-              defaultChecked={Boolean(props.item.isUsedUp)}
-            />
-            <span>{t("common.usedUp")}</span>
-          </label>
+          <fieldset className="space-y-1">
+            <legend className="text-sm font-medium">
+              {t("materials.availability")}
+            </legend>
+            <label className="flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm">
+              <input
+                name="isUsedUp"
+                type="checkbox"
+                defaultChecked={Boolean(props.item.isUsedUp)}
+              />
+              <span>{t("common.usedUp")}</span>
+            </label>
+          </fieldset>
         ) : null}
         {props.kind === "tools" ? (
           <TextChoiceField
@@ -2789,7 +2881,14 @@ function LinkedDetailSection({
       <div className="space-y-2">
         {items.map((item) => (
           <div key={item.id} className="space-y-1">
-            <ItemCard item={item} kind={kind} view="list" unitSystem={unitSystem} onPhotoClick={onOpenPhoto} />
+            <ItemCard
+              item={item}
+              kind={kind}
+              view="list"
+              unitSystem={unitSystem}
+              onPhotoClick={onOpenPhoto}
+              onClick={() => window.location.assign(`/${kind}?itemId=${item.id}`)}
+            />
             {details ? <p className="text-xs text-muted-foreground">{details(item)}</p> : null}
           </div>
         ))}
@@ -3168,7 +3267,7 @@ function buildListParams(
   filters: Filters,
   dir: "asc" | "desc",
   page: number,
-  pageSize: PageSize
+  pageSize: InventoryPageSize
 ) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
@@ -3711,6 +3810,10 @@ function formToBody(kind: Kind, form: FormData) {
       .filter((link) => link.fabricId && link.lengthUsedM),
     materials: [...new Set(materialIds.map(Number).filter(Boolean))].map((materialId) => ({ materialId }))
   };
+}
+
+function editorFormSnapshot(kind: Kind, form: HTMLFormElement) {
+  return JSON.stringify(formToBody(kind, new FormData(form)));
 }
 
 async function errorMessage(response: Response, t: ReturnType<typeof useTranslations>) {
