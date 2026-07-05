@@ -12,3 +12,8 @@ coverage
 .DS_Store
 AGENTS.md
 README.md
+CONTRIBUTING.md
+SECURITY.md
+docs
+compose.yml
+.gitignore

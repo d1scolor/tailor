@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { dbDir, dbPath, displayDir, originalsDir, photosDir, thumbsDir } from "@/lib/env";
 import * as schema from "./schema";
-import { assertCurrentSchema, recordSchemaVersion } from "./schema-compat";
+import { assertCurrentSchema } from "./schema-compat";
 
 type Sqlite = Database.Database;
 
@@ -28,7 +28,7 @@ export function getSqlite() {
     sqlite.pragma("foreign_keys = ON");
   }
   if (!initialized) {
-    runMigrations(sqlite);
+    initializeSchema(sqlite);
     initialized = true;
   }
   return sqlite;
@@ -44,28 +44,22 @@ export function closeDb() {
   initialized = false;
 }
 
-export function runMigrations(db: Sqlite) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name TEXT PRIMARY KEY,
-      applied_at TEXT NOT NULL
-    )
-  `);
-  const migrationsDir = path.join(process.cwd(), "src/lib/db/migrations");
-  const migrations = fs
-    .readdirSync(migrationsDir)
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-
-  for (const name of migrations) {
-    const applied = db.prepare("SELECT name FROM _migrations WHERE name = ?").get(name);
-    if (applied) continue;
-    const migration = fs.readFileSync(path.join(migrationsDir, name), "utf8");
-    db.transaction(() => {
-      db.exec(migration);
-      db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run(name, new Date().toISOString());
-    })();
+export function initializeSchema(db: Sqlite) {
+  const tableCount = Number(
+    (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS count
+           FROM sqlite_master
+           WHERE type = 'table'
+             AND name NOT LIKE 'sqlite_%'`
+        )
+        .get() as { count: number }
+    ).count
+  );
+  if (tableCount === 0) {
+    const schemaPath = path.join(process.cwd(), "src/lib/db/schema.sql");
+    db.exec(fs.readFileSync(schemaPath, "utf8"));
   }
   assertCurrentSchema(db);
-  recordSchemaVersion(db);
 }

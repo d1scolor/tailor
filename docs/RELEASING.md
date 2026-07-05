@@ -128,9 +128,9 @@ gh release view v0.2.0
 gh release edit v0.2.0 --notes-file release-notes.md
 ```
 
-Call out new environment variables, migration considerations, backup
-requirements, and known issues. Editing release notes does not change the Git
-tag or container image.
+Call out new environment variables, schema compatibility considerations,
+backup requirements, and known issues. Editing release notes does not change
+the Git tag or container image.
 
 ## Retry or promote a release
 
@@ -149,9 +149,10 @@ or rebuild the image.
 
 ## Data safety
 
-`edge` is intended for maintainer testing and can contain forward database
-migrations. Back up production data before deploying it. Moving the container
-back to an older SHA does not reverse database migrations.
+`edge` is intended for maintainer testing and can contain data-model changes.
+Back up production data before deploying it. Do not assume that moving the
+container back to an older SHA will make data written by a newer build
+compatible with the older code.
 
 ## Troubleshooting
 

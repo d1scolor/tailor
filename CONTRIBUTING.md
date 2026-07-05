@@ -11,12 +11,11 @@ Use Node.js 24 LTS and install the locked dependency tree:
 ```bash
 npm ci
 cp .env.example .env
-npm run db:migrate
 npm run dev
 ```
 
-Use a temporary `DATA_DIR` when testing migrations. Never commit local
-databases, photos, backups, credentials, or `.env` files.
+Use a temporary `DATA_DIR` when testing database bootstrap changes. Never
+commit local databases, photos, backups, credentials, or `.env` files.
 
 ## Maintaining a fork
 
@@ -31,7 +30,8 @@ npm audit
 ```
 
 User-facing text must be translated in every catalog under `messages/`.
-Database changes must use forward-only migrations that preserve existing data.
+Database changes must update the baseline schema and include an explicit,
+data-preserving upgrade path for existing public installations.
 
 ## Security reports
 

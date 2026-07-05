@@ -26,15 +26,3 @@ export function assertCurrentSchema(db: Sqlite) {
   }
   if (missing.length) throw new UnsupportedDatabaseSchemaError(missing);
 }
-
-export function recordSchemaVersion(db: Sqlite) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS _schema_version (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      version INTEGER NOT NULL
-    );
-    INSERT INTO _schema_version (id, version)
-    VALUES (1, ${requirements.version})
-    ON CONFLICT(id) DO UPDATE SET version = excluded.version;
-  `);
-}

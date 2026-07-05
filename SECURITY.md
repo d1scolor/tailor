@@ -20,6 +20,7 @@ security-sensitive details.
 
 ## Deployment expectations
 
-Tailor should be deployed behind an HTTPS reverse proxy with the container port
-bound to loopback. Protect the Docker host, `.env`, backups, and `/data` volume;
-each contains credentials or private inventory data.
+For internet access, Tailor should be deployed behind an HTTPS reverse proxy
+with the container port bound to loopback. Direct HTTP access is intended only
+for a trusted private network or VPN. Protect the Docker host, `.env`, backups,
+and `/data` volume; each contains credentials or private inventory data.

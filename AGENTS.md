@@ -7,11 +7,10 @@ Tailor is a personal sewing inventory app for one user. It is deployed as a sing
 - `npm run typecheck`: TypeScript check.
 - `npm run lint`: ESLint plus the no-hardcoded-JSX i18n check.
 - `npm run build`: production Next.js build.
-- `npm run db:migrate`: run SQLite migrations.
 - `npm run dev:restart`: restart the local dev server at `http://127.0.0.1:3000`.
 - `scripts/release.sh VERSION [COMMIT]`: validate and push a stable release tag for an existing tested image.
 
-When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run `npm run build` for route/schema/UI changes. Run a temporary `DATA_DIR=... npm run db:migrate` when migrations or DB bootstrap code change.
+When changing behavior, run at least `npm run typecheck` and `npm run lint`. Run `npm run build` for route/schema/UI changes. Run the bootstrap script against a temporary `DATA_DIR` when the database schema or bootstrap code changes.
 
 ## Architecture
 
@@ -37,13 +36,13 @@ The shared client is `src/components/inventory-client.tsx`. Prefer extending tha
 
 Projects are special: they link to fabrics, patterns, and materials, consume remaining stock, and calculate costs. Avoid copying project logic to other item types. Be careful with changes to `src/lib/consumption.ts` and project cost calculation.
 
-## Database And Migrations
+## Database
 
-- Migrations live in `src/lib/db/migrations` and are applied lexicographically.
+- `src/lib/db/schema.sql` is the public baseline used to initialize empty databases.
 - `src/lib/db/schema-requirements.json` defines the minimum supported schema and rejects incomplete legacy databases.
-- `scripts/bootstrap.mjs` also runs migrations during container boot.
+- `scripts/bootstrap.mjs` initializes an empty database or validates an existing one during container boot.
 - New enum-like fields should store stable ASCII keys in SQLite and use i18n for display labels.
-- Existing data must be migrated forward with a new migration; do not require destructive DB resets for normal feature work.
+- Any future schema change must include an explicit upgrade path for existing public installations before the baseline is changed.
 
 ## API Conventions
 
