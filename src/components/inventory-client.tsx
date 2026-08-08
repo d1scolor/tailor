@@ -51,6 +51,7 @@ type MetaItem = {
 type PickerKind = Extract<Kind, "fabrics" | "patterns" | "materials">;
 type InventoryUsageStatus = "unused" | "partial" | "usedUp";
 type TagMatch = "any" | "all";
+type SummaryToggleKey = SummaryDisplayKey | "projectFabricLength";
 type InitialRelationshipFilters = {
   patternId?: string;
   fabricId?: string;
@@ -61,7 +62,7 @@ type SummaryCardDefinition = {
   label: string;
   value: string | number;
   toggle?: {
-    key: SummaryDisplayKey;
+    key: SummaryToggleKey;
     nextLabel: string;
   };
 };
@@ -372,6 +373,7 @@ export function InventoryClient(props: Props) {
   const [summaryDisplayModes, setSummaryDisplayModes] = useState<SummaryDisplayModes>(
     props.summaryDisplayModes
   );
+  const [projectFabricLengthActive, setProjectFabricLengthActive] = useState(false);
   const [filters, setFilters] = useState<Filters>(() =>
     emptyFilters(props.initialRelationshipFilters)
   );
@@ -495,7 +497,11 @@ export function InventoryClient(props: Props) {
     window.setTimeout(() => setToast((current) => (current === message ? null : current)), 3200);
   }
 
-  function toggleSummaryMetric(key: SummaryDisplayKey) {
+  function toggleSummaryMetric(key: SummaryToggleKey) {
+    if (key === "projectFabricLength") {
+      setProjectFabricLengthActive((current) => !current);
+      return;
+    }
     const value = !summaryDisplayModesRef.current[key];
     const next = { ...summaryDisplayModesRef.current, [key]: value };
     summaryDisplayModesRef.current = next;
@@ -813,6 +819,7 @@ export function InventoryClient(props: Props) {
           props.kind,
           summary,
           summaryDisplayModes,
+          projectFabricLengthActive,
           unitSystem,
           currencyCode,
           locale,
@@ -3332,6 +3339,7 @@ function summaryCards(
   kind: Kind,
   summary: Record<string, any>,
   displayModes: SummaryDisplayModes,
+  projectFabricLengthActive: boolean,
   unitSystem: UnitSystem,
   currencyCode: CurrencyCode,
   locale: string,
@@ -3386,8 +3394,14 @@ function summaryCards(
       { key: "count", label: t("projects.total"), value: summary.count ?? 0 },
       {
         key: "cost",
-        label: t("projects.cost"),
-        value: money(summary.totalCost, locale, currencyCode)
+        label: t(projectFabricLengthActive ? "projects.lengthUsed" : "projects.cost"),
+        value: projectFabricLengthActive
+          ? formatMeasurement(summary.totalFabricUsedM ?? 0, "lengthLong", unitSystem, locale)
+          : money(summary.totalCost, locale, currencyCode),
+        toggle: {
+          key: "projectFabricLength" as const,
+          nextLabel: t(projectFabricLengthActive ? "projects.cost" : "projects.lengthUsed")
+        }
       },
       {
         key: "labor",

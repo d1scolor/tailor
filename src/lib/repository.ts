@@ -778,7 +778,18 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
     laborMinutes: number | null;
     laborCostCents: number | null;
   }>;
-  const fabricCosts = projectFabricCosts(db, rows.map((row) => row.id));
+  const projectIds = rows.map((row) => row.id);
+  const fabricCosts = projectFabricCosts(db, projectIds);
+  const totalFabricUsedM = projectIds.length
+    ? (db
+        .prepare(
+          `SELECT COALESCE(SUM(length_used_m), 0)
+           FROM project_fabrics
+           WHERE project_id IN (${projectIds.map(() => "?").join(",")})`
+        )
+        .pluck()
+        .get(...projectIds) as number)
+    : 0;
   return {
     count: rows.length,
     totalCost: rows.reduce(
@@ -786,6 +797,7 @@ export function summary(kind: Kind, userId: number, params = new URLSearchParams
         sum + (fabricCosts.get(row.id) ?? 0) + (row.materialCostCents ?? 0) + (row.laborCostCents ?? 0),
       0
     ),
+    totalFabricUsedM,
     totalLaborMinutes: rows.reduce((sum, row) => sum + (row.laborMinutes ?? 0), 0),
     totalLaborCost: rows.reduce((sum, row) => sum + (row.laborCostCents ?? 0), 0),
     totalValue: rows.reduce((sum, row) => sum + (row.valueCents ?? 0), 0),
