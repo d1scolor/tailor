@@ -309,7 +309,8 @@
     "patterns": "Moldes usados",
     "fabrics": "Tecidos usados",
     "materials": "Materiais usados",
-    "lengthUsed": "Comprimento usado"
+    "lengthUsed": "Comprimento usado",
+    "fabricLengthUsed": "Comprimento dos tecidos usados"
   },
   "tools": {
     "title": "Ferramentas",

@@ -309,7 +309,8 @@
     "patterns": "Gebruikte patronen",
     "fabrics": "Gebruikte stoffen",
     "materials": "Gebruikte materialen",
-    "lengthUsed": "Gebruikte lengte"
+    "lengthUsed": "Gebruikte lengte",
+    "fabricLengthUsed": "Lengte van de gebruikte stoffen"
   },
   "tools": {
     "title": "Gereedschap",

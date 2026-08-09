@@ -309,7 +309,8 @@
     "patterns": "사용 패턴",
     "fabrics": "사용 원단",
     "materials": "사용 부자재",
-    "lengthUsed": "사용 길이"
+    "lengthUsed": "사용 길이",
+    "fabricLengthUsed": "사용한 원단의 길이"
   },
   "tools": {
     "title": "도구",

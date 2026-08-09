@@ -309,7 +309,8 @@
     "patterns": "Cartamodelli usati",
     "fabrics": "Tessuti usati",
     "materials": "Materiali usati",
-    "lengthUsed": "Lunghezza usata"
+    "lengthUsed": "Lunghezza usata",
+    "fabricLengthUsed": "Lunghezza dei tessuti usati"
   },
   "tools": {
     "title": "Strumenti",
