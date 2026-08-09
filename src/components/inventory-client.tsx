@@ -3394,13 +3394,13 @@ function summaryCards(
       { key: "count", label: t("projects.total"), value: summary.count ?? 0 },
       {
         key: "cost",
-        label: t(projectFabricLengthActive ? "projects.lengthUsed" : "projects.cost"),
+        label: t(projectFabricLengthActive ? "projects.fabricLengthUsed" : "projects.cost"),
         value: projectFabricLengthActive
           ? formatMeasurement(summary.totalFabricUsedM ?? 0, "lengthLong", unitSystem, locale)
           : money(summary.totalCost, locale, currencyCode),
         toggle: {
           key: "projectFabricLength" as const,
-          nextLabel: t(projectFabricLengthActive ? "projects.cost" : "projects.lengthUsed")
+          nextLabel: t(projectFabricLengthActive ? "projects.cost" : "projects.fabricLengthUsed")
         }
       },
       {

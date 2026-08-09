@@ -309,7 +309,8 @@
     "patterns": "使用型紙",
     "fabrics": "使用生地",
     "materials": "使用副資材",
-    "lengthUsed": "使用長さ"
+    "lengthUsed": "使用長さ",
+    "fabricLengthUsed": "使用した生地の長さ"
   },
   "tools": {
     "title": "道具",

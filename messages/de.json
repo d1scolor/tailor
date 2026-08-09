@@ -309,7 +309,8 @@
     "patterns": "Verwendete Schnittmuster",
     "fabrics": "Verwendete Stoffe",
     "materials": "Verwendete Materialien",
-    "lengthUsed": "Verwendete Länge"
+    "lengthUsed": "Verwendete Länge",
+    "fabricLengthUsed": "Länge der verwendeten Stoffe"
   },
   "tools": {
     "title": "Werkzeuge",

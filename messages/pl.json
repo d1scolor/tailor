@@ -309,7 +309,8 @@
     "patterns": "Użyte wykroje",
     "fabrics": "Użyte materiały",
     "materials": "Użyte dodatki",
-    "lengthUsed": "Użyta długość"
+    "lengthUsed": "Użyta długość",
+    "fabricLengthUsed": "Długość użytych tkanin"
   },
   "tools": {
     "title": "Narzędzia",

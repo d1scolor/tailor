@@ -309,7 +309,8 @@
     "patterns": "Patrones usados",
     "fabrics": "Telas usadas",
     "materials": "Materiales usados",
-    "lengthUsed": "Longitud utilizada"
+    "lengthUsed": "Longitud utilizada",
+    "fabricLengthUsed": "Longitud de las telas utilizadas"
   },
   "tools": {
     "title": "Herramientas",

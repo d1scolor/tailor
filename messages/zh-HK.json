@@ -309,7 +309,8 @@
     "patterns": "使用的紙樣",
     "fabrics": "使用的布料",
     "materials": "使用的輔料",
-    "lengthUsed": "使用長度"
+    "lengthUsed": "使用長度",
+    "fabricLengthUsed": "使用布料的長度"
   },
   "tools": {
     "title": "工具",
